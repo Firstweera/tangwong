@@ -1,10 +1,11 @@
-// LobbyPage.jsx — room lobby with layout variations (grid / list / circle)
+// LobbyPage.jsx — room lobby, composed from reusable lobby + game components.
 import { useState } from 'react';
-import { Icon, Avatar, AvatarStack, GameCard } from '../components/ui';
-import { Header, IconButton, BottomBar } from '../components/layout';
-import { PlayerGrid } from '../features/lobby/components/PlayerGrid.jsx';
-import { PlayerList } from '../features/lobby/components/PlayerList.jsx';
-import { PlayerCircle } from '../features/lobby/components/PlayerCircle.jsx';
+import { Icon } from '../components/ui';
+import { PlayerAvatarGroup } from '../components/game';
+import {
+  LobbyHeader, RoomCodeDisplay, GameSelector,
+  PlayerList, PlayerGrid, PlayerCircle, LobbyFooter,
+} from '../features/lobby';
 import { PLAYERS, GAMES } from '../data';
 
 export default function LobbyPage({ go, layout, showToast }) {
@@ -22,25 +23,16 @@ export default function LobbyPage({ go, layout, showToast }) {
   return (
     <div className="screen screen-anim">
       <div className="scroll" style={{ paddingBottom: 96 }}>
-        <Header
-          left={<IconButton onClick={() => go('home')}><Icon name="chevL" size={20} /></IconButton>}
+        <LobbyHeader
           title="ห้องของแพรวา"
           subtitle={`${players.length} คน · กำลังจัดทีม`}
-          right={<IconButton onClick={() => showToast('ตั้งค่าห้อง', '⚙️')}><Icon name="settings" size={19} /></IconButton>}
+          onBack={() => go('home')}
+          onSettings={() => showToast('ตั้งค่าห้อง', '⚙️')}
         />
 
         {/* room code */}
         <div className="pad-x" style={{ marginTop: 12 }}>
-          <div className="card row between" style={{ padding: '14px 16px' }}>
-            <div className="col" style={{ gap: 3 }}>
-              <span className="eyebrow">รหัสห้อง · room code</span>
-              <span className="mono" style={{ fontSize: 30, fontWeight: 700, letterSpacing: '0.16em', lineHeight: 1 }}>{ROOM}</span>
-            </div>
-            <div className="row gap8">
-              <button className="row center" style={{ width: 44, height: 44, borderRadius: 13, background: 'var(--surface-3)' }} onClick={copyCode}><Icon name="copy" size={19} /></button>
-              <button className="row center" style={{ width: 44, height: 44, borderRadius: 13, background: 'var(--grad)', color: '#fff', boxShadow: '0 8px 18px -8px rgba(109,94,249,0.8)' }} onClick={() => showToast('แชร์ลิงก์ห้องแล้ว', '🔗')}><Icon name="share" size={18} /></button>
-            </div>
-          </div>
+          <RoomCodeDisplay code={ROOM} onCopy={copyCode} onShare={() => showToast('แชร์ลิงก์ห้องแล้ว', '🔗')} />
         </div>
 
         {/* voice channel indicator */}
@@ -53,17 +45,13 @@ export default function LobbyPage({ go, layout, showToast }) {
                 <span className="tiny" style={{ color: '#34D17E', fontWeight: 700 }}>● 4 คนกำลังคุย</span>
               </div>
             </div>
-            <div className="row"><AvatarStack people={[PLAYERS[3], PLAYERS[2], PLAYERS[1], PLAYERS[4]]} size={28} max={4} /></div>
+            <PlayerAvatarGroup players={[PLAYERS[3], PLAYERS[2], PLAYERS[1], PLAYERS[4]]} size={28} max={4} />
           </div>
         </div>
 
         {/* selected game */}
         <div className="pad-x" style={{ marginTop: 18 }}>
-          <div className="row between" style={{ marginBottom: 10 }}>
-            <h2 className="th h2" style={{ fontSize: 18 }}>เกมที่เลือก</h2>
-            <button className="chip" onClick={() => showToast('เลือกเกมอื่น', '🎲')}><Icon name="dice" size={14} /> เปลี่ยนเกม</button>
-          </div>
-          <GameCard game={GAMES[0]} height={150} onClick={() => {}} />
+          <GameSelector game={GAMES[0]} onChange={() => showToast('เลือกเกมอื่น', '🎲')} onSelect={() => {}} />
         </div>
 
         {/* players */}
@@ -78,21 +66,7 @@ export default function LobbyPage({ go, layout, showToast }) {
         </div>
       </div>
 
-      <BottomBar>
-        <div className="row gap10">
-          <button className={'btn ' + (meReady ? 'btn-glass' : 'btn-accent')} style={{ flex: '0 0 auto', width: 120 }} onClick={toggleMe}>
-            {meReady ? <><Icon name="check" size={18} stroke={3} /> พร้อม</> : 'กดพร้อม'}
-          </button>
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => go('game')}>
-            <span className="sheen" />
-            <span className="th" style={{ fontWeight: 800 }}>เริ่มเกม</span>
-            <Icon name="arrowR" size={20} stroke={2.6} />
-          </button>
-        </div>
-        <div className="tiny center row" style={{ marginTop: 8, opacity: 0.7 }}>
-          {allReady ? 'ทุกคนพร้อมแล้ว — เริ่มได้เลย!' : 'คุณคือหัวห้อง · เริ่มเกมได้ทุกเมื่อ'}
-        </div>
-      </BottomBar>
+      <LobbyFooter meReady={meReady} onToggleReady={toggleMe} onStart={() => go('game')} allReady={allReady} />
     </div>
   );
 }

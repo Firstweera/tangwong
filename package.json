@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "TangWong (ตั้งวง) — mobile-first social board game platform",
+  "sideEffects": ["**/*.css"],
   "scripts": {
     "dev": "vite",
     "build": "vite build",

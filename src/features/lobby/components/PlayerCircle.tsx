@@ -1,8 +1,20 @@
-// PlayerCircle.jsx — ตั้งวง radial circle layout for lobby
-import { Avatar, Logo } from '../../../components/ui';
+import { Avatar, Logo } from '@/components/ui';
+import type { Player } from '@/types';
 
-export function PlayerCircle({ players, isReady, readyCount }) {
+export interface PlayerCircleProps {
+  players: Player[];
+  isReady?: (player: Player) => boolean;
+  readyCount?: number;
+  hostId?: string;
+}
+
+/**
+ * PlayerCircle — the ตั้งวง radial table layout: players seated around a ring
+ * with a centred crest. Ready players get a green ring. Game-agnostic table view.
+ */
+export function PlayerCircle({ players, isReady, readyCount = 0, hostId }: PlayerCircleProps) {
   const n = players.length, R = 116, cx = 50, cy = 50;
+  const host = hostId ?? players[0]?.id;
   return (
     <div className="ring-stage" style={{ height: 300 }}>
       <div className="spin-slow" style={{
@@ -19,8 +31,8 @@ export function PlayerCircle({ players, isReady, readyCount }) {
         const x = cx + (R / 2.32) * Math.cos(ang);
         const y = cy + (R / 2.32) * Math.sin(ang);
         return (
-          <div key={p.id} className="ring-seat rise" style={{ left: x + '%', top: y + '%', animationDelay: i * 0.05 + 's' }}>
-            <Avatar who={p} size={52} dot crown={i === 0} ring={isReady(p) ? '#34D17E' : false} />
+          <div key={p.id} className="ring-seat rise" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${i * 0.05}s` }}>
+            <Avatar who={p} size={52} dot crown={p.id === host} ring={isReady?.(p) ? '#34D17E' : false} />
             <span className="ring-name th">{p.name}</span>
           </div>
         );
