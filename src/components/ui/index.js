@@ -7,3 +7,4 @@ export { GameCard } from './GameCard.jsx';
 export { QuestTrack } from './QuestTrack.jsx';
 export { Confetti } from './Confetti.jsx';
 export { useToast } from './Toast.jsx';
+export { CardBack, CardFan, Token, Die } from './Tabletop.jsx';

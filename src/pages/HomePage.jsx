@@ -1,8 +1,48 @@
 // HomePage.jsx — landing / home
 import { useState } from 'react';
-import { Icon, Avatar, Logo, GameCard } from '../components/ui';
-import { ME, FRIENDS, GAMES } from '../data';
+import { Icon, Avatar, Logo, GameCard, CardFan, Token, Die } from '../components/ui';
+import { ME, PLAYERS, FRIENDS, GAMES } from '../data';
 import { getFriendStatus } from '../features/friends/friendStatus';
+
+function RoundTableHero() {
+  const seats = [PLAYERS[1], PLAYERS[3], ME, PLAYERS[4], PLAYERS[2]]; // cat, owl, you, panda, raccoon
+  const pos = [[11, 65], [30, 50], [50, 44], [70, 50], [89, 65]];
+  return (
+    <div className="pad-x" style={{ paddingTop: 8 }}>
+      <div className="felt felt-stitch" style={{ position: 'relative', borderRadius: 26, height: 330, padding: '18px 18px 0', overflow: 'hidden',
+        boxShadow: '0 24px 54px -18px rgba(0,0,0,0.65), inset 0 0 0 2px rgba(255,215,138,0.45), inset 0 0 70px rgba(0,0,0,0.4)' }}>
+        {/* live badge */}
+        <div className="row gap6" style={{ position: 'absolute', top: 15, right: 15, zIndex: 3, fontSize: 11, fontWeight: 800, color: '#fff',
+          padding: '5px 10px', borderRadius: 9, background: 'rgba(0,0,0,0.34)', border: '1px solid rgba(255,255,255,0.16)', backdropFilter: 'blur(6px)', alignItems: 'center' }}>
+          <span style={{ width: 7, height: 7, borderRadius: 4, background: '#34D17E', boxShadow: '0 0 8px #34D17E' }} /> LIVE · 6 กำลังเล่น
+        </div>
+        {/* headline */}
+        <div className="row gap6" style={{ marginBottom: 9, position: 'relative', zIndex: 2, alignItems: 'center', paddingRight: 130 }}>
+          <span style={{ fontSize: 14 }}>🎲</span>
+          <span className="eyebrow" style={{ color: 'rgba(255,255,255,0.82)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>social deduction</span>
+        </div>
+        <h1 className="th display" style={{ fontSize: 36, color: '#fff', position: 'relative', zIndex: 2, textShadow: '0 2px 16px rgba(0,0,0,0.45)' }}>
+          รวมวง<br /><span style={{ color: 'var(--brass-1)' }}>เริ่มเกม</span>
+        </h1>
+        {/* table scene */}
+        <div style={{ position: 'absolute', inset: 0 }}>
+          {/* implied table felt ring under the cards */}
+          <div style={{ position: 'absolute', left: '50%', top: '63%', transform: 'translate(-50%,-50%)', width: '78%', height: '46%',
+            borderRadius: '50%', border: '2px dashed rgba(255,215,138,0.28)', boxShadow: 'inset 0 0 40px rgba(0,0,0,0.3)' }} />
+          {seats.map((p, i) => (
+            <div key={i} className="col center gap4" style={{ position: 'absolute', left: pos[i][0] + '%', top: pos[i][1] + '%', transform: 'translate(-50%,-50%)' }}>
+              <Avatar who={p} size={i === 2 ? 54 : 46} dot ring={i === 2 ? 'var(--brass-1)' : false} />
+            </div>
+          ))}
+          {/* center: fanned deck + chip + die */}
+          <div style={{ position: 'absolute', left: '50%', top: '80%', transform: 'translate(-50%,-50%)' }}><CardFan count={5} w={42} h={58} /></div>
+          <div style={{ position: 'absolute', left: '23%', top: '82%', transform: 'translate(-50%,-50%) rotate(-8deg)' }}><Token kind="good" size={34} /></div>
+          <div style={{ position: 'absolute', left: '77%', top: '83%', transform: 'translate(-50%,-50%) rotate(12deg)' }}><Die face={5} size={34} /></div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StepDot({ n, title, sub, color }) {
   return (
@@ -36,17 +76,11 @@ export default function HomePage({ go, showToast }) {
         </div>
       </div>
 
-      {/* hero */}
-      <div className="pad-x" style={{ paddingTop: 14 }}>
-        <div className="row gap6" style={{ alignItems: 'center', marginBottom: 14 }}>
-          <span style={{ width: 7, height: 7, borderRadius: 4, background: '#34D17E', boxShadow: '0 0 8px #34D17E' }} />
-          <span className="eyebrow">เล่นด้วยกัน ได้ทุกที่ · play anywhere</span>
-        </div>
-        <h1 className="th display" style={{ fontSize: 40 }}>
-          รวมเพื่อน<br /><span className="grad-text">เริ่มเกม</span>
-        </h1>
-        <p className="body" style={{ marginTop: 12, fontSize: 14.5, maxWidth: 290 }}>
-          Gather your friends. Start the game. สร้างห้อง แชร์โค้ด แล้วเล่นบอร์ดเกมปาร์ตี้ด้วยกันได้ทันที
+      {/* hero table scene */}
+      <RoundTableHero />
+      <div className="pad-x" style={{ paddingTop: 16 }}>
+        <p className="body" style={{ fontSize: 14.5, maxWidth: 320 }}>
+          Gather your friends around the table. สร้างห้อง ชวนเพื่อนมาล้อมวง แล้วเล่นบอร์ดเกมจับโกหกด้วยกันได้ทันที
         </p>
       </div>
 

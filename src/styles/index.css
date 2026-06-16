@@ -7,6 +7,7 @@
 @import './typography.css';
 @import './animations.css';
 @import './components.css';
+@import './tabletop.css';
 
 /* design system (additive — structural tokens + new primitive classes) */
 @import '../design-system/tokens.css';
