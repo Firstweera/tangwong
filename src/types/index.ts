@@ -85,7 +85,32 @@ export type Screen =
   | 'games' | 'friends' | 'profile' | 'ds';
 
 /** Navigate to a named screen */
-export type GoFn = (screen: Screen) => void;
+export type GoFn = (screen: Screen, payload?: unknown) => void;
 
 /** Show a toast notification */
 export type ShowToastFn = (message: string, emoji?: string) => void;
+
+// ─── Room ───────────────────────────────────────────────────────────────────
+
+export type RoomStatus = 'waiting' | 'starting' | 'in-game';
+
+export interface RoomSettings {
+  name: string;
+  maxPlayers: number;
+  isPublic: boolean;
+  gameId: string;
+}
+
+export interface Room {
+  id: string;
+  code: string;
+  name: string;
+  maxPlayers: number;
+  isPublic: boolean;
+  gameId: string;
+  hostId: string;
+  players: Player[];
+  status: RoomStatus;
+  inviteLink: string;
+  createdAt: number;
+}

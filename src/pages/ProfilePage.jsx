@@ -1,11 +1,16 @@
 // ProfilePage.jsx — user profile tab
 import { Icon, Avatar, GameCard } from '../components/ui';
-import { ME, GAMES } from '../data';
+import { GAMES, MASCOTS } from '../data';
 
-export function ProfilePage({ go, showToast }) {
+export function ProfilePage({ go, showToast, guest, player, openEditProfile }) {
   const stats = [['142', 'เกมที่เล่น'], ['68%', 'อัตราชนะ'], ['#3', 'อันดับเพื่อน']];
   const favs = [GAMES[0], GAMES[1], GAMES[2]];
   const ach = [['🏆', 'ราชาแห่งวง', true], ['🕵️', 'เมอร์ลินไร้เงา', true], ['🔥', 'ชนะ 5 ติด', true], ['🎭', 'นักบลัฟ', false], ['👑', 'หัวห้องตัวยง', false]];
+
+  const mascotEmoji = guest ? MASCOTS[guest.mascot]?.em : '🦊';
+  const displayName = player?.name ?? 'ผู้เล่น';
+  const handleId = player?.id?.replace('guest_', '') ?? 'guest';
+
   return (
     <div className="scroll screen-anim" style={{ paddingBottom: 112 }}>
       {/* header banner */}
@@ -16,12 +21,14 @@ export function ProfilePage({ go, showToast }) {
       </div>
       <div className="pad-x" style={{ marginTop: -44 }}>
         <div className="row between" style={{ alignItems: 'flex-end' }}>
-          <div style={{ borderRadius: '50%', boxShadow: '0 0 0 4px var(--bg)' }}><Avatar who={ME} size={92} /></div>
-          <button className="btn btn-glass" style={{ height: 42, borderRadius: 13, marginBottom: 6 }} onClick={() => showToast('แก้ไขโปรไฟล์', '✏️')}>แก้ไข</button>
+          <div style={{ borderRadius: '50%', boxShadow: '0 0 0 4px var(--bg)' }}>
+            <Avatar who={player} size={92} />
+          </div>
+          <button className="btn btn-glass" style={{ height: 42, borderRadius: 13, marginBottom: 6 }} onClick={() => openEditProfile?.()}>แก้ไข</button>
         </div>
         <div className="col" style={{ gap: 2, marginTop: 10 }}>
-          <h1 className="th h1" style={{ fontSize: 26 }}>คุณ <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 17 }}>@you_fox</span></h1>
-          <span className="th body">🦊 เล่นบอร์ดเกมตั้งแต่ 2023 · ชอบเกมจับโกหก</span>
+          <h1 className="th h1" style={{ fontSize: 26 }}>{displayName} <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 17 }}>@{handleId}</span></h1>
+          <span className="th body">{mascotEmoji} เล่นบอร์ดเกมตั้งแต่ 2023 · ชอบเกมจับโกหก</span>
         </div>
         {/* stats */}
         <div className="card-solid row" style={{ marginTop: 16, padding: '14px 0' }}>

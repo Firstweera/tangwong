@@ -53,8 +53,8 @@ Compose class names with **`cn()`** from `src/lib/utils.ts` (clsx +
 tailwind-merge) so conditional classes merge and later Tailwind utilities win:
 
 ```tsx
-import { cn } from '@/lib/utils'; // or relative: '../lib/utils'
-<div className={cn('px-4 py-2', isActive && 'bg-primary', className)} />
+import { cn } from "@/lib/utils"; // or relative: '../lib/utils'
+<div className={cn("px-4 py-2", isActive && "bg-primary", className)} />;
 ```
 
 Avoid:
@@ -176,3 +176,71 @@ The first playable MVP should be:
 Home → Create/Join Room → Lobby → Avalon-inspired Game → Result
 
 Do not prioritize landing page, profile, friends, achievements, or monetization before the core multiplayer loop works.
+
+# Progress Tracking Rules
+
+Before starting any task:
+
+1. Read docs/roadmap.md
+
+2. Identify:
+   - current epic
+   - current feature
+   - task status
+
+3. Do not work on future epics unless explicitly instructed.
+
+---
+
+After completing a feature:
+
+Update docs/roadmap.md
+
+Change status:
+
+⚪ Not Started
+→ 🟡 In Progress
+→ ✅ Completed
+
+---
+
+When marking a feature as completed:
+
+Add:
+
+- completion date
+- implemented files
+- notes
+- follow-up tasks
+
+Example:
+
+### Guest Profile
+
+✅ Completed
+
+Files:
+
+- guest-store.ts
+- guest-types.ts
+- ProfileSheet.tsx
+
+Notes:
+
+- nickname persistence implemented
+- avatar selection implemented
+
+Follow-up:
+
+- integrate with Socket.io player identity
+
+---
+
+At the end of every implementation:
+
+Provide:
+
+1. What was completed
+2. What roadmap items changed
+3. What remains in the current epic
+4. Suggested next task

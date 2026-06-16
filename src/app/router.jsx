@@ -9,15 +9,27 @@ import { ProfilePage } from '../pages/ProfilePage.jsx';
 
 // ctx carries the shared handlers/state every page may need.
 export function renderScreen(screen, ctx) {
-  const { go, showToast, payload, lobbyLayout } = ctx;
+  const {
+    go, showToast, payload, lobbyLayout,
+    guest, player,
+    currentRoom, lastRoom,
+    createRoom, joinRoom, leaveRoom, rejoinRoom, updateRoomSettings,
+    openCreateRoom, openEditProfile,
+  } = ctx;
   switch (screen) {
-    case 'home':    return <HomePage go={go} showToast={showToast} />;
+    case 'home':    return <HomePage go={go} showToast={showToast} player={player} lastRoom={lastRoom}
+                              openCreateRoom={openCreateRoom} joinRoom={joinRoom} rejoinRoom={rejoinRoom}
+                              openEditProfile={openEditProfile} />;
     case 'games':   return <GamesPage go={go} showToast={showToast} />;
     case 'friends': return <FriendsPage go={go} showToast={showToast} />;
-    case 'profile': return <ProfilePage go={go} showToast={showToast} />;
-    case 'lobby':   return <LobbyPage go={go} layout={lobbyLayout} showToast={showToast} />;
+    case 'profile': return <ProfilePage go={go} showToast={showToast} guest={guest} player={player}
+                              openEditProfile={openEditProfile} />;
+    case 'lobby':   return <LobbyPage go={go} layout={lobbyLayout} showToast={showToast}
+                              room={currentRoom} player={player} onLeave={leaveRoom} onUpdateSettings={updateRoomSettings} />;
     case 'game':    return <GamePage go={go} showToast={showToast} />;
-    case 'result':  return <ResultPage go={go} payload={payload} showToast={showToast} />;
-    default:        return <HomePage go={go} showToast={showToast} />;
+    case 'result':  return <ResultPage go={go} payload={payload} showToast={showToast} player={player} />;
+    default:        return <HomePage go={go} showToast={showToast} player={player} lastRoom={lastRoom}
+                              openCreateRoom={openCreateRoom} joinRoom={joinRoom} rejoinRoom={rejoinRoom}
+                              openEditProfile={openEditProfile} />;
   }
 }

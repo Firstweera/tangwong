@@ -2,9 +2,9 @@
 import { useState, useEffect } from 'react';
 import { Icon, Avatar, QuestTrack, Confetti } from '../components/ui';
 import { BottomBar } from '../components/layout';
-import { ME, PLAYERS, ROLES, ROLE_OF } from '../data';
+import { PLAYERS, ROLES, ROLE_OF } from '../data';
 
-export default function ResultPage({ go, payload, showToast }) {
+export default function ResultPage({ go, payload, showToast, player }) {
   const { winner = 'good', reason = 'quests', results = ['success', 'success', 'fail', 'success', null] } = payload || {};
   const good = winner === 'good';
   const players = PLAYERS;
@@ -49,7 +49,7 @@ export default function ResultPage({ go, payload, showToast }) {
             <div style={{ position: 'absolute', inset: 0, background: 'var(--grad-soft)', opacity: 0.6 }} />
             <div className="row gap14" style={{ position: 'relative', alignItems: 'center' }}>
               <div style={{ position: 'relative' }}>
-                <Avatar who={ME} size={62} ring="var(--accent)" />
+                <Avatar who={player} size={62} ring="var(--accent)" />
                 <span style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', fontSize: 13, fontWeight: 800, background: 'var(--accent)', color: '#3a2406', padding: '1px 8px', borderRadius: 8 }}>MVP</span>
               </div>
               <div className="col" style={{ gap: 3, flex: 1 }}>

@@ -12,7 +12,7 @@ const MAIN_SET = new Set(MAIN_TABS.map(t => t.id));
 // Whether a given screen id is one of the main tabs (so the tab bar shows).
 export const isMainTab = (screen) => MAIN_SET.has(screen);
 
-export function TabBar({ screen, go, navStyle, navLabels }) {
+export function TabBar({ screen, go, navStyle, navLabels, onFabPress }) {
   const bar = navStyle === 'bar';
   const left = MAIN_TABS.slice(0, 2), right = MAIN_TABS.slice(2);
   const Item = ({ t }) => {
@@ -27,7 +27,7 @@ export function TabBar({ screen, go, navStyle, navLabels }) {
   return (
     <div className="tabbar" style={bar ? { left: 0, right: 0, bottom: 0, borderRadius: '22px 22px 0 0', height: 78, paddingBottom: 12 } : {}}>
       {left.map(t => <Item key={t.id} t={t} />)}
-      <button className="tab-fab" onClick={() => go('lobby')} aria-label="create room"><Icon name="plus" size={26} stroke={2.6} /></button>
+      <button className="tab-fab" onClick={onFabPress ?? (() => go('lobby'))} aria-label="create room"><Icon name="plus" size={26} stroke={2.6} /></button>
       {right.map(t => <Item key={t.id} t={t} />)}
     </div>
   );

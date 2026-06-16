@@ -1,11 +1,12 @@
 // HomePage.jsx — landing / home
 import { useState } from 'react';
 import { Icon, Avatar, Logo, GameCard, CardFan, Token, Die } from '../components/ui';
-import { ME, PLAYERS, FRIENDS, GAMES } from '../data';
+import { PLAYERS, FRIENDS, GAMES } from '../data';
 import { getFriendStatus } from '../features/friends/friendStatus';
+import { parseInviteCode } from '../features/room/roomUtils.ts';
 
-function RoundTableHero() {
-  const seats = [PLAYERS[1], PLAYERS[3], ME, PLAYERS[4], PLAYERS[2]]; // cat, owl, you, panda, raccoon
+function RoundTableHero({ player }) {
+  const seats = [PLAYERS[1], PLAYERS[3], player, PLAYERS[4], PLAYERS[2]]; // cat, owl, you, panda, raccoon
   const pos = [[11, 65], [30, 50], [50, 44], [70, 50], [89, 65]];
   return (
     <div className="pad-x" style={{ paddingTop: 8 }}>
@@ -57,10 +58,50 @@ function StepDot({ n, title, sub, color }) {
   );
 }
 
-export default function HomePage({ go, showToast }) {
+// Card shown when the user recently left a room
+function RejoinCard({ room, onRejoin }) {
+  const game = GAMES.find(g => g.id === room.gameId) ?? GAMES[0];
+  return (
+    <div className="pad-x" style={{ marginTop: 16 }}>
+      <div className="card row between" style={{ padding: '12px 14px', alignItems: 'center' }}>
+        <div className="row gap10" style={{ alignItems: 'center' }}>
+          <div className="row center" style={{ width: 38, height: 38, borderRadius: 12,
+            background: 'rgba(109,94,249,0.15)', fontSize: 19 }}>
+            🚪
+          </div>
+          <div className="col" style={{ gap: 2 }}>
+            <span className="th" style={{ fontSize: 13.5, fontWeight: 800 }}>{room.name}</span>
+            <span className="tiny" style={{ color: 'var(--muted)' }}>
+              {game.emoji} {game.name} · รหัส {room.code}
+            </span>
+          </div>
+        </div>
+        <button
+          className="btn btn-ghost"
+          style={{ height: 36, padding: '0 14px', fontSize: 13, fontWeight: 800 }}
+          onClick={onRejoin}
+        >
+          กลับเข้า
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function HomePage({ go, showToast, player, openCreateRoom, joinRoom, rejoinRoom, lastRoom, openEditProfile }) {
   const avalon = GAMES[0];
   const [code, setCode] = useState('');
   const onlineFriends = FRIENDS.filter(f => f.online);
+
+  const handleJoin = () => {
+    if (code.length < 4) { showToast('ใส่รหัสห้องก่อนนะ', '🔑'); return; }
+    const parsed = parseInviteCode(code);
+    if (joinRoom) {
+      joinRoom(parsed);
+    } else {
+      go('lobby');
+    }
+  };
 
   return (
     <div className="scroll screen-anim" style={{ paddingBottom: 112 }}>
@@ -72,12 +113,12 @@ export default function HomePage({ go, showToast }) {
             <Icon name="bell" size={20} />
             <span style={{ position: 'absolute', top: 9, right: 10, width: 8, height: 8, borderRadius: 4, background: 'var(--accent)', boxShadow: '0 0 0 2px var(--surface-solid)' }} />
           </button>
-          <Avatar who={ME} size={42} onClick={() => showToast('โปรไฟล์ของคุณ', '🦊')} />
+          <Avatar who={player} size={42} onClick={() => openEditProfile?.()} />
         </div>
       </div>
 
       {/* hero table scene */}
-      <RoundTableHero />
+      <RoundTableHero player={player} />
       <div className="pad-x" style={{ paddingTop: 16 }}>
         <p className="body" style={{ fontSize: 14.5, maxWidth: 320 }}>
           Gather your friends around the table. สร้างห้อง ชวนเพื่อนมาล้อมวง แล้วเล่นบอร์ดเกมจับโกหกด้วยกันได้ทันที
@@ -86,7 +127,7 @@ export default function HomePage({ go, showToast }) {
 
       {/* CTAs */}
       <div className="pad-x col gap12" style={{ marginTop: 20 }}>
-        <button className="btn btn-primary btn-lg btn-block" onClick={() => go('lobby')}>
+        <button className="btn btn-primary btn-lg btn-block" onClick={() => openCreateRoom?.()}>
           <span className="sheen" />
           <Icon name="plus" size={22} stroke={2.6} />
           <span className="th">สร้างห้อง · Create Room</span>
@@ -97,7 +138,8 @@ export default function HomePage({ go, showToast }) {
             <Icon name="qr" size={19} style={{ color: 'var(--muted)' }} />
             <input
               value={code}
-              onChange={e => setCode(e.target.value.toUpperCase().slice(0, 6))}
+              onChange={e => setCode(e.target.value.toUpperCase().slice(0, 24))}
+              onKeyDown={e => e.key === 'Enter' && handleJoin()}
               placeholder="ใส่รหัสห้อง · ROOM CODE"
               className="mono"
               style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: 'var(--text)',
@@ -105,11 +147,16 @@ export default function HomePage({ go, showToast }) {
             />
           </div>
           <button className="btn btn-ghost" style={{ height: 46, borderRadius: 13, padding: '0 18px' }}
-                  onClick={() => code.length >= 4 ? go('lobby') : showToast('ใส่รหัสห้องก่อนนะ', '🔑')}>
+                  onClick={handleJoin}>
             เข้าร่วม
           </button>
         </div>
       </div>
+
+      {/* rejoin card — shown when user just left a room */}
+      {lastRoom && (
+        <RejoinCard room={lastRoom} onRejoin={rejoinRoom ?? (() => go('lobby'))} />
+      )}
 
       {/* online friends */}
       <div style={{ marginTop: 26 }}>
@@ -150,10 +197,10 @@ export default function HomePage({ go, showToast }) {
           </button>
         </div>
         <div className="pad-x">
-          <GameCard game={avalon} big height={190} onClick={() => go('lobby')} />
+          <GameCard game={avalon} big height={190} onClick={() => openCreateRoom?.()} />
         </div>
         <div className="pad-x" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
-          {GAMES.slice(1).map(g => <GameCard key={g.id} game={g} height={150} onClick={() => go('lobby')} />)}
+          {GAMES.slice(1).map(g => <GameCard key={g.id} game={g} height={150} onClick={() => openCreateRoom?.()} />)}
         </div>
       </div>
 
@@ -166,6 +213,7 @@ export default function HomePage({ go, showToast }) {
           <StepDot n="3" title="เริ่มเกม" sub="Pick a game and play together" color="var(--accent)" />
         </div>
       </div>
+
     </div>
   );
 }

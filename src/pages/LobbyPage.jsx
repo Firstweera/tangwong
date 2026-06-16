@@ -6,11 +6,31 @@ import {
   LobbyHeader, RoomCodeDisplay, GameSelector,
   PlayerList, PlayerGrid, PlayerCircle, LobbyFooter,
 } from '../features/lobby';
+import { RoomSettingsSheet } from '../features/room/components/RoomSettingsSheet.tsx';
 import { PLAYERS, GAMES } from '../data';
 
-export default function LobbyPage({ go, layout, showToast }) {
-  const ROOM = '4F2K9';
+// Default room for dev jump-to shortcuts (TweaksPanel "Lobby" button)
+const DEMO_ROOM = {
+  id: 'demo',
+  code: '4F2K9',
+  name: 'ห้องของแพรวา',
+  maxPlayers: 7,
+  isPublic: true,
+  gameId: 'avalon',
+  hostId: 'p4',
+  players: PLAYERS,
+  status: 'waiting',
+  inviteLink: 'https://tangwong.app/join/4F2K9',
+  createdAt: 0,
+};
+
+export default function LobbyPage({ go, layout, showToast, room, onLeave, onUpdateSettings }) {
+  const activeRoom = room ?? DEMO_ROOM;
+  const currentGame = GAMES.find(g => g.id === activeRoom.gameId) ?? GAMES[0];
+
   const [ready, setReady] = useState({ p2: true, p3: true, p4: false, p5: true, p6: false, p7: true });
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   const meReady = ready.me || false;
   const players = PLAYERS;
   const readyCount = players.filter(p => p.id === 'me' ? meReady : ready[p.id]).length;
@@ -18,21 +38,46 @@ export default function LobbyPage({ go, layout, showToast }) {
 
   const toggleMe = () => setReady(r => ({ ...r, me: !r.me }));
   const isReady = (p) => p.id === 'me' ? meReady : ready[p.id];
-  const copyCode = () => showToast('คัดลอกรหัสห้องแล้ว', '📋');
+
+  const handleBack = () => {
+    if (onLeave) {
+      onLeave();
+    } else {
+      go('home');
+    }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard?.writeText(activeRoom.code).catch(() => {});
+    showToast('คัดลอกรหัสห้องแล้ว', '📋');
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: activeRoom.name, text: `เข้าร่วมห้อง ${activeRoom.name}`, url: activeRoom.inviteLink }).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(activeRoom.inviteLink).catch(() => {});
+      showToast('คัดลอกลิงก์เชิญแล้ว', '🔗');
+    }
+  };
+
+  const handleSaveSettings = (settings) => {
+    if (onUpdateSettings) onUpdateSettings(settings);
+  };
 
   return (
     <div className="screen screen-anim">
       <div className="scroll" style={{ paddingBottom: 96 }}>
         <LobbyHeader
-          title="ห้องของแพรวา"
-          subtitle={`${players.length} คน · กำลังจัดทีม`}
-          onBack={() => go('home')}
-          onSettings={() => showToast('ตั้งค่าห้อง', '⚙️')}
+          title={activeRoom.name}
+          subtitle={`${players.length} คน · ${activeRoom.isPublic ? 'ห้องสาธารณะ' : 'ห้องส่วนตัว'}`}
+          onBack={handleBack}
+          onSettings={() => setSettingsOpen(true)}
         />
 
         {/* room code */}
         <div className="pad-x" style={{ marginTop: 12 }}>
-          <RoomCodeDisplay code={ROOM} onCopy={copyCode} onShare={() => showToast('แชร์ลิงก์ห้องแล้ว', '🔗')} />
+          <RoomCodeDisplay code={activeRoom.code} onCopy={handleCopy} onShare={handleShare} />
         </div>
 
         {/* voice channel indicator */}
@@ -51,13 +96,13 @@ export default function LobbyPage({ go, layout, showToast }) {
 
         {/* selected game */}
         <div className="pad-x" style={{ marginTop: 18 }}>
-          <GameSelector game={GAMES[0]} onChange={() => showToast('เลือกเกมอื่น', '🎲')} onSelect={() => {}} />
+          <GameSelector game={currentGame} onChange={() => setSettingsOpen(true)} onSelect={() => {}} />
         </div>
 
         {/* players */}
         <div className="pad-x" style={{ marginTop: 20 }}>
           <div className="row between" style={{ marginBottom: 12 }}>
-            <h2 className="th h2" style={{ fontSize: 18 }}>ผู้เล่น <span style={{ color: 'var(--muted)', fontWeight: 600 }}>{players.length}/{GAMES[0].players.split('–')[1]}</span></h2>
+            <h2 className="th h2" style={{ fontSize: 18 }}>ผู้เล่น <span style={{ color: 'var(--muted)', fontWeight: 600 }}>{players.length}/{activeRoom.maxPlayers}</span></h2>
             <span className="chip" style={{ background: 'rgba(52,209,126,0.14)', color: '#34D17E', border: 'none' }}>{readyCount}/{players.length} พร้อม</span>
           </div>
           {layout === 'list'   ? <PlayerList   players={players} isReady={isReady} /> :
@@ -67,6 +112,14 @@ export default function LobbyPage({ go, layout, showToast }) {
       </div>
 
       <LobbyFooter meReady={meReady} onToggleReady={toggleMe} onStart={() => go('game')} allReady={allReady} />
+
+      {/* Room settings sheet */}
+      <RoomSettingsSheet
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        room={activeRoom}
+        onSave={handleSaveSettings}
+      />
     </div>
   );
 }

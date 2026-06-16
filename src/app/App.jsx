@@ -7,6 +7,10 @@ import {
 import { useToast } from '../components/ui';
 import { TabBar, isMainTab } from './TabBar.jsx';
 import { renderScreen } from './router.jsx';
+import { buildRoom, buildRoomFromCode, parseInviteCode } from '../features/room/roomUtils.ts';
+import { useGuest } from '../features/guest/hooks/useGuest.ts';
+import { CreateRoomSheet } from '../features/room/components/CreateRoomSheet.tsx';
+import { EditProfileSheet } from '../features/guest/components/EditProfileSheet.tsx';
 
 const TWEAK_DEFAULTS = {
   theme: 'dark',
@@ -24,7 +28,59 @@ export default function App() {
   const [scale, setScale] = useState(1);
   const [toastNode, showToast] = useToast();
 
+  // ─── Guest identity ───────────────────────────────────────────────────────
+  const { guest, player, updateGuest } = useGuest();
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+
+  // ─── Room state ──────────────────────────────────────────────────────────
+  const [createOpen, setCreateOpen] = useState(false);
+  const [currentRoom, setCurrentRoom] = useState(null);
+  const [lastRoom, setLastRoom] = useState(null);
+
   const go = (s, p = null) => { setPayload(p); setScreen(s); };
+
+  const createRoom = (settings) => {
+    const room = buildRoom(settings, player);
+    setCurrentRoom(room);
+    go('lobby');
+  };
+
+  const joinRoom = (input) => {
+    const code = parseInviteCode(input);
+    if (code.length < 5) { showToast('ใส่รหัสห้องให้ครบ 5 ตัว', '🔑'); return; }
+    const room = buildRoomFromCode(code, player);
+    setCurrentRoom(room);
+    go('lobby');
+  };
+
+  const leaveRoom = () => {
+    if (currentRoom) setLastRoom(currentRoom);
+    setCurrentRoom(null);
+    go('home');
+  };
+
+  const rejoinRoom = () => {
+    if (!lastRoom) return;
+    setCurrentRoom(lastRoom);
+    setLastRoom(null);
+    go('lobby');
+  };
+
+  const updateRoomSettings = (settings) => {
+    setCurrentRoom(r => r ? { ...r, ...settings } : r);
+    showToast('อัปเดตห้องแล้ว', '✅');
+  };
+
+  const handleFabCreate = (settings) => {
+    setCreateOpen(false);
+    createRoom(settings);
+  };
+
+  const handleSaveProfile = (updates) => {
+    updateGuest(updates);
+    showToast('บันทึกโปรไฟล์แล้ว', '✅');
+  };
+  // ─────────────────────────────────────────────────────────────────────────
 
   // scale device to fit viewport
   useEffect(() => {
@@ -45,7 +101,14 @@ export default function App() {
     '--grad-soft': `linear-gradient(135deg, ${t.accent[0]}38, ${t.accent[1]}1f)`,
   };
 
-  const screenEl = renderScreen(screen, { go, showToast, payload, lobbyLayout: t.lobbyLayout });
+  const screenEl = renderScreen(screen, {
+    go, showToast, payload, lobbyLayout: t.lobbyLayout,
+    guest, player,
+    currentRoom, lastRoom,
+    createRoom, joinRoom, leaveRoom, rejoinRoom, updateRoomSettings,
+    openCreateRoom: () => setCreateOpen(true),
+    openEditProfile: () => setEditProfileOpen(true),
+  });
 
   return (
     <React.Fragment>
@@ -55,8 +118,10 @@ export default function App() {
             <div className="screen" key={screen}>
               {screenEl}
             </div>
-            {isMainTab(screen) && <TabBar screen={screen} go={go} navStyle={t.navStyle} navLabels={t.navLabels} />}
+            {isMainTab(screen) && <TabBar screen={screen} go={go} navStyle={t.navStyle} navLabels={t.navLabels} onFabPress={() => setCreateOpen(true)} />}
             {toastNode}
+            <CreateRoomSheet open={createOpen} onClose={() => setCreateOpen(false)} onCreateRoom={handleFabCreate} player={player} />
+            <EditProfileSheet open={editProfileOpen} onClose={() => setEditProfileOpen(false)} guest={guest} onSave={handleSaveProfile} />
           </div>
         </IOSDevice>
       </div>
