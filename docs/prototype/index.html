@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TangWong — ตั้งวง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&family=Noto+Sans+Thai:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="theme.css" />
+</head>
+<body>
+<template id="__bundler_thumbnail" data-bg-color="#0C111D">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="tw" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#6D5EF9"/>
+        <stop offset="1" stop-color="#00D4FF"/>
+      </linearGradient>
+    </defs>
+    <rect width="1200" height="800" fill="#0C111D"/>
+    <rect x="470" y="250" width="260" height="260" rx="84" fill="url(#tw)"/>
+    <circle cx="600" cy="335" r="30" fill="#fff"/>
+    <circle cx="552" cy="420" r="30" fill="#fff" fill-opacity="0.92"/>
+    <circle cx="648" cy="420" r="30" fill="#fff" fill-opacity="0.82"/>
+    <text x="600" y="600" text-anchor="middle" font-family="'Noto Sans Thai',sans-serif" font-size="72" font-weight="800" fill="#fff">ตั้งวง</text>
+    <text x="600" y="650" text-anchor="middle" font-family="sans-serif" font-size="26" font-weight="700" letter-spacing="8" fill="#93A0B7">TANGWONG</text>
+  </svg>
+</template>
+<div id="stage">
+  <div id="device-scaler"></div>
+</div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="ui.jsx"></script>
+<script type="text/babel" src="screen-home.jsx"></script>
+<script type="text/babel" src="screen-lobby.jsx"></script>
+<script type="text/babel" src="screen-game.jsx"></script>
+<script type="text/babel" src="screen-result.jsx"></script>
+<script type="text/babel" src="screen-more.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>

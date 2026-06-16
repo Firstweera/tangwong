@@ -1,0 +1,62 @@
+/* ════════════════════════════════════════════════════════════════
+   Design System — structural tokens
+   Theme-independent scales (spacing, radius, shadow, motion, z-index).
+   Colour tokens stay on .app (see styles/tokens.css) so they can switch
+   with light/dark; these are added on :root and are purely additive —
+   nothing in the existing app references them, so visuals are unchanged.
+   ════════════════════════════════════════════════════════════════ */
+:root {
+  /* ── spacing — 4px base scale ── */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ── radius — matches the prototype's curve language ── */
+  --radius-xs: 8px;
+  --radius-sm: 11px;
+  --radius-md: 14px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 22px;
+  --radius-3xl: 26px;
+  --radius-full: 999px;
+
+  /* ── elevation — black-based, works on the dark stage; --shadow stays
+        theme-scoped in styles/tokens.css for surfaces that need it ── */
+  --shadow-1: 0 4px 12px -4px rgba(0,0,0,0.40);
+  --shadow-2: 0 12px 30px -12px rgba(0,0,0,0.50);
+  --shadow-3: 0 18px 40px -12px rgba(0,0,0,0.55);
+  --shadow-glow-primary: 0 12px 30px -8px rgba(109,94,249,0.70);
+  --shadow-glow-accent: 0 12px 30px -8px rgba(255,159,67,0.60);
+
+  /* ── motion — durations + easings pulled from existing transitions ── */
+  --dur-instant: 0.12s;
+  --dur-fast: 0.16s;
+  --dur-base: 0.22s;
+  --dur-slow: 0.34s;
+  --dur-slower: 0.5s;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ── z-index layers — aligned with existing values
+        (tabbar:30, confetti:80, toast:90) so DS overlays stack correctly ── */
+  --z-base: 1;
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-nav: 30;
+  --z-dropdown: 40;
+  --z-overlay: 60;   /* backdrop */
+  --z-modal: 70;     /* modal / drawer / sheet panel */
+  --z-tooltip: 75;
+  --z-confetti: 80;
+  --z-toast: 90;
+}

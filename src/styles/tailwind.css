@@ -1,0 +1,60 @@
+/* ════════════════════════════════════════════════════════════════
+   Tailwind CSS v4 — entry + theme bridge
+   ────────────────────────────────────────────────────────────────
+   PREFLIGHT IS INTENTIONALLY EXCLUDED. Tailwind's base reset would
+   restyle the existing prototype markup; the app already ships its own
+   reset.css. We import only `theme` (tokens) and `utilities` so adding
+   Tailwind changes no existing pixels — only new utility classes opt in.
+   Enable preflight later, once the CSS migration is complete, by adding:
+     @import "tailwindcss/preflight.css" layer(base);
+   ════════════════════════════════════════════════════════════════ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+/* source("../") scopes class scanning to src/ only — keeps Tailwind out of
+   legacy/, docs/, .claude/, node_modules and the 1.6 MB offline HTML. */
+@import "tailwindcss/utilities.css" layer(utilities) source("../");
+
+/* Bridge Tailwind's theme to the live design tokens so utilities resolve to
+   the SAME CSS variables as the design system — and stay light/dark aware.
+   (The vars are defined on .app in styles/tokens.css; literal fallbacks keep
+   utilities valid if ever used outside the app frame.) */
+@theme {
+  /* Drop Tailwind's default colour palette — the design system supplies the
+     only colours, so utilities can't drift off-token (and ~22 kB of unused
+     palette vars don't ship). Keep the always-useful keywords. */
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* brand */
+  --color-primary: var(--primary, #6D5EF9);
+  --color-primary-2: var(--primary-2, #8B7BFF);
+  --color-secondary: var(--secondary, #00D4FF);
+  --color-accent: var(--accent, #FF9F43);
+  /* game semantics */
+  --color-good: var(--good, #4C8DFF);
+  --color-evil: var(--evil, #FF5C6C);
+  /* surfaces & text */
+  --color-surface: var(--surface, rgba(31,41,55,0.72));
+  --color-surface-solid: var(--surface-solid, #1A2233);
+  --color-surface-2: var(--surface-2, rgba(255,255,255,0.05));
+  --color-surface-3: var(--surface-3, rgba(255,255,255,0.08));
+  --color-elev: var(--elev, rgba(20,26,42,0.86));
+  --color-ink: var(--text, #ffffff);
+  --color-muted: var(--muted, #93A0B7);
+  --color-faint: var(--faint, #59647d);
+  --color-line: var(--border, rgba(255,255,255,0.09));
+  --color-line-2: var(--border-2, rgba(255,255,255,0.14));
+
+  /* fonts — match index.html / reset.css */
+  --font-sans: 'Plus Jakarta Sans', 'Noto Sans Thai', system-ui, sans-serif;
+  --font-thai: 'Noto Sans Thai', 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* radius — semantic additions aligned to the prototype's curve language
+     (additive; Tailwind's default rounded-* scale is left intact) */
+  --radius-card: 22px;
+  --radius-sheet: 26px;
+}

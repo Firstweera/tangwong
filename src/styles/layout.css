@@ -1,0 +1,22 @@
+/* ───────────────────────── screen plumbing ───────────────────────── */
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.scroll {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: none;
+}
+.scroll::-webkit-scrollbar { display: none; }
+.pad-top { padding-top: 60px; }
+.pad-x { padding-left: 20px; padding-right: 20px; }
+
+/* ───────────────────────── utilities ───────────────────────── */
+.row { display: flex; align-items: center; }
+.col { display: flex; flex-direction: column; }
+.gap6{gap:6px}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}.gap14{gap:14px}.gap16{gap:16px}.gap20{gap:20px}
+.between { justify-content: space-between; }
+.center { align-items: center; justify-content: center; }
+.wrap { flex-wrap: wrap; }
+.divider { height: 1px; background: var(--border); }

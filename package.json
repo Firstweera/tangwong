@@ -1,0 +1,28 @@
+{
+  "name": "tangwong",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "TangWong (ตั้งวง) — mobile-first social board game platform",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/oxide-darwin-arm64": "^4.3.1",
+    "@tailwindcss/vite": "^4.3.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.3.1",
+    "typescript": "^6.0.3",
+    "vite": "^5.4.11"
+  }
+}

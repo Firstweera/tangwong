@@ -1,0 +1,13 @@
+/* ───────────────────────── reset ───────────────────────── */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  font-family: 'Plus Jakarta Sans', 'Noto Sans Thai', system-ui, sans-serif;
+  background: #06080f;
+  color: #fff;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+.th { font-family: 'Noto Sans Thai', 'Plus Jakarta Sans', sans-serif; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }

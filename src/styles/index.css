@@ -1,0 +1,13 @@
+/* Tailwind first: establishes theme + utilities layers (no preflight) */
+@import './tailwind.css';
+
+@import './reset.css';
+@import './tokens.css';
+@import './layout.css';
+@import './typography.css';
+@import './animations.css';
+@import './components.css';
+
+/* design system (additive — structural tokens + new primitive classes) */
+@import '../design-system/tokens.css';
+@import '../design-system/ds.css';

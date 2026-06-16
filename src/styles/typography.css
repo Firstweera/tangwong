@@ -1,0 +1,12 @@
+/* ───────────────────────── typography ───────────────────────── */
+.display { font-weight: 800; letter-spacing: -0.03em; line-height: 1.04; }
+.h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.08; }
+.h2 { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
+.h3 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.body { font-size: 14px; color: var(--muted); line-height: 1.5; }
+.tiny { font-size: 12px; color: var(--muted); }
+.grad-text {
+  background: var(--grad); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}

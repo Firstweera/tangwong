@@ -1,0 +1,209 @@
+/* ════════════════════════════════════════════════════════════════
+   Design System — component styles
+   Only NEW primitives live here. Components that mirror existing UI
+   (Button→.btn, Card→.card, PlayerAvatar→.av, Toast→.toast) reuse the
+   prototype's classes from styles/components.css and add nothing here.
+   All values are token-driven; this file is additive (ds-* namespace).
+   ════════════════════════════════════════════════════════════════ */
+
+/* ───────────────── Interaction helpers ───────────────── */
+.pressable { cursor: pointer; transition: transform var(--dur-fast) var(--ease-out); }
+.pressable:active { transform: scale(0.97); }
+
+/* ───────────────── Inputs ───────────────── */
+.ds-field {
+  display: flex; align-items: center; gap: var(--space-2);
+  width: 100%; min-height: 50px; padding: 0 var(--space-4);
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  transition: border-color var(--dur-base), box-shadow var(--dur-base), background var(--dur-base);
+}
+.ds-field:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(109,94,249,0.18); background: var(--surface-3); }
+.ds-field input,
+.ds-field textarea,
+.ds-field select {
+  flex: 1; width: 100%; min-width: 0;
+  background: none; border: none; outline: none; color: inherit;
+  font-family: inherit; font-size: 15px; font-weight: 500;
+}
+.ds-field input::placeholder,
+.ds-field textarea::placeholder { color: var(--faint); }
+.ds-field--area { min-height: 0; align-items: stretch; padding: var(--space-3) var(--space-4); }
+.ds-field--area textarea { resize: vertical; line-height: 1.45; min-height: 76px; }
+.ds-field--invalid { border-color: var(--evil); }
+.ds-field select { appearance: none; cursor: pointer; }
+.ds-select-wrap { position: relative; }
+.ds-select-caret { position: absolute; right: var(--space-4); top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--muted); }
+
+/* ───────────────── SegmentedControl ───────────────── */
+.ds-seg {
+  display: inline-flex; gap: 3px; padding: 3px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.ds-seg--block { display: flex; width: 100%; }
+.ds-seg-opt {
+  flex: 1; padding: 8px 16px; border-radius: var(--radius-sm);
+  font-size: 13.5px; font-weight: 700; color: var(--muted);
+  white-space: nowrap; transition: color var(--dur-fast), background var(--dur-fast);
+}
+.ds-seg-opt.on { background: var(--grad); color: #fff; box-shadow: var(--shadow-1); }
+
+/* ───────────────── Badge & Tag ───────────────── */
+.ds-badge {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--radius-full);
+  font-size: 11px; font-weight: 800; line-height: 1;
+  background: var(--evil); color: #fff;
+}
+.ds-badge--dot { min-width: 10px; width: 10px; height: 10px; padding: 0; }
+.ds-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 26px; padding: 0 10px; border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 700; line-height: 1;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+}
+.ds-tag--solid { border-color: transparent; color: #fff; }
+
+/* ───────────────── Tooltip ───────────────── */
+.ds-tip-wrap { position: relative; display: inline-flex; }
+.ds-tip {
+  position: absolute; z-index: var(--z-tooltip);
+  bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(4px);
+  padding: 6px 10px; border-radius: var(--radius-sm);
+  background: var(--elev); border: 1px solid var(--border-2); color: var(--text);
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  box-shadow: var(--shadow-2); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.ds-tip-wrap:hover .ds-tip { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ───────────────── Overlays (Modal / Drawer / BottomSheet) ───────────────── */
+.ds-overlay {
+  position: absolute; inset: 0; z-index: var(--z-overlay);
+  background: rgba(4, 6, 12, 0.58); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  display: flex; animation: dsFade var(--dur-base) var(--ease-out);
+}
+.ds-overlay--center { align-items: center; justify-content: center; padding: var(--space-5); }
+.ds-overlay--bottom { align-items: flex-end; }
+.ds-overlay--right { justify-content: flex-end; }
+
+.ds-modal {
+  position: relative; z-index: var(--z-modal); width: 100%; max-width: 360px;
+  background: var(--surface-solid); border: 1px solid var(--border-2);
+  border-radius: var(--radius-3xl); padding: var(--space-6);
+  box-shadow: var(--shadow-3); animation: dsPop var(--dur-slow) var(--ease-spring);
+}
+.ds-sheet {
+  position: relative; z-index: var(--z-modal); width: 100%;
+  background: var(--surface-solid); border-top: 1px solid var(--border-2);
+  border-radius: var(--radius-3xl) var(--radius-3xl) 0 0;
+  padding: var(--space-3) var(--space-5) var(--space-6);
+  box-shadow: var(--shadow-3); animation: dsSlideUp var(--dur-slow) var(--ease-out);
+  max-height: 86%; overflow-y: auto;
+}
+.ds-sheet-grab { width: 38px; height: 4px; border-radius: var(--radius-full); background: var(--border-2); margin: 4px auto var(--space-4); }
+.ds-drawer {
+  position: relative; z-index: var(--z-modal); height: 100%; width: 84%; max-width: 320px;
+  background: var(--surface-solid); border-left: 1px solid var(--border-2);
+  padding: var(--space-6) var(--space-5); box-shadow: var(--shadow-3);
+  overflow-y: auto; animation: dsSlideRight var(--dur-slow) var(--ease-out);
+}
+.ds-drawer--left { border-left: none; border-right: 1px solid var(--border-2); animation-name: dsSlideLeft; }
+
+@keyframes dsFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dsPop { from { opacity: 0; transform: scale(0.92) translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes dsSlideUp { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes dsSlideRight { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes dsSlideLeft { from { transform: translateX(-100%); } to { transform: none; } }
+
+/* ───────────────── Gaming primitives ───────────────── */
+/* PlayerStatus — avatar-adjacent status pill */
+.ds-pstatus {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 24px; padding: 0 9px 0 7px; border-radius: var(--radius-full);
+  background: var(--surface-2); border: 1px solid var(--border);
+  font-size: 11.5px; font-weight: 700; color: var(--text);
+}
+.ds-pstatus-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* VoteChip — circular vote token */
+.ds-vote {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: var(--radius-full);
+  border: 2px solid var(--border-2); background: var(--surface-2); color: var(--muted);
+  font-weight: 800; transition: transform var(--dur-fast) var(--ease-spring), box-shadow var(--dur-base);
+}
+.ds-vote:active { transform: scale(0.92); }
+.ds-vote--yes { background: linear-gradient(135deg, #5C9BFF, #3B6FE0); border-color: transparent; color: #fff; box-shadow: 0 6px 14px -6px rgba(76,141,255,0.9); }
+.ds-vote--no { background: linear-gradient(135deg, #FF6E7C, #E0384A); border-color: transparent; color: #fff; box-shadow: 0 6px 14px -6px rgba(255,92,108,0.9); }
+.ds-vote--abstain { background: var(--surface-3); }
+.ds-vote--selected { box-shadow: 0 0 0 3px rgba(109,94,249,0.28); }
+
+/* RoleBadge — hidden-role indicator with tone */
+.ds-role {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 12px 6px 10px; border-radius: var(--radius-md);
+  font-size: 13px; font-weight: 800; letter-spacing: -0.01em;
+  border: 1px solid var(--border-2); background: var(--surface-2); color: var(--text);
+}
+.ds-role--good { background: linear-gradient(135deg, rgba(76,141,255,0.22), rgba(76,141,255,0.06)); border-color: rgba(76,141,255,0.4); color: var(--good); }
+.ds-role--evil { background: linear-gradient(135deg, rgba(255,92,108,0.22), rgba(255,92,108,0.06)); border-color: rgba(255,92,108,0.4); color: var(--evil); }
+.ds-role--neutral { background: var(--grad-soft); border-color: var(--border-2); }
+
+/* GamePhaseIndicator — stepper of phases */
+.ds-phase { display: flex; align-items: center; gap: 6px; }
+.ds-phase-step { display: flex; align-items: center; gap: 6px; }
+.ds-phase-dot {
+  display: flex; align-items: center; justify-content: center;
+  height: 28px; min-width: 28px; padding: 0 10px; border-radius: var(--radius-full);
+  font-size: 11.5px; font-weight: 800; white-space: nowrap;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--muted);
+  transition: all var(--dur-base) var(--ease-out);
+}
+.ds-phase-dot.done { color: var(--good); border-color: rgba(76,141,255,0.4); }
+.ds-phase-dot.current { background: var(--grad); border-color: transparent; color: #fff; box-shadow: var(--shadow-glow-primary); }
+.ds-phase-line { width: 14px; height: 2px; border-radius: 2px; background: var(--border-2); }
+
+/* TurnIndicator — whose turn, with optional timer ring pulse */
+.ds-turn {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 6px 14px 6px 6px; border-radius: var(--radius-full);
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.ds-turn--active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,159,67,0.16); animation: pulseRing 1.8s ease-in-out infinite; }
+.ds-turn-label { font-size: 13px; font-weight: 800; }
+.ds-turn-sub { font-size: 10.5px; font-weight: 600; color: var(--muted); }
+
+/* ───────────────── Card primitives ───────────────── */
+/* PlayingCard — generic suit/rank card for card games */
+.ds-pcard {
+  position: relative; width: 64px; height: 90px; flex-shrink: 0;
+  border-radius: var(--radius-md); background: #fff; color: #16203a;
+  border: 1px solid rgba(0,0,0,0.12); box-shadow: var(--shadow-2);
+  padding: 6px 7px; user-select: none;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.ds-pcard--lg { width: 86px; height: 120px; border-radius: var(--radius-lg); }
+.ds-pcard--red { color: #E0384A; }
+.ds-pcard--down { background: var(--grad); border-color: transparent; }
+.ds-pcard--down .ds-pcard-grain { position: absolute; inset: 0; border-radius: inherit; background-image: radial-gradient(rgba(255,255,255,0.16) 1px, transparent 1.4px); background-size: 11px 11px; opacity: 0.5; }
+.ds-pcard-rank { font-size: 15px; font-weight: 800; line-height: 1; }
+.ds-pcard-suit-sm { font-size: 12px; line-height: 1; }
+.ds-pcard-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 30px; }
+.ds-pcard-br { position: absolute; right: 7px; bottom: 6px; transform: rotate(180deg); text-align: center; }
+
+/* ResourceCard — resource/amount token for strategy games */
+.ds-rcard {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg);
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.ds-rcard-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border-radius: var(--radius-md); font-size: 20px; flex-shrink: 0;
+  background: var(--surface-3);
+}
+.ds-rcard-amt { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ds-rcard-label { font-size: 11.5px; font-weight: 600; color: var(--muted); }
