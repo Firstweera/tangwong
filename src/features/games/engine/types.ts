@@ -1,6 +1,6 @@
 // Generic Game Engine — core types.
 // Pure TypeScript — no React, no DOM. Works on client and server.
-import type { MascotKey } from '@/types';
+import type { MascotKey } from '../../../types/index.ts';
 
 // ─── Player ──────────────────────────────────────────────────────────────────
 

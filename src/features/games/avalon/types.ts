@@ -1,5 +1,5 @@
 // Avalon — game-specific state types layered on the generic engine.
-import type { RoleKey, RoleSide } from '@/types';
+import type { RoleKey, RoleSide } from '../../../types/index.ts';
 
 /** Avalon's phase flow (declared as engine GamePhase strings). */
 export type AvalonPhase =

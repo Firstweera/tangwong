@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-06-18 — Phase 4.5.3 B0+B1: engine portability + game-state schema
+
+Foundation for server-authoritative game sync (no Edge Functions / game-start /
+game-action / UI yet — those are B2+). See docs/phase-4.5.3-plan.md.
+
+Completed:
+
+- **B0 — engine portability**: removed the Vite `@/` alias from every pure
+  engine/avalon file (`engine/types.ts`, `engine/playerUtils.ts`, `avalon/types.ts`,
+  `avalon/setup.ts`, `avalon/rules.ts`) → explicit relative `.ts` imports. Works
+  in tsc + Vite (`allowImportingTsExtensions`) and gives Deno the explicit paths
+  it needs. React/UI files keep `@/` (unchanged).
+- **B1 — game schema + RLS** (`0004_game_state.sql`, ready to apply):
+  - `game_states` (1/room, member-read), `game_private` (1/room/player,
+    **owner-only read = the hidden-info boundary**), `game_actions` (log, member-read)
+  - no client write policies on any table (Edge Function / service role is the
+    only writer); realtime publication for all three
+  - `game_private` realtime is RLS-filtered → only the owner receives their role
+
+Files:
+
+- src/features/games/engine/{types,playerUtils}.ts
+- src/features/games/avalon/{types,setup,rules}.ts
+- supabase/migrations/0004_game_state.sql (new)
+
+Follow-up:
+
+- apply 0004 in Supabase + RLS-verify (another player's game_private unreadable)
+- B2: `supabase/functions` + deno.json import map + `game-start`
+
 ## 2026-06-18 — Layout: mobile-first webview app shell (responsive column)
 
 Reworked the shell into a self-contained, mobile-first column that fills the

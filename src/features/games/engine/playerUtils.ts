@@ -1,7 +1,7 @@
 // Bridges the UI Player type → engine GamePlayer.
-import type { Player } from '@/types';
+import type { Player } from '../../../types/index.ts';
 import type { GamePlayer, RoomState } from './types';
-import type { Room } from '@/types';
+import type { Room } from '../../../types/index.ts';
 
 /** Convert a UI Player to an engine GamePlayer */
 export function playerToGamePlayer(

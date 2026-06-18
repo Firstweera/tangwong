@@ -1,8 +1,8 @@
 // Avalon rules for the rules sheet — facts (player counts, roles, quest sizes,
 // flow, win conditions) are pulled from the real engine so the screen never
 // drifts from gameplay.
-import { ROLES } from '@/data';
-import type { RoleKey } from '@/types';
+import { ROLES } from '../../../data.ts';
+import type { RoleKey } from '../../../types/index.ts';
 import type { GameRules, RuleStep } from '../rules';
 import { avalonConfig } from './config';
 import { AVALON_PHASES } from './phases';

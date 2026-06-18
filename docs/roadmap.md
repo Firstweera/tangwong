@@ -564,7 +564,21 @@ the `game-start` / `game-action` functions, server-resolved bots, host-driven
 timers, and a B0–B7 build order. Hidden-info isolation rides on the RLS pattern
 verified in 4.5.2.
 
-Next: B0 (engine portability to Deno) + B1 (`0004_game_state.sql` + RLS).
+Progress:
+
+- **B0 — engine portability ✅** (2026-06-18): removed the Vite `@/` alias from
+  every pure engine/avalon file (relative `.ts` imports — `allowImportingTsExtensions`
+  keeps tsc/Vite green and gives Deno explicit paths). React/UI files unchanged
+  (UI keeps `@/`). Deno `deno check` smoke test deferred to B2 (needs the
+  `supabase/functions` deno.json import map for extensionless local imports).
+- **B1 — game schema + RLS ✅ ready** (2026-06-18): `0004_game_state.sql` adds
+  `game_states` (member-read), `game_private` (**owner-only read = hidden-info
+  boundary**), `game_actions` (member-read); no client write policies (Edge
+  Function/service-role writes only); realtime publication for all three.
+  **Action: apply 0004 in Supabase SQL editor**, then RLS-verify with a §5-style
+  console kit (another player's game_private row must be unreadable).
+
+Next: B2 (`supabase/functions` + deno.json + `game-start`) — not started.
 
 Follow-up (from 4.5.2, non-blocking): server-side presence pruning; emit
 join/leave/ready system messages from real events.
