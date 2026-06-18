@@ -33,28 +33,40 @@ export function useChat(roomId: string, meId: string, code?: string): UseChatRet
 
 // ─── Supabase transport (Phase 4.5.2) ───────────────────────────────────────
 
+// A real rooms.id is a UUID; the optimistic seed uses a local `room_…` id. Chat
+// keys off rooms.id (a uuid column), so we must wait for the synced UUID before
+// touching the chat_messages table — otherwise Postgres rejects the seed id (400)
+// and send_system fails because the room doesn't exist server-side yet.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function useSupabaseChat(roomId: string, meId: string, code?: string): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const ready = UUID_RE.test(roomId);
 
   const refresh = useCallback(() => {
+    if (!ready) return;
     void chatService.fetchMessages(roomId).then(setMessages);
-  }, [roomId]);
+  }, [roomId, ready]);
 
   useEffect(() => {
+    if (!ready) return;
     refresh();
     const unsub = chatService.subscribeChat(roomId, refresh);
     return unsub;
-  }, [roomId, refresh]);
+  }, [roomId, ready, refresh]);
 
   const sendMessage = useCallback((text: string) => {
+    if (!ready) return;
     void chatService.sendMessage(roomId, meId, text).then(refresh);
-  }, [roomId, meId, refresh]);
+  }, [roomId, meId, ready, refresh]);
   const sendSystem = useCallback((text: string) => {
-    if (code) void chatService.sendSystem(code, text).then(refresh);
-  }, [code, refresh]);
+    if (!ready || !code) return;
+    void chatService.sendSystem(code, text).then(refresh);
+  }, [code, ready, refresh]);
   const toggleReaction = useCallback((messageId: string, emoji: string) => {
+    if (!ready) return;
     void chatService.toggleReaction(messageId, emoji).then(refresh);
-  }, [refresh]);
+  }, [ready, refresh]);
   const clear = useCallback(() => {}, []); // server chat isn't locally clearable
 
   return { messages, sendMessage, sendSystem, toggleReaction, clear };

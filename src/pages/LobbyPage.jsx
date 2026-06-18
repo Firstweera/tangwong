@@ -32,7 +32,6 @@ const DEMO_ROOM = {
 
 export default function LobbyPage({ go, layout, showToast, room, player, onLeave, onUpdateSettings }) {
   const seedRoom = room ?? DEMO_ROOM;
-  const meId = player?.id ?? 'me';
 
   // ─── Realtime room (Epic 4) — live players, ready, settings across tabs ─────
   const handleRemoved = () => {
@@ -40,7 +39,7 @@ export default function LobbyPage({ go, layout, showToast, room, player, onLeave
     if (onLeave) onLeave(); else go('home');
   };
   const {
-    room: liveRoom, players, isReady, readyCount, setReady, updateSettings, addBot, kick, transferHost, leave,
+    room: liveRoom, players, meId, isReady, readyCount, setReady, updateSettings, addBot, kick, transferHost, leave,
   } = useRealtimeRoom(
     seedRoom,
     player ?? { id: meId, name: 'คุณ', en: 'You', mascot: 'fox', online: true },
@@ -89,13 +88,15 @@ export default function LobbyPage({ go, layout, showToast, room, player, onLeave
   // ─── Local chat (Epic 3), now synced across tabs via the shared room id ─────
   const { messages, sendMessage, sendSystem, toggleReaction } = useChat(liveRoom.id, meId, liveRoom.code);
 
-  // The host seeds a welcome notice once when the room's chat is empty.
+  // The host seeds a welcome notice once, after the room has synced server-side
+  // (a UUID id, not the optimistic `room_…` seed) and the chat loads empty.
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(liveRoom.id);
   const seeded = useRef(false);
   useEffect(() => {
-    if (seeded.current) return;
+    if (seeded.current || !isUuid || !isHost) return;
     seeded.current = true;
-    if (isHost && messages.length === 0) sendSystem(`ยินดีต้อนรับสู่ ${liveRoom.name}`);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (messages.length === 0) sendSystem(`ยินดีต้อนรับสู่ ${liveRoom.name}`);
+  }, [isUuid, isHost, messages.length, sendSystem, liveRoom.name]);
 
   const toggleMe = () => setReady(!meReady);
 

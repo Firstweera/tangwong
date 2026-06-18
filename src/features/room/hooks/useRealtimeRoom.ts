@@ -12,6 +12,10 @@ const OFFLINE_MS = 10_000;
 export interface UseRealtimeRoomReturn {
   room: SyncedRoom;
   players: Player[];
+  /** The current player's identity as stored server-side (auth.uid() over Supabase,
+   *  local id over cross-tab). Use this for host/ready/self checks — NOT player.id,
+   *  which differs from the DB identity under the Supabase transport. */
+  meId: string;
   /** Whether a player has marked ready. */
   isReady: (player: Player) => boolean;
   readyCount: number;
@@ -153,6 +157,7 @@ function useSupabaseRoom(seed: Room, player: Player, options: UseRealtimeRoomOpt
   return {
     room,
     players: room.players,
+    meId,
     isReady: (p) => !!room.ready[p.id],
     readyCount,
     isOnline: (p) => !!p.bot || (room.presence[p.id] ?? 0) >= now - OFFLINE_MS,
@@ -261,6 +266,7 @@ function useCrossTabRoom(seed: Room, player: Player, options: UseRealtimeRoomOpt
   return {
     room,
     players: room.players,
+    meId,
     isReady: (p) => !!room.ready[p.id],
     readyCount,
     isOnline: (p) => store.isOnline(room, p.id, now),
