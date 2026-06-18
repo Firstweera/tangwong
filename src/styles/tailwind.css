@@ -11,7 +11,7 @@
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
 /* source("../") scopes class scanning to src/ only — keeps Tailwind out of
-   legacy/, docs/, .claude/, node_modules and the 1.6 MB offline HTML. */
+   docs/, .claude/, and node_modules. */
 @import "tailwindcss/utilities.css" layer(utilities) source("../");
 
 /* Bridge Tailwind's theme to the live design tokens so utilities resolve to
