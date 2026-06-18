@@ -1,5 +1,14 @@
 // Room code + invite link utilities
 import type { Player, Room, RoomSettings } from '@/types';
+import { useSupabaseTransport, roomService } from '@/services/supabase';
+import * as crossTabStore from './stores/roomRealtime';
+
+/** Whether a room still exists for `code`, on whichever transport is active.
+ *  Used to hide the "rejoin" shortcut once a left room has been deleted. */
+export async function roomExists(code: string): Promise<boolean> {
+  if (useSupabaseTransport) return roomService.roomExists(code);
+  return crossTabStore.loadRoom(code) != null;
+}
 
 // Unambiguous chars only — avoids O/0 and I/1 confusion
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

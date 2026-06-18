@@ -63,6 +63,16 @@ export async function fetchRoom(code: string): Promise<SyncedRoom | null> {
   return assemble(room as RoomRow, (members ?? []) as RoomPlayerRow[]);
 }
 
+/** Whether a room still exists for this code (DEFINER RPC — works even for a
+ *  private room the caller has already left). Fails open (true) on error so a
+ *  transient blip never hides a valid rejoin. */
+export async function roomExists(code: string): Promise<boolean> {
+  if (!supabase) return false;
+  const { data, error } = await supabase.rpc('room_exists', { p_code: code });
+  if (error) { console.error('[roomExists] RPC error:', error.message); return true; }
+  return !!data;
+}
+
 /** Join (or create) the room, then return the fresh snapshot. */
 export async function joinRoom(code: string, player: Player, seed: Room): Promise<SyncedRoom | null> {
   if (!supabase) return null;

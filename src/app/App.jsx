@@ -84,6 +84,9 @@ export default function App() {
     go('lobby');
   };
 
+  // Drop the rejoin shortcut (e.g. once the left room has been deleted).
+  const clearLastRoom = () => setLastRoom(null);
+
   const updateRoomSettings = (settings) => {
     setCurrentRoom(r => r ? { ...r, ...settings } : r);
     showToast('อัปเดตห้องแล้ว', '✅');
@@ -111,7 +114,7 @@ export default function App() {
     go, showToast, payload, lobbyLayout: t.lobbyLayout,
     guest, player,
     currentRoom, lastRoom,
-    createRoom, joinRoom, leaveRoom, rejoinRoom, updateRoomSettings,
+    createRoom, joinRoom, leaveRoom, rejoinRoom, clearLastRoom, updateRoomSettings,
     openCreateRoom: () => setCreateOpen(true),
     openEditProfile: () => setEditProfileOpen(true),
     completeGuestOnboarding, onOAuth,

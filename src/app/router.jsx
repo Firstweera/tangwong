@@ -14,7 +14,7 @@ export function renderScreen(screen, ctx) {
     go, showToast, payload, lobbyLayout,
     guest, player,
     currentRoom, lastRoom,
-    createRoom, joinRoom, leaveRoom, rejoinRoom, updateRoomSettings,
+    createRoom, joinRoom, leaveRoom, rejoinRoom, clearLastRoom, updateRoomSettings,
     openCreateRoom, openEditProfile,
     completeGuestOnboarding, onOAuth,
   } = ctx;
@@ -22,7 +22,7 @@ export function renderScreen(screen, ctx) {
     case 'welcome': return <WelcomePage onGuest={completeGuestOnboarding} onOAuth={onOAuth} />;
     case 'home':    return <HomePage go={go} showToast={showToast} player={player} lastRoom={lastRoom}
                               openCreateRoom={openCreateRoom} joinRoom={joinRoom} rejoinRoom={rejoinRoom}
-                              openEditProfile={openEditProfile} />;
+                              clearLastRoom={clearLastRoom} openEditProfile={openEditProfile} />;
     case 'games':   return <GamesPage go={go} showToast={showToast} />;
     case 'friends': return <FriendsPage go={go} showToast={showToast} />;
     case 'profile': return <ProfilePage go={go} showToast={showToast} guest={guest} player={player}
@@ -33,6 +33,6 @@ export function renderScreen(screen, ctx) {
     case 'result':  return <ResultPage go={go} payload={payload} showToast={showToast} player={player} />;
     default:        return <HomePage go={go} showToast={showToast} player={player} lastRoom={lastRoom}
                               openCreateRoom={openCreateRoom} joinRoom={joinRoom} rejoinRoom={rejoinRoom}
-                              openEditProfile={openEditProfile} />;
+                              clearLastRoom={clearLastRoom} openEditProfile={openEditProfile} />;
   }
 }

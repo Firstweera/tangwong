@@ -1,9 +1,9 @@
 // HomePage.jsx — landing / home
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon, Avatar, Logo, GameCard, CardFan, Token, Die } from '../components/ui';
 import { PLAYERS, FRIENDS, GAMES } from '../data';
 import { getFriendStatus } from '../features/friends/friendStatus';
-import { parseInviteCode } from '../features/room/roomUtils.ts';
+import { parseInviteCode, roomExists } from '../features/room/roomUtils.ts';
 import { RulesSheet } from '../features/games/ui';
 import { getGameRules } from '../features/games';
 
@@ -90,13 +90,23 @@ function RejoinCard({ room, onRejoin }) {
   );
 }
 
-export default function HomePage({ go, showToast, player, openCreateRoom, joinRoom, rejoinRoom, lastRoom, openEditProfile }) {
+export default function HomePage({ go, showToast, player, openCreateRoom, joinRoom, rejoinRoom, clearLastRoom, lastRoom, openEditProfile }) {
   const avalon = GAMES[0];
   const [code, setCode] = useState('');
   const [rulesGame, setRulesGame] = useState(null);
   const onlineFriends = FRIENDS.filter(f => f.online);
 
   const rulesProps = (g) => (getGameRules(g.id) ? { onRules: () => setRulesGame(g) } : {});
+
+  // Hide the rejoin shortcut once the left room has been deleted (everyone left).
+  useEffect(() => {
+    if (!lastRoom?.code) return;
+    let active = true;
+    roomExists(lastRoom.code).then(exists => {
+      if (active && !exists) clearLastRoom?.();
+    });
+    return () => { active = false; };
+  }, [lastRoom?.code, clearLastRoom]);
 
   const handleJoin = () => {
     if (code.length < 4) { showToast('ใส่รหัสห้องก่อนนะ', '🔑'); return; }
