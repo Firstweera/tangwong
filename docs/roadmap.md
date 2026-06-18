@@ -578,7 +578,17 @@ Progress:
   **Action: apply 0004 in Supabase SQL editor**, then RLS-verify with a §5-style
   console kit (another player's game_private row must be unreadable).
 
-Next: B2 (`supabase/functions` + deno.json + `game-start`) — not started.
+- **B2 — `game-start` Edge Function ✅ written** (2026-06-19, deploy pending):
+  `supabase/functions/` scaffold — `deno.json` (npm supabase-js + `sloppy-imports`),
+  `_shared/cors.ts` + `_shared/supabase.ts` (admin/service-role client + JWT
+  caller id). `game-start/index.ts`: host-only, idempotent; runs the engine
+  (createInitialState → first phase `roleReveal`), writes the public snapshot +
+  per-player private rows, flips room to `in-game`. Imports the engine by
+  relative path into `src/` (B1). **Action: `supabase functions deploy
+  game-start`** + run the hidden-info verify in `supabase/functions/README.md`
+  (others' `game_private` must read back `[]`).
+
+Next: B3 (`game-action` — dispatch + server-side bots + persist + version guard).
 
 Follow-up (from 4.5.2, non-blocking): server-side presence pruning; emit
 join/leave/ready system messages from real events.

@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-06-19 — Phase 4.5.3 B2: game-start Edge Function (authority)
+
+Server-authoritative match start. The Edge Function runs the existing TS engine
+with the service role and is the only writer of game state — clients only read
+(RLS). Deploy + UI wiring are pending (B4); not yet runtime-verified here.
+
+Completed:
+
+- `supabase/functions/` scaffold: `deno.json` (npm `@supabase/supabase-js` +
+  `sloppy-imports` so Deno resolves the engine's extensionless local imports),
+  `_shared/cors.ts`, `_shared/supabase.ts` (service-role admin client + JWT
+  caller-id helper).
+- `game-start/index.ts`: host-only + idempotent. Builds the roster from
+  `room_players`, runs `GameEngine.createInitialState` → first phase
+  (`roleReveal`), writes `game_states` (public) + one `game_private` per player
+  (roles/vision), logs `GAME_STARTED`, flips `rooms.status = 'in-game'`.
+- imports the engine by relative path into `src/` (Option B1, one source of truth);
+  type-only barrel imports are stripped at bundle so React never enters the function.
+- `supabase/functions/README.md`: deploy + hidden-info verify steps.
+
+Files:
+
+- supabase/functions/{deno.json, README.md}
+- supabase/functions/_shared/{cors,supabase}.ts
+- supabase/functions/game-start/index.ts
+
+Follow-up:
+
+- `supabase functions deploy game-start` + verify (others' game_private → `[]`)
+- B3: `game-action` (dispatch + server-side bots + version guard)
+
 ## 2026-06-18 — Phase 4.5.3 B0+B1: engine portability + game-state schema
 
 Foundation for server-authoritative game sync (no Edge Functions / game-start /
