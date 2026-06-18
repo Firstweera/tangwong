@@ -70,12 +70,21 @@ function useSupabaseRoom(seed: Room, player: Player, options: UseRealtimeRoomOpt
   const meId = authUid ?? player.id;
   // Optimistic seed until the first fetch resolves (keeps `room` non-null).
   const [room, setRoom] = useState<SyncedRoom>(() => ({ ...seed, ready: {}, presence: {} }));
-  // Kick detection is only meaningful once we have a DB snapshot (not the seed).
-  const [synced, setSynced] = useState(false);
   const removedFiredRef = useRef(false);
   const leftRef = useRef(false);
   const onRemovedRef = useRef(options.onRemoved);
   onRemovedRef.current = options.onRemoved;
+  // Refs so the async refresh reads current values without a stale closure.
+  const syncedRef = useRef(false);
+  const meIdRef = useRef(meId);
+  meIdRef.current = meId;
+
+  // Fire onRemoved exactly once (never on a voluntary leave).
+  const fireRemoved = useCallback(() => {
+    if (leftRef.current || removedFiredRef.current) return;
+    removedFiredRef.current = true;
+    onRemovedRef.current?.();
+  }, []);
 
   // Resolve auth.uid() from the Supabase session. This may be set slightly after
   // the component mounts (anonymous sign-in is async). Once resolved, triggers join.
@@ -92,9 +101,19 @@ function useSupabaseRoom(seed: Room, player: Player, options: UseRealtimeRoomOpt
 
   const refresh = useCallback(async () => {
     const next = await roomService.fetchRoom(code);
-    if (next) setRoom(next);
+    if (next) {
+      setRoom(next);
+      // After the first sync, if I'm no longer in the roster I've been kicked.
+      // (Once kicked, RLS hides room_players from me, so a public room reads back
+      //  with an empty roster — not "everyone but me".)
+      if (syncedRef.current && !next.players.some(p => p.id === meIdRef.current)) fireRemoved();
+    } else if (syncedRef.current) {
+      // The room is no longer readable: kicked from a private room (RLS now hides
+      // the row), or the room was deleted. Either way I'm out.
+      fireRemoved();
+    }
     return next;
-  }, [code]);
+  }, [code, fireRemoved]);
 
   useEffect(() => {
     if (!authUid) return; // Wait for a real session before joining.
@@ -105,10 +124,16 @@ function useSupabaseRoom(seed: Room, player: Player, options: UseRealtimeRoomOpt
     (async () => {
       const joined = await roomService.joinRoom(code, player, seed);
       if (!active) return;
-      if (joined) { setRoom(joined); setSynced(true); }
+      if (joined) { setRoom(joined); syncedRef.current = true; }
       const roomId = joined?.id ?? room.id;
       unsub = roomService.subscribeRoom(roomId, () => { void refresh(); });
-      beat = window.setInterval(() => { void roomService.touchPresence(code); }, HEARTBEAT_MS);
+      // Heartbeat: keep last_seen fresh AND re-fetch as a safety net so a kick is
+      // detected within one tick even if the realtime delete event isn't delivered
+      // to the (now non-member) client.
+      beat = window.setInterval(() => {
+        void roomService.touchPresence(code);
+        void refresh();
+      }, HEARTBEAT_MS);
     })();
 
     return () => {
@@ -118,17 +143,6 @@ function useSupabaseRoom(seed: Room, player: Player, options: UseRealtimeRoomOpt
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, authUid]);
-
-  // Detect being kicked — only after the first DB sync so we don't false-fire on
-  // the optimistic seed (whose player IDs are local UUIDs, not auth UIDs).
-  useEffect(() => {
-    if (!synced) return;
-    if (leftRef.current || removedFiredRef.current) return;
-    if (room.players.length > 0 && !room.players.some(p => p.id === meId)) {
-      removedFiredRef.current = true;
-      onRemovedRef.current?.();
-    }
-  }, [room, meId, synced]);
 
   const setReady = useCallback((ready: boolean) => {
     void roomService.setReady(code, ready).then(refresh);
