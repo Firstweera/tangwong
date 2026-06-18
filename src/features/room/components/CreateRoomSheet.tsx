@@ -114,14 +114,18 @@ export function CreateRoomSheet({ open, onClose, onCreateRoom, player }: CreateR
               {GAMES.map(g => (
                 <button
                   key={g.id}
-                  onClick={() => setGameId(g.id)}
+                  onClick={() => g.available && setGameId(g.id)}
+                  disabled={!g.available}
                   className="chip"
-                  style={gameId === g.id
-                    ? { background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 800 }
-                    : { fontWeight: 700 }
+                  title={g.available ? undefined : 'เร็วๆ นี้'}
+                  style={!g.available
+                    ? { fontWeight: 700, opacity: 0.45, cursor: 'not-allowed' }
+                    : gameId === g.id
+                      ? { background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 800 }
+                      : { fontWeight: 700 }
                   }
                 >
-                  {g.emoji} {g.name}
+                  {g.emoji} {g.name}{!g.available && ' 🔒'}
                 </button>
               ))}
             </div>

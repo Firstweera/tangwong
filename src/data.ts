@@ -62,25 +62,25 @@ export const GAMES: Game[] = [
   {
     id: 'avalon', name: 'Avalon', th: 'อาวาลอน', tag: 'Social Deduction', th_tag: 'เกมจับโกหก',
     emoji: '🛡️', players: '5–10', minPlayers: 5, maxPlayers: 10, mins: '20–30', heat: 'HOT',
-    g: ['#6D5EF9', '#3B2C9E'], accent: '#9C8BFF',
+    g: ['#6D5EF9', '#3B2C9E'], accent: '#9C8BFF', available: true,
     desc: 'ภารกิจลับของอัศวินโต๊ะกลม สืบหาคนทรยศก่อนสายเกินไป',
   },
   {
     id: 'werewolf', name: 'Werewolf', th: 'มนุษย์หมาป่า', tag: 'Social Deduction', th_tag: 'เกมจับโกหก',
     emoji: '🐺', players: '6–16', minPlayers: 6, maxPlayers: 16, mins: '15–40', heat: '',
-    g: ['#FF5C6C', '#7A1F35'], accent: '#FF8A96',
+    g: ['#FF5C6C', '#7A1F35'], accent: '#FF8A96', available: false,
     desc: 'กลางคืนหมาป่าออกล่า กลางวันชาวบ้านโหวตจับ',
   },
   {
     id: 'coup', name: 'Coup', th: 'รัฐประหาร', tag: 'Bluffing', th_tag: 'เกมบลัฟ',
     emoji: '🎭', players: '2–6', minPlayers: 2, maxPlayers: 6, mins: '10–15', heat: 'NEW',
-    g: ['#FF9F43', '#9E4E12'], accent: '#FFC07A',
+    g: ['#FF9F43', '#9E4E12'], accent: '#FFC07A', available: false,
     desc: 'โกหก ขู่ และกำจัดคู่แข่งให้เหลือคนเดียว',
   },
   {
     id: 'dixit', name: 'Dixit', th: 'ดิกซิท', tag: 'Storytelling', th_tag: 'เล่าเรื่อง',
     emoji: '🎨', players: '3–8', minPlayers: 3, maxPlayers: 8, mins: '20–30', heat: '',
-    g: ['#00D4FF', '#0A6E8C'], accent: '#7DE8FF',
+    g: ['#00D4FF', '#0A6E8C'], accent: '#7DE8FF', available: false,
     desc: 'เล่าเรื่องจากภาพปริศนา ทายให้ถูกแต่อย่าชัดเกินไป',
   },
 ];

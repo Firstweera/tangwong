@@ -49,7 +49,7 @@ export function ProfilePage({ go, showToast, guest, player, openEditProfile }) {
         {/* favorites */}
         <h2 className="th h2" style={{ fontSize: 18, marginTop: 22, marginBottom: 12 }}>เกมโปรด</h2>
         <div className="row gap10" style={{ overflowX: 'auto', scrollbarWidth: 'none', margin: '0 -20px', padding: '0 20px' }}>
-          {favs.map(g => <div key={g.id} style={{ width: 150, flexShrink: 0 }}><GameCard game={g} height={150} onClick={() => go('lobby')} {...(getGameRules(g.id) ? { onRules: () => setRulesGame(g) } : {})} /></div>)}
+          {favs.map(g => <div key={g.id} style={{ width: 150, flexShrink: 0 }}><GameCard game={g} height={150} disabled={!g.available} onClick={() => go('lobby')} {...(getGameRules(g.id) ? { onRules: () => setRulesGame(g) } : {})} /></div>)}
         </div>
         {/* achievements */}
         <h2 className="th h2" style={{ fontSize: 18, marginTop: 22, marginBottom: 12 }}>ความสำเร็จ</h2>

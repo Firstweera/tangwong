@@ -58,6 +58,9 @@ export interface Game {
   g: [string, string];
   accent: string;
   desc: string;
+  /** Whether the game has a working engine and is playable. Games without one
+   *  are shown disabled ("เร็วๆ นี้") until their engine lands. */
+  available: boolean;
 }
 
 // ─── Avalon types ──────────────────────────────────────────────────────────

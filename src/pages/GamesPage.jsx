@@ -26,6 +26,7 @@ export function GamesPage({ go }) {
             key={g.id}
             game={g}
             height={164}
+            disabled={!g.available}
             onClick={() => go('lobby')}
             onRules={getGameRules(g.id) ? () => setRulesGame(g) : undefined}
           />
