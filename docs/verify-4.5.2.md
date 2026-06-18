@@ -273,6 +273,25 @@ and the kit isn't failing for the wrong reason):
 console.log('member read (should have rows):', (await sb.from('room_players').select('*').eq('room_id', roomId)).data);
 ```
 
+## §6 host-guard console kit (run on Device B = a NON-host member)
+
+Device B joins the host's room, then in its console — every host-only RPC called
+by a non-host **must be rejected** with `host only`:
+
+```js
+const sb = window.supabase;
+const code = 'XXXXX'; // ← the 5-char room code shown in the lobby
+const g = (n, r) => console.log(n, r.error ? '✅ rejected: ' + r.error.message : '❌ ALLOWED', r.data);
+g('kick           ', await sb.rpc('kick_player',     { p_code: code, p_target: 'anyone' }));
+g('update_settings', await sb.rpc('update_settings', { p_code: code, p_settings: { name: 'hacked' } }));
+g('transfer_host  ', await sb.rpc('transfer_host',   { p_code: code, p_target: 'anyone' }));
+g('add_bot        ', await sb.rpc('add_bot',         { p_code: code, p_bot: { id: 'b', name: 'b', mascot: 'fox' } }));
+g('send_system    ', await sb.rpc('send_system',     { p_code: code, p_text: 'fake' }));
+```
+
+All five must print `✅ rejected: … host only`. Any `❌ ALLOWED` (or Device A
+seeing the room name change to "hacked") = a hole → report it.
+
 ## Result log
 
 | Date | Tester | Result | Notes |
