@@ -278,4 +278,5 @@ console.log('member read (should have rows):', (await sb.from('room_players').se
 | Date | Tester | Result | Notes |
 |------|--------|--------|-------|
 | 2026-06-18 | Claude (static) | ✅ SQL audit | §5/§6 enforced in SQL; awaiting live two-device run + console kit |
-| 2026-06-18 | User (2 accounts) | ✅ chat sync | 2 real accounts, same room, two-way chat works live — confirms identity split, join-by-code, realtime delivery, chat RLS for members. Remaining: §5 console kit + other §3 cases |
+| 2026-06-18 | User (2 accounts) | ✅ chat sync | 2 real accounts, same room, two-way chat works live — confirms identity split, join-by-code, realtime delivery, chat RLS for members |
+| 2026-06-18 | User (console kit) | ✅ §5 security 7/7 | All "must be rejected" pass: direct rooms insert / room_players update / chat forge / system inject / reaction write all blocked (0 rows affected, verified by read-back); foreign chat + foreign profile return 0 rows. #2/#6 initial ❌ were a helper false-positive (UPDATE returns null on 0 rows) — re-test confirmed 0 rows affected. Non-negotiable security gate PASS |

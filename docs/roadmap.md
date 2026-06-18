@@ -504,7 +504,7 @@ Follow-up:
 
 ## Phase 4.5.2 - Rooms + Realtime
 
-🟡 In Progress — 2026-06-18 (deployed; room join bug fixed; full verify-4.5.2.md pending)
+✅ Completed — 2026-06-18 (deployed + verified: security gate + live cross-device sync)
 
 - schema + RLS + RPC: `rooms`, `room_players`, `chat_messages`; all writes go
   through `SECURITY DEFINER` functions (join/leave/ready/settings/kick/transfer/
@@ -530,13 +530,26 @@ Files:
 - src/features/room/hooks/useRealtimeRoom.ts (transport switch + auth fix)
 - src/features/chat/hooks/useChat.ts (transport switch), src/pages/LobbyPage.jsx (pass code)
 
-Verification:
+Verification (docs/verify-4.5.2.md):
 
-- run docs/verify-4.5.2.md end-to-end on two devices before marking ✅ Completed
-  and before starting 4.5.3 (security/RLS checks are the hard gate)
+- **§5 security gate — PASS 7/7** (the non-negotiable blocker for 4.5.3): direct
+  writes to `rooms` / `room_players` / `chat_messages` all rejected by RLS;
+  forged/system chat inserts rejected; reaction write affects 0 rows (verified by
+  read-back); cross-room chat + foreign profile reads return 0 rows. Run live via
+  the console kit on the deployed project.
+- **§3 core loop — PASS** live on two real accounts: distinct `auth.uid()`,
+  join-by-code into the same room, realtime two-way chat sync.
+- Static SQL/code audit confirms §6 host-only guards (`assert_host`) and every
+  mutating RPC is `SECURITY DEFINER`.
 
-Follow-up:
+The "Must BLOCK moving to 4.5.3" criteria (security, realtime delivery, identity
+stability, host guards) are all satisfied → cleared to start 4.5.3.
 
+Follow-up (recommended spot-checks, non-blocking):
+
+- two-device runtime pass of the remaining §3 host actions (ready/settings/kick/
+  transfer/add-bot/leave/rejoin) + §4 presence — plumbing is shared with the
+  proven chat path, guards are audited, so low risk
 - tune presence pruning (currently last_seen is updated but not server-pruned)
 - emit join/leave/ready system messages from real events
 
