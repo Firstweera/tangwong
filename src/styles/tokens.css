@@ -1,14 +1,7 @@
-/* ───────────────────────── stage ───────────────────────── */
-#stage {
-  position: fixed; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  background:
-    radial-gradient(1100px 700px at 18% -10%, rgba(109,94,249,0.20), transparent 60%),
-    radial-gradient(900px 700px at 110% 20%, rgba(0,212,255,0.12), transparent 55%),
-    radial-gradient(800px 800px at 50% 120%, rgba(255,159,67,0.10), transparent 55%),
-    #06080f;
+/* ───────────────────────── app shell ───────────────────────── */
+html, body, #root {
+  min-height: 100dvh;
 }
-#device-scaler { transform-origin: center center; }
 
 /* ───────────────────────── theme tokens ───────────────────────── */
 .app {
@@ -21,7 +14,8 @@
   --grad: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 115%);
   --grad-soft: linear-gradient(135deg, rgba(109,94,249,0.22), rgba(0,212,255,0.10));
   --grad-warm: linear-gradient(135deg, var(--accent), var(--primary));
-  width: 100%; height: 100%;
+  width: 100%; min-height: 100dvh;
+  max-width: 480px; margin: 0 auto;
   position: relative;
   display: flex; flex-direction: column;
   font-size: 15px;

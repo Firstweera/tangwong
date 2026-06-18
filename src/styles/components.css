@@ -57,7 +57,11 @@
 
 /* ───────────────────────── nav ───────────────────────── */
 .tabbar {
-  position: absolute; left: 14px; right: 14px; bottom: 22px; z-index: 30;
+  position: fixed;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  width: calc(min(100vw, 480px) - 28px);
+  z-index: 30;
   height: 66px; border-radius: 24px;
   background: var(--elev); border: 1px solid var(--border-2);
   backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%);

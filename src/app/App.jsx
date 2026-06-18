@@ -1,6 +1,5 @@
 // App.jsx — composition root: device scaler, theme/accent vars, shell + tweaks
 import React, { useState, useEffect } from 'react';
-import { IOSDevice } from '../devtools/IOSFrame.jsx';
 import {
   useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakColor, TweakToggle, TweakButton,
 } from '../devtools/TweaksPanel.jsx';
@@ -25,14 +24,15 @@ export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [screen, setScreen] = useState('home');
   const [payload, setPayload] = useState(null);
-  const [scale, setScale] = useState(1);
   const [toastNode, showToast] = useToast();
 
   // ─── Guest identity ───────────────────────────────────────────────────────
   const { guest, player, updateGuest } = useGuest();
+
   const [editProfileOpen, setEditProfileOpen] = useState(false);
 
-  // ─── Room state ──────────────────────────────────────────────────────────
+  // ─── Room state ─────────────────────────────────────────────────────────
+
   const [createOpen, setCreateOpen] = useState(false);
   const [currentRoom, setCurrentRoom] = useState(null);
   const [lastRoom, setLastRoom] = useState(null);
@@ -82,18 +82,6 @@ export default function App() {
   };
   // ─────────────────────────────────────────────────────────────────────────
 
-  // scale device to fit viewport
-  useEffect(() => {
-    const fit = () => {
-      const W = 402, H = 874;
-      setScale(Math.min((window.innerWidth - 24) / W, (window.innerHeight - 24) / H, 1));
-    };
-    fit();
-    window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
-  }, []);
-
-  const dark = t.theme === 'dark';
   const accentVars = {
     '--primary': t.accent[0],
     '--secondary': t.accent[1],
@@ -112,18 +100,14 @@ export default function App() {
 
   return (
     <React.Fragment>
-      <div style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}>
-        <IOSDevice dark={dark}>
-          <div className="app" data-theme={t.theme} style={{ ...accentVars }}>
-            <div className="screen" key={screen}>
-              {screenEl}
-            </div>
-            {isMainTab(screen) && <TabBar screen={screen} go={go} navStyle={t.navStyle} navLabels={t.navLabels} onFabPress={() => setCreateOpen(true)} />}
-            {toastNode}
-            <CreateRoomSheet open={createOpen} onClose={() => setCreateOpen(false)} onCreateRoom={handleFabCreate} player={player} />
-            <EditProfileSheet open={editProfileOpen} onClose={() => setEditProfileOpen(false)} guest={guest} onSave={handleSaveProfile} />
-          </div>
-        </IOSDevice>
+      <div className="app" data-theme={t.theme} style={{ ...accentVars }}>
+        <div className="screen" key={screen}>
+          {screenEl}
+        </div>
+        {isMainTab(screen) && <TabBar screen={screen} go={go} navStyle={t.navStyle} navLabels={t.navLabels} onFabPress={() => setCreateOpen(true)} />}
+        {toastNode}
+        <CreateRoomSheet open={createOpen} onClose={() => setCreateOpen(false)} onCreateRoom={handleFabCreate} player={player} />
+        <EditProfileSheet open={editProfileOpen} onClose={() => setEditProfileOpen(false)} guest={guest} onSave={handleSaveProfile} />
       </div>
 
       <TweaksPanel>

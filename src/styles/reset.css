@@ -1,11 +1,11 @@
 /* ───────────────────────── reset ───────────────────────── */
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; }
+html, body { min-height: 100dvh; }
 body {
   font-family: 'Plus Jakarta Sans', 'Noto Sans Thai', system-ui, sans-serif;
   background: #06080f;
   color: #fff;
-  overflow: hidden;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 .th { font-family: 'Noto Sans Thai', 'Plus Jakarta Sans', sans-serif; }
