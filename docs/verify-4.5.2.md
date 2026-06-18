@@ -172,8 +172,93 @@ Editor "Run as authenticated"). Each **must be rejected**.
 
 ---
 
+## Static SQL / code audit — 2026-06-18
+
+Code-level verification of the security model (the §5/§6 "must be rejected" gate),
+done by auditing `0001_profiles.sql`, `0002_rooms_chat.sql`, and the client
+services. This does **not** replace the two-device runtime run (§3/§4), but it
+proves the policies/guards are correct by construction.
+
+### §5 Security — all PASS (enforced by SQL)
+
+- **Direct insert into `rooms`** — RLS ON, only a `rooms_select` policy exists
+  (no INSERT/UPDATE/DELETE policy) → direct writes denied; `join_room` is the only
+  path (SECURITY DEFINER, bypasses RLS). ✅
+- **Direct update of `room_players`** — RLS ON, only `room_players_select` → all
+  direct writes denied; only `set_ready` / `touch_presence` / etc. (DEFINER) mutate. ✅
+- **Non-member reads** — `room_players_select` and `chat_select` both gate on
+  `is_room_member(room_id)` (DEFINER, `auth.uid()`), so a non-member reads 0 rows;
+  `rooms_select` is `is_public OR is_room_member(id)` (public row visible by design). ✅
+- **Writes only via RPC** — confirmed: no table has insert/update/delete policies
+  except `chat_insert_own`. ✅
+- **Chat insert policy** — `chat_insert_own` with_check =
+  `kind='user' AND player_id=auth.uid()::text AND is_room_member(room_id)`:
+  foreign `player_id` → rejected; `kind='system'` → rejected (system only via
+  `send_system` DEFINER); own user message → allowed. ✅
+- **Reaction via RPC only** — no UPDATE policy on `chat_messages` → direct
+  `update … set reactions` denied; `toggle_reaction` (DEFINER) checks
+  `is_room_member`. ✅
+- **Profile isolation** — `profiles` has owner-only `select/insert/update`
+  (`auth.uid() = id`); opponents render from denormalised
+  `room_players.nickname/mascot`, never from `profiles`. ✅
+
+### §6 Host-only guards — all PASS
+
+- `kick_player`, `update_settings`, `transfer_host`, `add_bot`, `send_system`
+  all call `assert_host(p_code)` → raises `host only` when
+  `host_id <> auth.uid()`. ✅
+- `set_ready` / `touch_presence` scope to `player_id = auth.uid()` (self-only,
+  no host needed); `toggle_reaction` gated by `is_room_member`; `leave_room`
+  self-only; `join_room` requires auth. ✅
+- Every mutating RPC is `SECURITY DEFINER` with `set search_path = public`. ✅
+
+### Client-side consistency
+
+- All room mutations go through `roomService` RPC calls; chat user messages insert
+  directly (matches `chat_insert_own`); everything else (reactions, system) via RPC. ✅
+- `chat.sendMessage` inserts `player_id: meId` where `meId` is the resolved
+  `auth.uid()` (LobbyPage uses the hook's `meId`), so it satisfies the insert
+  policy `player_id = auth.uid()`. ✅
+
+### Notes / accepted follow-ups (do not block)
+
+- `join_room` creates a room for an unknown code (create+join share one path).
+- `add_bot` trusts a host-supplied bot `player_id` (host-scoped, low risk).
+- Server-side presence pruning still absent (client-side offline display only).
+
+**Static audit verdict:** the §5 security gate and §6 host guards are correct in
+SQL. Remaining to mark 4.5.2 ✅: the live two-device runtime run (§1 dashboard,
+§3 sync, §4 presence) + executing the §5 console kit below against the deployed
+project.
+
+## §5 console test kit (run on the live app, authenticated client)
+
+Open the deployed app (signed in as a member of a room you created), then in the
+browser console — every call below **must fail or return 0 rows**:
+
+```js
+const sb = window.supabase ?? (await import('/src/services/supabase/client.ts')).supabase;
+// 1. direct room insert — expect error (no insert policy)
+console.log('rooms.insert', await sb.from('rooms').insert({ code:'HACK1', name:'x', game_id:'avalon', host_id:'x' }));
+// 2. direct ready flip — expect error / 0 rows
+console.log('rp.update', await sb.from('room_players').update({ is_ready:true }).neq('player_id','__none__'));
+// 3. read a room you never joined — expect data: [] (use a real other room id)
+console.log('foreign chat', await sb.from('chat_messages').select('*').eq('room_id','00000000-0000-0000-0000-000000000000'));
+// 4. forge a chat message as someone else — expect error (player_id must = auth.uid)
+console.log('forge chat', await sb.from('chat_messages').insert({ room_id:'<your-room-uuid>', player_id:'someone-else', kind:'user', text:'forged' }));
+// 5. inject a system message directly — expect error (kind must be 'user')
+console.log('inject system', await sb.from('chat_messages').insert({ room_id:'<your-room-uuid>', player_id:null, kind:'system', text:'fake' }));
+// 6. direct reaction write — expect error (no update policy)
+console.log('react direct', await sb.from('chat_messages').update({ reactions:[] }).eq('id','<any-msg-id>'));
+// 7. read another user's profile — expect data: [] (owner-only)
+console.log('foreign profile', await sb.from('profiles').select('*').neq('id','__none__'));
+```
+
+A `{ error: {...} }` (RLS/permission) or `{ data: [] }` on each = PASS. Any row
+inserted/updated/returned for someone else = FAIL → block 4.5.3.
+
 ## Result log
 
 | Date | Tester | Result | Notes |
 |------|--------|--------|-------|
-|      |        |        |       |
+| 2026-06-18 | Claude (static) | ✅ SQL audit | §5/§6 enforced in SQL; awaiting live two-device run + console kit |
