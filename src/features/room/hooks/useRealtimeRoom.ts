@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Player, Room, RoomSettings } from '@/types';
 import { createChannel } from '@/services/realtime';
 import type { CrossTabChannel, SyncedRoom, RealtimeRoomMessage } from '@/services/realtime';
-import { useSupabaseTransport, roomService } from '@/services/supabase';
+import { useSupabaseTransport, roomService, supabase } from '@/services/supabase';
 import { BOT_POOL } from '@/data';
 import * as store from '../stores/roomRealtime';
 
@@ -59,13 +59,32 @@ export function useRealtimeRoom(seed: Room, player: Player, options: UseRealtime
 
 function useSupabaseRoom(seed: Room, player: Player, options: UseRealtimeRoomOptions): UseRealtimeRoomReturn {
   const code = seed.code;
-  const meId = player.id;
+  // player.id is a local UUID until the Supabase session resolves. The DB stores
+  // auth.uid() as player_id, so we must resolve the real uid before joining — otherwise
+  // kick detection compares the wrong IDs and immediately ejects the player.
+  const [authUid, setAuthUid] = useState<string | null>(null);
+  const meId = authUid ?? player.id;
   // Optimistic seed until the first fetch resolves (keeps `room` non-null).
   const [room, setRoom] = useState<SyncedRoom>(() => ({ ...seed, ready: {}, presence: {} }));
+  // Kick detection is only meaningful once we have a DB snapshot (not the seed).
+  const [synced, setSynced] = useState(false);
   const removedFiredRef = useRef(false);
   const leftRef = useRef(false);
   const onRemovedRef = useRef(options.onRemoved);
   onRemovedRef.current = options.onRemoved;
+
+  // Resolve auth.uid() from the Supabase session. This may be set slightly after
+  // the component mounts (anonymous sign-in is async). Once resolved, triggers join.
+  useEffect(() => {
+    if (!supabase) return;
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) setAuthUid(session.user.id);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session?.user?.id) setAuthUid(session.user.id);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const refresh = useCallback(async () => {
     const next = await roomService.fetchRoom(code);
@@ -74,6 +93,7 @@ function useSupabaseRoom(seed: Room, player: Player, options: UseRealtimeRoomOpt
   }, [code]);
 
   useEffect(() => {
+    if (!authUid) return; // Wait for a real session before joining.
     let unsub = () => {};
     let beat = 0;
     let active = true;
@@ -81,7 +101,7 @@ function useSupabaseRoom(seed: Room, player: Player, options: UseRealtimeRoomOpt
     (async () => {
       const joined = await roomService.joinRoom(code, player, seed);
       if (!active) return;
-      if (joined) setRoom(joined);
+      if (joined) { setRoom(joined); setSynced(true); }
       const roomId = joined?.id ?? room.id;
       unsub = roomService.subscribeRoom(roomId, () => { void refresh(); });
       beat = window.setInterval(() => { void roomService.touchPresence(code); }, HEARTBEAT_MS);
@@ -93,16 +113,18 @@ function useSupabaseRoom(seed: Room, player: Player, options: UseRealtimeRoomOpt
       if (beat) window.clearInterval(beat);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code, meId]);
+  }, [code, authUid]);
 
-  // Detect being kicked (no longer a member) and notify once.
+  // Detect being kicked — only after the first DB sync so we don't false-fire on
+  // the optimistic seed (whose player IDs are local UUIDs, not auth UIDs).
   useEffect(() => {
+    if (!synced) return;
     if (leftRef.current || removedFiredRef.current) return;
     if (room.players.length > 0 && !room.players.some(p => p.id === meId)) {
       removedFiredRef.current = true;
       onRemovedRef.current?.();
     }
-  }, [room, meId]);
+  }, [room, meId, synced]);
 
   const setReady = useCallback((ready: boolean) => {
     void roomService.setReady(code, ready).then(refresh);
