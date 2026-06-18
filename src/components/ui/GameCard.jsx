@@ -12,21 +12,14 @@ export function GameCard({ game, onClick, onRules, height = 168, big }) {
         <div className="row between" style={{ alignItems: 'flex-start' }}>
           <span className="th" style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 10px', borderRadius: 9,
                 background: 'rgba(0,0,0,0.22)', backdropFilter: 'blur(6px)', color: 'rgba(255,255,255,0.95)' }}>{game.th_tag}</span>
-          <div className="row gap8" style={{ alignItems: 'center' }}>
-            {game.heat && (
-              <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '0.08em', padding: '4px 8px', borderRadius: 8,
-                    background: game.heat === 'HOT' ? '#FF5C6C' : game.heat === 'NEW' ? '#34D17E' : '#fff', color: '#fff' }}>
-                {game.heat === 'HOT' ? '🔥 HOT' : game.heat}
-              </span>
-            )}
-            {onRules && (
-              <button className="row center" aria-label="อ่านกฎ" onClick={(e) => { e.stopPropagation(); onRules(game); }}
-                style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 11, color: '#fff',
-                         background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.22)', backdropFilter: 'blur(8px)' }}>
-                <Icon name="book" size={16} />
-              </button>
-            )}
-          </div>
+          {onRules && (
+            <button className="row center gap6" aria-label="อ่านกฎ" onClick={(e) => { e.stopPropagation(); onRules(game); }}
+              style={{ flexShrink: 0, height: 30, padding: '0 11px', borderRadius: 9, color: '#fff', fontSize: 11.5, fontWeight: 700,
+                       background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.22)', backdropFilter: 'blur(8px)' }}>
+              <Icon name="book" size={14} />
+              <span className="th">อ่านกฎ</span>
+            </button>
+          )}
         </div>
         <div>
           <div className="th" style={{ fontSize: big ? 30 : 23, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', textShadow: '0 2px 10px rgba(0,0,0,0.25)' }}>{game.th}</div>

@@ -1,10 +1,14 @@
 // ProfilePage.jsx — user profile tab
+import { useState } from 'react';
 import { Icon, Avatar, GameCard } from '../components/ui';
+import { RulesSheet } from '../features/games/ui';
+import { getGameRules } from '../features/games';
 import { GAMES, MASCOTS } from '../data';
 
 export function ProfilePage({ go, showToast, guest, player, openEditProfile }) {
   const stats = [['142', 'เกมที่เล่น'], ['68%', 'อัตราชนะ'], ['#3', 'อันดับเพื่อน']];
   const favs = [GAMES[0], GAMES[1], GAMES[2]];
+  const [rulesGame, setRulesGame] = useState(null);
   const ach = [['🏆', 'ราชาแห่งวง', true], ['🕵️', 'เมอร์ลินไร้เงา', true], ['🔥', 'ชนะ 5 ติด', true], ['🎭', 'นักบลัฟ', false], ['👑', 'หัวห้องตัวยง', false]];
 
   const mascotEmoji = guest ? MASCOTS[guest.mascot]?.em : '🦊';
@@ -45,7 +49,7 @@ export function ProfilePage({ go, showToast, guest, player, openEditProfile }) {
         {/* favorites */}
         <h2 className="th h2" style={{ fontSize: 18, marginTop: 22, marginBottom: 12 }}>เกมโปรด</h2>
         <div className="row gap10" style={{ overflowX: 'auto', scrollbarWidth: 'none', margin: '0 -20px', padding: '0 20px' }}>
-          {favs.map(g => <div key={g.id} style={{ width: 150, flexShrink: 0 }}><GameCard game={g} height={150} onClick={() => go('lobby')} /></div>)}
+          {favs.map(g => <div key={g.id} style={{ width: 150, flexShrink: 0 }}><GameCard game={g} height={150} onClick={() => go('lobby')} {...(getGameRules(g.id) ? { onRules: () => setRulesGame(g) } : {})} /></div>)}
         </div>
         {/* achievements */}
         <h2 className="th h2" style={{ fontSize: 18, marginTop: 22, marginBottom: 12 }}>ความสำเร็จ</h2>
@@ -57,6 +61,14 @@ export function ProfilePage({ go, showToast, guest, player, openEditProfile }) {
           ))}
         </div>
       </div>
+
+      {rulesGame && (
+        <RulesSheet
+          game={rulesGame}
+          onClose={() => setRulesGame(null)}
+          onPlay={() => { setRulesGame(null); go('lobby'); }}
+        />
+      )}
     </div>
   );
 }

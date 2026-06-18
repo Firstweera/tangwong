@@ -4,6 +4,8 @@ import { Icon, Avatar, Logo, GameCard, CardFan, Token, Die } from '../components
 import { PLAYERS, FRIENDS, GAMES } from '../data';
 import { getFriendStatus } from '../features/friends/friendStatus';
 import { parseInviteCode } from '../features/room/roomUtils.ts';
+import { RulesSheet } from '../features/games/ui';
+import { getGameRules } from '../features/games';
 
 function RoundTableHero({ player }) {
   const seats = [PLAYERS[1], PLAYERS[3], player, PLAYERS[4], PLAYERS[2]]; // cat, owl, you, panda, raccoon
@@ -91,7 +93,10 @@ function RejoinCard({ room, onRejoin }) {
 export default function HomePage({ go, showToast, player, openCreateRoom, joinRoom, rejoinRoom, lastRoom, openEditProfile }) {
   const avalon = GAMES[0];
   const [code, setCode] = useState('');
+  const [rulesGame, setRulesGame] = useState(null);
   const onlineFriends = FRIENDS.filter(f => f.online);
+
+  const rulesProps = (g) => (getGameRules(g.id) ? { onRules: () => setRulesGame(g) } : {});
 
   const handleJoin = () => {
     if (code.length < 4) { showToast('ใส่รหัสห้องก่อนนะ', '🔑'); return; }
@@ -197,10 +202,10 @@ export default function HomePage({ go, showToast, player, openCreateRoom, joinRo
           </button>
         </div>
         <div className="pad-x">
-          <GameCard game={avalon} big height={190} onClick={() => openCreateRoom?.()} />
+          <GameCard game={avalon} big height={190} onClick={() => openCreateRoom?.()} {...rulesProps(avalon)} />
         </div>
         <div className="pad-x" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
-          {GAMES.slice(1).map(g => <GameCard key={g.id} game={g} height={150} onClick={() => openCreateRoom?.()} />)}
+          {GAMES.slice(1).map(g => <GameCard key={g.id} game={g} height={150} onClick={() => openCreateRoom?.()} {...rulesProps(g)} />)}
         </div>
       </div>
 
@@ -214,6 +219,13 @@ export default function HomePage({ go, showToast, player, openCreateRoom, joinRo
         </div>
       </div>
 
+      {rulesGame && (
+        <RulesSheet
+          game={rulesGame}
+          onClose={() => setRulesGame(null)}
+          onPlay={() => { setRulesGame(null); openCreateRoom?.(); }}
+        />
+      )}
     </div>
   );
 }
