@@ -44,3 +44,11 @@ export function saveGuest(profile: GuestProfile): void {
     // ignore write errors (private browsing, storage full)
   }
 }
+
+export function clearGuest(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}

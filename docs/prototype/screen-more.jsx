@@ -74,26 +74,32 @@ function FriendsScreen({ go, showToast }) {
   );
 }
 
-function ProfileScreen({ go, showToast }) {
+function ProfileScreen({ go, openAccount, showToast }) {
   const stats = [['142', 'เกมที่เล่น'], ['68%', 'อัตราชนะ'], ['#3', 'อันดับเพื่อน']];
   const favs = [GAMES[0], GAMES[1], GAMES[2]];
   const ach = [['🏆', 'ราชาแห่งวง', true], ['🕵️', 'เมอร์ลินไร้เงา', true], ['🔥', 'ชนะ 5 ติด', true], ['🎭', 'นักบลัฟ', false], ['👑', 'หัวห้องตัวยง', false]];
+  const handle = '@' + (ME.provider ? (ME.name === 'คุณ' ? 'player' : ME.name).toLowerCase().replace(/\s+/g, '_') : 'guest_' + ME.mascot);
   return (
     <div className="scroll screen-anim" style={{ paddingBottom: 112 }}>
       {/* header banner */}
       <div style={{ position: 'relative', height: 150 }}>
         <div style={{ position: 'absolute', inset: 0, background: 'var(--grad)', opacity: 0.9 }} />
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(rgba(255,255,255,0.16) 1px, transparent 1.4px)', backgroundSize: '14px 14px', opacity: 0.5 }} />
-        <button className="row center" style={{ position: 'absolute', top: 56, right: 18, width: 40, height: 40, borderRadius: 12, background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(8px)', color: '#fff' }} onClick={() => showToast('ตั้งค่า', '⚙️')}><Icon name="settings" size={19} /></button>
+        <button className="row center" style={{ position: 'absolute', top: 56, right: 18, width: 40, height: 40, borderRadius: 12, background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(8px)', color: '#fff' }} onClick={openAccount}><Icon name="settings" size={19} /></button>
       </div>
       <div className="pad-x" style={{ marginTop: -44 }}>
         <div className="row between" style={{ alignItems: 'flex-end' }}>
-          <div style={{ borderRadius: '50%', boxShadow: '0 0 0 4px var(--bg)' }}><Avatar who={ME} size={92} /></div>
-          <button className="btn btn-glass" style={{ height: 42, borderRadius: 13, marginBottom: 6 }} onClick={() => showToast('แก้ไขโปรไฟล์', '✏️')}>แก้ไข</button>
+          <div style={{ borderRadius: '50%', boxShadow: '0 0 0 4px var(--bg)' }}><Avatar who={ME} size={92} onClick={openAccount} /></div>
+          <button className="btn btn-glass" style={{ height: 42, borderRadius: 13, marginBottom: 6 }} onClick={openAccount}>แก้ไข</button>
         </div>
         <div className="col" style={{ gap: 2, marginTop: 10 }}>
-          <h1 className="th h1" style={{ fontSize: 26 }}>คุณ <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 17 }}>@you_fox</span></h1>
-          <span className="th body">🦊 เล่นบอร์ดเกมตั้งแต่ 2023 · ชอบเกมจับโกหก</span>
+          <h1 className="th h1" style={{ fontSize: 26 }}>{ME.name} <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 17 }}>{handle}</span></h1>
+          <span className="th body row gap6" style={{ alignItems: 'center' }}>
+            <span style={{ fontSize: 16 }}>{MASCOTS[ME.mascot].em}</span>
+            {ME.provider
+              ? <>เชื่อมบัญชีแล้ว · ชอบเกมจับโกหก</>
+              : <span style={{ color: 'var(--accent)', fontWeight: 700 }}>บัญชีผู้เยี่ยมชม — แตะเพื่อผูกบัญชี</span>}
+          </span>
         </div>
         {/* stats */}
         <div className="card-solid row" style={{ marginTop: 16, padding: '14px 0' }}>

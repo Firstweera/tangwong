@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-06-18 — Feature: Account sheet (edit profile + link + logout)
+
+Upgraded the profile sheet into a fuller "บัญชีของฉัน" account screen, ported
+from the updated prototype's `screen-account`.
+
+Completed:
+
+- **EditProfileSheet** now shows a live avatar/name preview + account status
+  badge ("🎭 บัญชีผู้เยี่ยมชม"), a 6-col mascot grid with a check marker, an
+  account-linking section (Google/Apple → "เร็วๆ นี้" toast until Epic 9), and a
+  **ออกจากระบบ** (logout) action. Nickname cap aligned to 16 chars (matches Welcome).
+- **Logout** (`useGuest.logout`): signs out of Supabase, clears the local guest,
+  and reloads into a fresh un-onboarded state (Welcome).
+- **ProfilePage**: ⚙️ settings button, avatar, and bio line now open the account
+  sheet; bio reflects the guest status ("แตะเพื่อผูกบัญชี").
+- `clearGuest()` added to guest storage.
+
+OAuth linking stays a preview (no fake provider is persisted) so account status
+is honest until real sign-in lands in Epic 9.
+
+Files:
+
+- src/features/guest/components/EditProfileSheet.tsx (account sheet)
+- src/features/guest/hooks/useGuest.ts (`logout`), stores/guestStorage.ts (`clearGuest`)
+- src/app/App.jsx (onLogout + showToast wired), src/pages/ProfilePage.jsx
+
+Follow-up:
+
+- wire real Google/Apple linking via `linkGoogle()` (Epic 9)
+
 ## 2026-06-18 — Feature: Welcome / onboarding entry + brand logo
 
 Added a first-run Welcome screen (ported from the updated prototype) and switched

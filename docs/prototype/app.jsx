@@ -44,18 +44,22 @@ function App() {
   const [screen, setScreen] = useState('welcome');
   const [payload, setPayload] = useState(null);
   const [scale, setScale] = useState(1);
+  const [account, setAccount] = useState(false);
+  const [idV, setIdV] = useState(0);          // identity version — bump to re-render ME everywhere
   const [toastNode, showToast] = useToast();
 
   const go = (s, p = null) => { setPayload(p); setScreen(s); };
+  const openAccount = () => setAccount(true);
 
   const onAuth = (info) => {
     if (info.provider === 'guest') {
-      ME.mascot = info.mascot; ME.name = info.name; ME.guest = true;
+      ME.mascot = info.mascot; ME.name = info.name; ME.guest = true; ME.provider = null;
     } else {
-      ME.guest = false;
-      const names = { line: 'LINE', google: 'Google', apple: 'Apple' };
+      ME.guest = false; ME.provider = info.provider;
+      const names = { google: 'Google', apple: 'Apple' };
       showToast(`เข้าสู่ระบบด้วย ${names[info.provider]} แล้ว`, '✅');
     }
+    setIdV(v => v + 1);
     setScreen('home');
   };
 
@@ -81,10 +85,10 @@ function App() {
   const screenEl = (() => {
     switch (screen) {
       case 'welcome': return <WelcomeScreen onAuth={onAuth} />;
-      case 'home':    return <HomeScreen go={go} showToast={showToast} />;
+      case 'home':    return <HomeScreen go={go} openAccount={openAccount} showToast={showToast} />;
       case 'games':   return <GamesScreen go={go} showToast={showToast} />;
       case 'friends': return <FriendsScreen go={go} showToast={showToast} />;
-      case 'profile': return <ProfileScreen go={go} showToast={showToast} />;
+      case 'profile': return <ProfileScreen go={go} openAccount={openAccount} showToast={showToast} />;
       case 'lobby':   return <LobbyScreen go={go} layout={t.lobbyLayout} showToast={showToast} />;
       case 'game':    return <GameScreen go={go} showToast={showToast} />;
       case 'result':  return <ResultScreen go={go} payload={payload} showToast={showToast} />;
@@ -97,10 +101,12 @@ function App() {
       <div style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}>
         <IOSDevice dark={dark}>
           <div className="app" data-theme={t.theme} data-felt={t.felt} style={{ ...accentVars }}>
-            <div className="screen" key={screen}>
+            <div className="screen" key={screen + ':' + idV}>
               {screenEl}
             </div>
             {MAIN_SET.has(screen) && <TabBar screen={screen} go={go} navStyle={t.navStyle} navLabels={t.navLabels} />}
+            {account && <AccountSheet onClose={() => setAccount(false)} onSaved={() => setIdV(v => v + 1)}
+              onLogout={() => { ME.guest = false; ME.provider = null; setScreen('welcome'); }} showToast={showToast} />}
             {toastNode}
           </div>
         </IOSDevice>

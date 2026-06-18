@@ -26,7 +26,7 @@ export default function App() {
   const [toastNode, showToast] = useToast();
 
   // ─── Guest identity ───────────────────────────────────────────────────────
-  const { guest, player, updateGuest, ready } = useGuest();
+  const { guest, player, updateGuest, logout, ready } = useGuest();
 
   // First-run lands on Welcome (pick name + mascot); returning users skip it.
   const [screen, setScreen] = useState(() => (guest.onboarded ? 'home' : 'welcome'));
@@ -126,7 +126,7 @@ export default function App() {
         {isMainTab(screen) && <TabBar screen={screen} go={go} navStyle={t.navStyle} navLabels={t.navLabels} onFabPress={() => setCreateOpen(true)} />}
         {toastNode}
         <CreateRoomSheet open={createOpen} onClose={() => setCreateOpen(false)} onCreateRoom={handleFabCreate} player={player} />
-        <EditProfileSheet open={editProfileOpen} onClose={() => setEditProfileOpen(false)} guest={guest} onSave={handleSaveProfile} />
+        <EditProfileSheet open={editProfileOpen} onClose={() => setEditProfileOpen(false)} guest={guest} onSave={handleSaveProfile} onLogout={logout} showToast={showToast} />
       </div>
 
       <TweaksPanel>

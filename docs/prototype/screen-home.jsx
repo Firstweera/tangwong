@@ -53,7 +53,7 @@ function StepDot({ n, title, sub, color }) {
   );
 }
 
-function HomeScreen({ go, showToast }) {
+function HomeScreen({ go, openAccount, showToast }) {
   const avalon = GAMES[0];
   const [code, setCode] = useState('');
   const [rules, setRules] = useState(null);
@@ -69,7 +69,7 @@ function HomeScreen({ go, showToast }) {
             <Icon name="bell" size={20} />
             <span style={{ position: 'absolute', top: 9, right: 10, width: 8, height: 8, borderRadius: 4, background: 'var(--accent)', boxShadow: '0 0 0 2px var(--surface-solid)' }} />
           </button>
-          <Avatar who={ME} size={42} onClick={() => showToast('โปรไฟล์ของคุณ', '🦊')} />
+          <Avatar who={ME} size={42} dot={!ME.guest} onClick={openAccount} />
         </div>
       </div>
 

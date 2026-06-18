@@ -1,14 +1,17 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { GuestProfile } from '../types';
 import { guestToPlayer } from '../types';
-import { loadGuest, saveGuest } from '../stores/guestStorage';
-import { isSupabaseEnabled, ensureSession, fetchProfile, upsertProfile } from '@/services/supabase';
+import { loadGuest, saveGuest, clearGuest } from '../stores/guestStorage';
+import { isSupabaseEnabled, ensureSession, fetchProfile, upsertProfile, supabase } from '@/services/supabase';
 import type { Player } from '@/types';
 
 export interface UseGuestReturn {
   guest: GuestProfile;
   player: Player;
   updateGuest: (updates: Partial<Omit<GuestProfile, 'playerId'>>) => void;
+  /** Clear the identity (sign out of Supabase + drop the local guest) and return
+   *  to a fresh, un-onboarded state. Reloads so auth/session start clean. */
+  logout: () => Promise<void>;
   /** True once the identity has been reconciled with the backend (or it's off). */
   ready: boolean;
 }
@@ -73,5 +76,15 @@ export function useGuest(): UseGuestReturn {
     });
   }, []);
 
-  return { guest, player: guestToPlayer(guest), updateGuest, ready };
+  const logout = useCallback(async () => {
+    clearGuest();
+    if (isSupabaseEnabled && supabase) {
+      try { await supabase.auth.signOut(); } catch { /* ignore */ }
+    }
+    // Reload to reset all in-memory state (rooms, chat, auth session) cleanly and
+    // re-enter the Welcome flow with a brand-new guest identity.
+    window.location.reload();
+  }, []);
+
+  return { guest, player: guestToPlayer(guest), updateGuest, logout, ready };
 }

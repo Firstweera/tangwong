@@ -236,6 +236,29 @@ Files:
 Follow-up:
 - wire real Google/Apple OAuth into `onOAuth` (Epic 9)
 
+### Account Sheet (edit profile + link + logout)
+
+✅ Completed — 2026-06-18
+
+Upgraded the edit-profile sheet into a fuller "บัญชีของฉัน" account screen
+(ported from the prototype `screen-account`): live avatar/name preview + account
+status badge, mascot grid, account-linking buttons (Google/Apple, previewed),
+and a logout action. Opened from the Home avatar and the Profile tab
+(⚙️ / avatar / "แก้ไข" / bio line).
+
+- nickname + mascot persist via `updateGuest` (16-char cap, matches Welcome)
+- `useGuest.logout()` signs out of Supabase, clears the local guest, and reloads
+  into a fresh un-onboarded state (Welcome)
+- account linking is preview-only (no fake provider persisted) until Epic 9
+
+Files:
+- src/features/guest/components/EditProfileSheet.tsx
+- src/features/guest/hooks/useGuest.ts, stores/guestStorage.ts
+- src/app/App.jsx, src/pages/ProfilePage.jsx
+
+Follow-up:
+- wire real account linking via `linkGoogle()` (Epic 9)
+
 ---
 
 # Epic 3 - Local Chat
