@@ -1,5 +1,242 @@
 # Changelog
 
+## 2026-06-17 — Game rules sheet (from engine) + add-bot UI polish
+
+Completed:
+
+- **RulesSheet** — slide-up rules per game: objective, team composition,
+  roles, how-to-play, win conditions, tips. Content is derived from the real
+  engine (`getGameRules`) — player counts, roles, quest sizes, phase flow, and
+  win conditions all come from Avalon's config/setup, so rules can't drift from
+  gameplay. Games without an engine show "กติกากำลังจะมา"
+- "อ่านกฎ" entry points: a book button on game cards (Games tab) and a chip in
+  the lobby game selector; only shown for games that have rules
+- add-bot UI now matches the prototype: an inline dashed **tile** inside the
+  grid layout, and a full-width dashed **button** under the list / circle layouts
+
+Files:
+
+- src/features/games/rules.ts (new — registry + types), src/features/games/avalon/rules.ts (new)
+- src/features/games/avalon/setup.ts (compositionFor)
+- src/features/games/ui/RulesSheet.tsx (new), src/features/games/ui/index.ts (new)
+- src/components/ui/Icon.jsx (book icon), GameCard.jsx + index.d.ts (onRules)
+- src/features/lobby/components/AddBotTile.tsx (new), PlayerGrid.tsx (extra slot), GameSelector.tsx (onRules)
+- src/pages/GamesPage.jsx, src/pages/LobbyPage.jsx
+
+## 2026-06-17 — Lobby: add bots + prototype UI sync
+
+Matches the updated prototype lobby.
+
+Completed:
+
+- **Add bot** — host-only "เพิ่มบอท" button adds a filler bot to the room (synced,
+  always ready, distinct mascot from BOT_POOL); disabled when the room is full
+- bots are real room members: shown with a 🤖 avatar badge + "บอท · พร้อมเสมอ",
+  exempt from presence pruning, and removable via the player menu ("นำบอทออก")
+- player actions menu hides "transfer host" for bots
+- start gate now needs the minimum players AND everyone ready; the button shows
+  "ต้องการอีก X คน" / "รอพร้อม (n/m)" / "เริ่มเกม" with a matching hint
+- "ต้องการอีก X คน — เพิ่มบอทเพื่อเติมที่นั่ง" banner + accent count when short
+- voice channel restyled to the inline muted-mic + "🔜 เร็วๆ นี้" treatment
+- the in-lobby roster (incl. bots) now feeds the Avalon game directly
+
+Files:
+
+- src/types/index.ts (Player.bot), src/data.ts (BOT_POOL)
+- src/components/ui/avatar-legacy.jsx + index.d.ts (bot badge)
+- src/features/room/stores/roomRealtime.ts (addBot, bot prune/online exempt)
+- src/features/room/hooks/useRealtimeRoom.ts (addBot)
+- src/features/room/components/PlayerActionsMenu.tsx (isBot)
+- src/features/lobby/components/{LobbyFooter,PlayerListItem,PlayerCircle}.tsx
+- src/components/game/PlayerSeat.tsx, src/pages/LobbyPage.jsx
+
+## 2026-06-17 — Epic 6: Avalon playable (Phase A — bot-driven, single client)
+
+Epic:
+Epic 6 - Avalon MVP
+
+Completed:
+
+- the full loop is playable: Home → Lobby → Avalon → Result; the human plays
+  their seat, bots auto-play the rest (🤖 toggle drives every seat)
+- `AvalonGame` on `useGameEngine(avalonConfig)`: per-phase center + action bar,
+  round table, secret role strip, quest track, in-game chat
+- `AvalonTable` (ring seats, leader crown, team/vote badges, tap-to-select) +
+  `RoleRevealCard` (tap to view role, side, and role-specific vision)
+- per-phase timer that auto-acts for an idle human
+- bots (`nextBotAction` / `nextAutoActor`) play every role with sensible heuristics
+- GamePage rebuilt: bot-pads short rosters so a solo player runs a full match;
+  maps `WinResult` → ResultPage
+- ResultPage now reveals real players/roles and reads the winner from the payload
+- engine: `redactStateFor` (hidden-info view, for Phase B) + `gamePlayerToPlayer`
+
+Verified:
+
+- 240 bot-driven games (5–10 players) all reached a winner with no stalls;
+  every win path observed (3 fails, assassin hit, assassin miss)
+
+Files:
+
+- src/features/games/avalon/bot.ts (new)
+- src/features/games/avalon/ui/{AvalonGame,AvalonTable,RoleRevealCard,index}.tsx (new)
+- src/features/games/engine/view.ts (new), engine/playerUtils.ts, engine/index.ts
+- src/pages/GamePage.jsx (rebuilt), src/pages/ResultPage.jsx, src/app/router.jsx
+
+Next (Phase B):
+
+- host-authoritative realtime sync (per-player redaction) for true multiplayer
+
+## 2026-06-17 — Epic 6: Avalon game engine (logic)
+
+Epic:
+Epic 6 - Avalon MVP
+
+Structure:
+`src/features/games/` is now one folder per game, with `engine/` as the shared
+core. Added `src/features/games/avalon/`.
+
+Completed (pure logic, no UI yet):
+
+- `GamePhase` widened with a `string & {}` escape hatch so games declare their
+  own phases (Avalon: roleReveal → teamProposal → teamVote → mission →
+  questReveal → assassinate → end)
+- role composition + shuffled assignment per player count (5–10); per-role vision
+  (Merlin sees evil except Mordred; Percival sees Merlin + Morgana; evil see each other)
+- quest team-size tables; quest 4 requires 2 fails at 7+ players
+- actions: NOMINATE_TEAM, VOTE_TEAM (strict majority), PLAY_MISSION_CARD
+  (team-only, good can't fail), CONTINUE (host), ASSASSINATE
+- win conditions: 3 failed quests, 5 rejected proposals, assassin kills Merlin;
+  good wins only if the assassin misses after 3 successes
+- verified by a scripted playthrough (role counts, vision, full loop, both
+  evil-win paths)
+
+Files:
+
+- src/features/games/avalon/{types,setup,phases,actions,winConditions,config,index}.ts (new)
+- src/features/games/index.ts (new barrel)
+- src/features/games/engine/types.ts (GamePhase widened)
+
+Next:
+
+- GamePage rebuilt on the engine + realtime sync + hidden-info per-player views
+
+## 2026-06-17 — Player actions menu: transfer host + kick
+
+Epic:
+Epic 4 - Realtime Multiplayer (Host Controls)
+
+Completed:
+
+- `DropdownMenu` — reusable, dependency-free popover (kebab trigger; closes on
+  outside-click or Escape); added a `more` kebab icon
+- `PlayerActionsMenu` — host-only ⋯ menu per player: 👑 transfer host · 🚫 kick
+- `transferHost` — added to the room store + `useRealtimeRoom`; the crown (and the
+  menus) move to the new host across all clients instantly
+- Player components now take a generic `actions` / `renderActions` slot instead of
+  a single `onKick` prop — the kebab replaces the bare ✕ across list/grid/circle
+- Menu shown only for other players (not the host, not yourself), pre-start only
+
+Files:
+
+- src/components/ui/Icon.jsx (more icon)
+- src/components/ui/dropdown-menu/DropdownMenu.tsx (new)
+- src/features/room/components/PlayerActionsMenu.tsx (new)
+- src/features/room/stores/roomRealtime.ts (transferHost)
+- src/features/room/hooks/useRealtimeRoom.ts (transferHost)
+- src/components/game/PlayerSeat.tsx
+- src/features/lobby/components/PlayerList.tsx, PlayerListItem.tsx, PlayerGrid.tsx, PlayerCircle.tsx
+- src/pages/LobbyPage.jsx
+
+## 2026-06-17 — Host controls: kick player + start gate
+
+Epic:
+Epic 4 - Realtime Multiplayer (Host Controls)
+
+Completed:
+
+- Start gate — the Start button is disabled until the room has at least the
+  game's `minPlayers`, even when everyone is ready; the footer shows the hint
+- Kick player — host-only ✕ on each player across list / grid / circle layouts
+  (hidden for the host and yourself); removes the player and broadcasts
+- Kicked client — `useRealtimeRoom` fires `onRemoved` when the player is no
+  longer a member; LobbyPage toasts and sends them home
+- Solves the "stranger joined the room I made for friends" case
+
+Files:
+
+- src/features/room/hooks/useRealtimeRoom.ts (kick, onRemoved)
+- src/features/lobby/components/LobbyFooter.tsx (start gate)
+- src/components/game/PlayerSeat.tsx
+- src/features/lobby/components/PlayerListItem.tsx
+- src/features/lobby/components/PlayerList.tsx
+- src/features/lobby/components/PlayerGrid.tsx
+- src/features/lobby/components/PlayerCircle.tsx
+- src/pages/LobbyPage.jsx
+
+## 2026-06-17 — Epic 4: Realtime Multiplayer (cross-tab transport)
+
+Epic:
+Epic 4 - Realtime Multiplayer
+
+Approach:
+Transport-agnostic realtime layer with a cross-tab adapter (BroadcastChannel +
+shared localStorage room). Socket.io-ready: the same `RealtimeService` seam will
+back a Node server later. Open two tabs to test live sync.
+
+Completed:
+
+- `createChannel(name)` — BroadcastChannel wrapper with a no-op fallback
+- `SyncedRoom` / `RealtimeService` — the transport contract (room + presence)
+- `roomRealtime` store — shared room in localStorage: create/join/leave, host
+  handoff, ready, settings, deterministic id (`room_<code>`), stale-member prune
+- `useRealtimeRoom(seed, player)` — joins + syncs the room across tabs, presence
+  heartbeat (3s), exposes `setReady` / `updateSettings` / `leave`
+- `useChat` — now syncs messages/system/reactions across tabs for the same room
+- LobbyPage — mock `PLAYERS` + hardcoded ready removed; renders the live room
+  (real join/leave/ready/settings/chat)
+- `ComingSoon` wrapper — dims unbuilt features with a "เร็วๆ นี้" badge; applied
+  to the lobby voice channel
+- buildRoomFromCode — joiner becomes host when seeding a brand-new room
+
+Deferred:
+
+- Socket.io Node server (interface seam is in place)
+- Deep network-drop reconnect (rejoin + history restore works today)
+
+Files:
+
+- src/services/realtime/channel.ts (new)
+- src/services/realtime/types.ts (new)
+- src/services/realtime/index.ts (new)
+- src/features/room/stores/roomRealtime.ts (new)
+- src/features/room/hooks/useRealtimeRoom.ts (new)
+- src/features/chat/hooks/useChat.ts
+- src/components/ui/coming-soon/ComingSoon.tsx (new)
+- src/features/room/roomUtils.ts
+- src/pages/LobbyPage.jsx
+
+## 2026-06-17 — Room size follows the selected game
+
+Change:
+Create Room — max-player options are now driven by the chosen game's range.
+
+Completed:
+
+- `Game.minPlayers` / `Game.maxPlayers` added to the game type + catalog
+  (Avalon 5–10, Werewolf 6–16, Coup 2–6, Dixit 3–8)
+- CreateRoomSheet builds the room-size chips from the selected game's range
+  instead of a fixed `[5..10]` list
+- switching games re-clamps the chosen size into the valid range (defaults to cap)
+- label shows the active game's range hint (e.g. "Coup · 2–6 คน")
+
+Files:
+
+- src/types/index.ts
+- src/data.ts
+- src/features/room/components/CreateRoomSheet.tsx
+- docs/feature-list.md
+- docs/roadmap.md
+
 ## 2026-06-16 — Epic 5: Generic Game Engine
 
 Epic:

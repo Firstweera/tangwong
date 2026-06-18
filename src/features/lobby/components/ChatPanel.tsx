@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Icon } from '@/components/ui';
 import type { ChatMessage as ChatMessageType, Player } from '@/types';
 import { ChatMessage } from './ChatMessage';
+import { SystemMessage } from './SystemMessage';
+import { EmojiReactionBar } from './EmojiReactionBar';
 
 export interface ChatPanelProps {
   messages: ChatMessageType[];
@@ -9,20 +11,39 @@ export interface ChatPanelProps {
   meId?: string;
   /** Called with the typed text on send. */
   onSend?: (text: string) => void;
+  /** Toggle the current player's `emoji` reaction on a message. */
+  onReact?: (messageId: string, emoji: string) => void;
   onClose?: () => void;
   placeholder?: string;
 }
 
 /**
- * ChatPanel — slide-up room/game chat: message stream + composer. Presentation
- * only; no transport (Socket.io wired later). Reusable across lobby and games.
+ * ChatPanel — slide-up room/game chat: message stream + composer. Renders user
+ * bubbles, system notices, timestamps, and per-message emoji reactions. Tap a
+ * bubble to open the reaction picker. Presentation only; no transport (the
+ * useChat store / Socket.io wire the data). Reusable across lobby and games.
  */
-export function ChatPanel({ messages, players, meId = 'me', onSend, onClose, placeholder = 'พิมพ์ข้อความ...' }: ChatPanelProps) {
+export function ChatPanel({ messages, players, meId = 'me', onSend, onReact, onClose, placeholder = 'พิมพ์ข้อความ...' }: ChatPanelProps) {
   const [text, setText] = useState('');
+  // Which message currently has its reaction picker open.
+  const [reactingId, setReactingId] = useState<string | null>(null);
+  const streamRef = useRef<HTMLDivElement>(null);
+
+  // Keep the latest message in view as the conversation grows.
+  useEffect(() => {
+    const el = streamRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages.length]);
+
   const send = () => {
     if (!text.trim()) return;
     onSend?.(text);
     setText('');
+  };
+
+  const react = (id: string, emoji: string) => {
+    onReact?.(id, emoji);
+    setReactingId(null);
   };
 
   return (
@@ -36,11 +57,28 @@ export function ChatPanel({ messages, players, meId = 'me', onSend, onClose, pla
             <Icon name="x" size={16} />
           </button>
         </div>
-        <div className="col gap10" style={{ flex: 1, overflowY: 'auto', padding: '8px 16px' }}>
-          {messages.map((m, i) => (
-            <ChatMessage key={i} text={m.text} me={m.who === meId} player={players.find((p) => p.id === m.who)} />
-          ))}
+        <div ref={streamRef} className="col gap10" style={{ flex: 1, overflowY: 'auto', padding: '8px 16px' }}>
+          {messages.map((m) =>
+            m.kind === 'system' ? (
+              <SystemMessage key={m.id} ts={m.ts}>{m.text}</SystemMessage>
+            ) : (
+              <ChatMessage
+                key={m.id}
+                message={m}
+                me={m.who === meId}
+                meId={meId}
+                player={players.find((p) => p.id === m.who)}
+                onSelect={() => setReactingId((id) => (id === m.id ? null : m.id))}
+                onToggleReaction={(emoji) => onReact?.(m.id, emoji)}
+              />
+            ),
+          )}
         </div>
+        {reactingId && (
+          <div className="pad-x" style={{ paddingTop: 8 }}>
+            <EmojiReactionBar onReact={(emoji) => react(reactingId, emoji)} />
+          </div>
+        )}
         <div className="row gap8 pad-x" style={{ paddingTop: 8 }}>
           <input
             value={text}

@@ -56,6 +56,7 @@ function StepDot({ n, title, sub, color }) {
 function HomeScreen({ go, showToast }) {
   const avalon = GAMES[0];
   const [code, setCode] = useState('');
+  const [rules, setRules] = useState(null);
   const onlineFriends = FRIENDS.filter(f => f.online);
 
   return (
@@ -147,10 +148,10 @@ function HomeScreen({ go, showToast }) {
           </button>
         </div>
         <div className="pad-x">
-          <GameCard game={avalon} big height={190} onClick={() => go('lobby')} />
+          <GameCard game={avalon} big height={190} onClick={() => go('lobby')} onRules={setRules} />
         </div>
         <div className="pad-x" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
-          {GAMES.slice(1).map(g => <GameCard key={g.id} game={g} height={150} onClick={() => go('lobby')} />)}
+          {GAMES.slice(1).map(g => <GameCard key={g.id} game={g} height={150} onClick={() => go('lobby')} onRules={setRules} />)}
         </div>
       </div>
 
@@ -163,6 +164,8 @@ function HomeScreen({ go, showToast }) {
           <StepDot n="3" title="เริ่มเกม" sub="Pick a game and play together" color="var(--accent)" />
         </div>
       </div>
+
+      {rules && <RulesSheet game={rules} onClose={() => setRules(null)} onPlay={() => { setRules(null); go('lobby'); }} />}
     </div>
   );
 }

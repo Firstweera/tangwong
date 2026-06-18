@@ -1,9 +1,14 @@
 // GamesPage.jsx — game catalog tab
-import { Icon, GameCard } from '../components/ui';
+import { useState } from 'react';
+import { GameCard } from '../components/ui';
+import { RulesSheet } from '../features/games/ui';
+import { getGameRules } from '../features/games';
 import { GAMES } from '../data';
 
-export function GamesPage({ go, showToast }) {
+export function GamesPage({ go }) {
   const cats = [['ทั้งหมด', true], ['จับโกหก', false], ['บลัฟ', false], ['เล่าเรื่อง', false]];
+  const [rulesGame, setRulesGame] = useState(null);
+
   return (
     <div className="scroll screen-anim" style={{ paddingBottom: 112 }}>
       <div className="pad-x pad-top" style={{ paddingBottom: 6 }}>
@@ -16,8 +21,24 @@ export function GamesPage({ go, showToast }) {
         ))}
       </div>
       <div className="pad-x col gap12">
-        {GAMES.map(g => <GameCard key={g.id} game={g} height={164} onClick={() => go('lobby')} />)}
+        {GAMES.map(g => (
+          <GameCard
+            key={g.id}
+            game={g}
+            height={164}
+            onClick={() => go('lobby')}
+            onRules={getGameRules(g.id) ? () => setRulesGame(g) : undefined}
+          />
+        ))}
       </div>
+
+      {rulesGame && (
+        <RulesSheet
+          game={rulesGame}
+          onClose={() => setRulesGame(null)}
+          onPlay={() => { setRulesGame(null); go('lobby'); }}
+        />
+      )}
     </div>
   );
 }

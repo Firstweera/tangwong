@@ -1,7 +1,7 @@
 // Avatar.jsx — player avatar disc + stacked group
 import { MASCOTS } from '../../data';
 
-export function Avatar({ who, size = 44, ring, dot, crown, faded, style, onClick }) {
+export function Avatar({ who, size = 44, ring, dot, crown, bot, faded, style, onClick }) {
   const m = MASCOTS[who?.mascot] || MASCOTS.fox;
   return (
     <div className={'av' + (ring ? ' av-ring' : '')}
@@ -15,7 +15,10 @@ export function Avatar({ who, size = 44, ring, dot, crown, faded, style, onClick
          }}>
       <span className="em">{m.em}</span>
       {crown && <span className="crown">👑</span>}
-      {dot && <span className="dot-on" />}
+      {bot && <span style={{ position: 'absolute', bottom: -2, right: -2, width: '38%', height: '38%', minWidth: 14, minHeight: 14,
+              borderRadius: '50%', background: 'var(--surface-solid)', border: '1.5px solid var(--border-2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.24, zIndex: 3 }}>🤖</span>}
+      {dot && !bot && <span className="dot-on" />}
     </div>
   );
 }

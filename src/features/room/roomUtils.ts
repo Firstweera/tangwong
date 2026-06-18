@@ -45,7 +45,9 @@ export function buildRoom(settings: RoomSettings, host: Player): Room {
   };
 }
 
-// Simulate joining an existing room by code (no backend: returns a mock room)
+// Seed used when joining by code. If the shared room already exists (another
+// tab created it) the realtime layer joins that instead and ignores this seed;
+// otherwise this becomes the new room with the joiner as host.
 export function buildRoomFromCode(code: string, joiner: Player): Room {
   const cleanCode = code.slice(0, 5).toUpperCase();
   return {
@@ -55,7 +57,7 @@ export function buildRoomFromCode(code: string, joiner: Player): Room {
     maxPlayers: 7,
     isPublic: true,
     gameId: 'avalon',
-    hostId: 'p4',
+    hostId: joiner.id,
     players: [joiner],
     status: 'waiting',
     inviteLink: generateInviteLink(cleanCode),

@@ -21,6 +21,8 @@ export interface PlayerSeatProps {
   /** Stagger entrance animation. */
   delay?: number;
   onClick?: () => void;
+  /** Top-right action slot (card variant), e.g. a host actions menu. */
+  actions?: ReactNode;
   className?: string;
 }
 
@@ -31,12 +33,12 @@ export interface PlayerSeatProps {
  */
 export function PlayerSeat({
   player, size = 56, host, you, online = true, ring = false,
-  variant = 'card', footer, delay = 0, onClick, className,
+  variant = 'card', footer, delay = 0, onClick, actions, className,
 }: PlayerSeatProps) {
   if (variant === 'plain') {
     return (
       <div className={cn('col center gap4', className)} onClick={onClick}>
-        <Avatar who={player} size={size} dot={online} crown={host} ring={ring} />
+        <Avatar who={player} size={size} dot={online} crown={host} ring={ring} bot={player.bot} />
         <span className="ring-name th">{player.name}</span>
         {footer}
       </div>
@@ -51,7 +53,12 @@ export function PlayerSeat({
       {you && (
         <span style={{ position: 'absolute', top: 8, left: 10, fontSize: 9.5, fontWeight: 800, color: 'var(--primary)' }}>YOU</span>
       )}
-      <Avatar who={player} size={size} dot={online} crown={host} ring={ring} />
+      {actions && (
+        <div style={{ position: 'absolute', top: 6, right: 6 }} onClick={(e) => e.stopPropagation()}>
+          {actions}
+        </div>
+      )}
+      <Avatar who={player} size={size} dot={online} crown={host} ring={ring} bot={player.bot} />
       <span className="th h3" style={{ fontSize: 14 }}>{player.name}</span>
       {footer}
     </div>

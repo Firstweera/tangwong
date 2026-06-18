@@ -2,6 +2,7 @@
 
 function GamesScreen({ go, showToast }) {
   const cats = [['ทั้งหมด', true], ['จับโกหก', false], ['บลัฟ', false], ['เล่าเรื่อง', false]];
+  const [rules, setRules] = useState(null);
   return (
     <div className="scroll screen-anim" style={{ paddingBottom: 112 }}>
       <div className="pad-x pad-top" style={{ paddingBottom: 6 }}>
@@ -14,8 +15,22 @@ function GamesScreen({ go, showToast }) {
         ))}
       </div>
       <div className="pad-x col gap12">
-        {GAMES.map(g => <GameCard key={g.id} game={g} height={164} onClick={() => go('lobby')} />)}
+        {GAMES.map(g => <GameCard key={g.id} game={g} height={164} onClick={() => go('lobby')} onRules={setRules} />)}
       </div>
+
+      {/* coming soon */}
+      <div className="pad-x" style={{ marginTop: 26 }}>
+        <div className="row gap8" style={{ alignItems: 'center', marginBottom: 4 }}>
+          <h2 className="th h2" style={{ fontSize: 18 }}>เกมที่กำลังจะมา</h2>
+          <span style={{ fontSize: 16 }}>🔜</span>
+        </div>
+        <p className="body" style={{ fontSize: 13, marginBottom: 14 }}>เกมใหม่กำลังเดินทางมาที่โต๊ะของคุณ</p>
+        <div className="col gap12">
+          {UPCOMING.map(g => <ComingSoonCard key={g.id} game={g} onNotify={(game) => showToast(`จะเตือนเมื่อ ${game.th} เปิดให้เล่น`, '🔔')} />)}
+        </div>
+      </div>
+
+      {rules && <RulesSheet game={rules} onClose={() => setRules(null)} onPlay={() => { setRules(null); go('lobby'); }} />}
     </div>
   );
 }

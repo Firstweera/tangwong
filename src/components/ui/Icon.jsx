@@ -32,6 +32,8 @@ export const ICONS = {
   exit:    'M14 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2 M9 12h11 M17 8l4 4-4 4',
   flag:    'M5 21V4 M5 5h11l-1.5 3L16 11H5',
   vote:    'M9 12l2 2 4-4 M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18',
+  more:    'M12 6v.01 M12 12v.01 M12 18v.01',
+  book:    'M4 5.5C7.5 4.5 10 5 12 6.5 14 5 16.5 4.5 20 5.5V18c-3.5-1-6-.5-8 1-2-1.5-4.5-2-8-1z M12 6.5V19.5',
 };
 
 export function Icon({ name, size = 22, stroke = 2, fill = 'none', style }) {

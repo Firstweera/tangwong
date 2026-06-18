@@ -45,7 +45,7 @@ Friends can create a room and finish an entire game.
 ### Room Settings
 
 - Room name
-- Max players
+- Max players (bounded by the selected game's player range, e.g. Avalon 5–10, Coup 2–6)
 - Public/private
 
 ---
@@ -108,9 +108,9 @@ Support all future games.
 
 ## Player Presence
 
-- Online
-- Offline
-- Reconnecting
+- Online (heartbeat-based, synced across clients)
+- Offline (pruned after missed heartbeats)
+- Reconnecting (rejoin restores room + chat; deep reconnect pending Socket.io)
 
 ### Reconnect
 

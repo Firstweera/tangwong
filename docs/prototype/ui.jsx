@@ -36,6 +36,8 @@ const ICONS = {
   exit:    'M14 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2 M9 12h11 M17 8l4 4-4 4',
   flag:    'M5 21V4 M5 5h11l-1.5 3L16 11H5',
   vote:    'M9 12l2 2 4-4 M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18',
+  book:    'M4 5.5A1.5 1.5 0 0 1 5.5 4H11v15.5a1.5 1.5 0 0 0-1.5-1.5H4z M20 5.5A1.5 1.5 0 0 0 18.5 4H13v15.5a1.5 1.5 0 0 1 1.5-1.5H20z',
+  more:    'M5 12h.01 M12 12h.01 M19 12h.01',
 };
 
 function Icon({ name, size = 22, stroke = 2, fill = 'none', style }) {
@@ -49,7 +51,7 @@ function Icon({ name, size = 22, stroke = 2, fill = 'none', style }) {
 }
 
 /* ───────────────── Avatar ───────────────── */
-function Avatar({ who, size = 44, ring, dot, crown, faded, style, onClick }) {
+function Avatar({ who, size = 44, ring, dot, crown, bot, faded, style, onClick }) {
   const m = MASCOTS[who?.mascot] || MASCOTS.fox;
   return (
     <div className={'av' + (ring ? ' av-ring' : '')}
@@ -63,7 +65,10 @@ function Avatar({ who, size = 44, ring, dot, crown, faded, style, onClick }) {
          }}>
       <span className="em">{m.em}</span>
       {crown && <span className="crown">👑</span>}
-      {dot && <span className="dot-on" />}
+      {bot && <span style={{ position: 'absolute', bottom: -2, right: -2, width: '38%', height: '38%', minWidth: 14, minHeight: 14,
+              borderRadius: '50%', background: 'var(--surface-solid)', border: '1.5px solid var(--border-2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.24 }}>🤖</span>}
+      {dot && !bot && <span className="dot-on" />}
     </div>
   );
 }
@@ -114,7 +119,7 @@ function Logo({ size = 34, showWord = true }) {
 }
 
 /* ───────────────── GameCard ───────────────── */
-function GameCard({ game, onClick, height = 168, big }) {
+function GameCard({ game, onClick, onRules, height = 168, big }) {
   return (
     <div className="gamecard" onClick={onClick} style={{ height }}>
       <div className="glow" style={{ background: `linear-gradient(150deg, ${game.g[0]}, ${game.g[1]})` }} />
@@ -122,14 +127,25 @@ function GameCard({ game, onClick, height = 168, big }) {
       <div style={{ position: 'absolute', right: -14, bottom: -18, fontSize: big ? 130 : 96, opacity: 0.9,
            filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))', transform: 'rotate(-8deg)' }}>{game.emoji}</div>
       <div className="col" style={{ position: 'relative', height: '100%', padding: 16, justifyContent: 'space-between' }}>
-        <div className="row between" style={{ alignItems: 'flex-start' }}>
+        <div className="row between" style={{ alignItems: 'flex-start', gap: 8 }}>
           <span className="th" style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 10px', borderRadius: 9,
                 background: 'rgba(0,0,0,0.22)', backdropFilter: 'blur(6px)', color: 'rgba(255,255,255,0.95)' }}>{game.th_tag}</span>
-          {game.heat && (
-            <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '0.08em', padding: '4px 8px', borderRadius: 8,
-                  background: game.heat === 'HOT' ? '#FF5C6C' : game.heat === 'NEW' ? '#34D17E' : '#fff', color: '#fff' }}>
-              {game.heat === 'HOT' ? '🔥 HOT' : game.heat}
-            </span>
+          {onRules && game.rules && (
+            big ? (
+              <button className="th tap row gap6" onClick={(e) => { e.stopPropagation(); onRules(game); }}
+                style={{ alignItems: 'center', flexShrink: 0, fontSize: 12.5, fontWeight: 700, color: '#fff',
+                         padding: '6px 12px', borderRadius: 11, background: 'rgba(0,0,0,0.28)',
+                         border: '1px solid rgba(255,255,255,0.22)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+                <Icon name="book" size={15} /> อ่านกฎ
+              </button>
+            ) : (
+              <button className="tap row center" onClick={(e) => { e.stopPropagation(); onRules(game); }} aria-label="อ่านกฎ"
+                style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 11, color: '#fff',
+                         background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.22)',
+                         backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+                <Icon name="book" size={16} />
+              </button>
+            )
           )}
         </div>
         <div>
@@ -139,6 +155,86 @@ function GameCard({ game, onClick, height = 168, big }) {
             <span style={{ opacity: 0.5 }}>·</span>
             <span className="row gap6" style={{ alignItems: 'center' }}><Icon name="clock" size={14} /> {game.mins}'</span>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────── RulesSheet ───────────────── */
+function RulesSheet({ game, onClose, onPlay }) {
+  const r = game.rules;
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 75, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
+      <div className="card-solid rise" style={{ position: 'relative', borderRadius: '26px 26px 0 0', maxHeight: '88%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* cover header */}
+        <div style={{ position: 'relative', padding: '20px 18px 18px', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(150deg, ${game.g[0]}, ${game.g[1]})` }} />
+          <div className="grain" style={{ position: 'absolute', inset: 0 }} />
+          <div style={{ position: 'absolute', right: -10, bottom: -24, fontSize: 120, opacity: 0.9, transform: 'rotate(-8deg)', filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))' }}>{game.emoji}</div>
+          <div className="row between" style={{ position: 'relative', alignItems: 'flex-start' }}>
+            <span className="th" style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 10px', borderRadius: 9, background: 'rgba(0,0,0,0.24)', color: '#fff' }}>{game.th_tag}</span>
+            <button className="row center tap" style={{ width: 34, height: 34, borderRadius: 11, background: 'rgba(0,0,0,0.28)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }} onClick={onClose}><Icon name="x" size={17} /></button>
+          </div>
+          <div className="th" style={{ position: 'relative', fontSize: 30, fontWeight: 800, color: '#fff', marginTop: 14, letterSpacing: '-0.02em', textShadow: '0 2px 10px rgba(0,0,0,0.25)' }}>{game.th}</div>
+          <div className="row gap10" style={{ position: 'relative', marginTop: 6, color: 'rgba(255,255,255,0.92)', fontSize: 12.5, fontWeight: 600 }}>
+            <span className="row gap6" style={{ alignItems: 'center' }}><Icon name="users" size={14} /> {game.players} คน</span>
+            <span style={{ opacity: 0.5 }}>·</span>
+            <span className="row gap6" style={{ alignItems: 'center' }}><Icon name="clock" size={14} /> {game.mins} นาที</span>
+          </div>
+        </div>
+
+        {/* scrollable body */}
+        <div className="scroll" style={{ padding: '18px 18px 8px' }}>
+          {/* objective */}
+          <div className="card" style={{ padding: 14, marginBottom: 20 }}>
+            <div className="row gap8" style={{ alignItems: 'center', marginBottom: 7 }}>
+              <Icon name="trophy" size={17} style={{ color: 'var(--accent)' }} />
+              <span className="eyebrow">เป้าหมาย · objective</span>
+            </div>
+            <p className="th body" style={{ fontSize: 13.5, color: 'var(--text)' }}>{r.goal}</p>
+          </div>
+
+          {/* how to play */}
+          <span className="eyebrow">วิธีเล่น · how to play</span>
+          <div className="col gap10" style={{ marginTop: 12, marginBottom: 20 }}>
+            {r.steps.map((s, i) => (
+              <div key={i} className="row gap12" style={{ alignItems: 'flex-start' }}>
+                <div className="row center" style={{ position: 'relative', width: 40, height: 40, borderRadius: 13, background: 'var(--surface-3)', fontSize: 20, flexShrink: 0 }}>
+                  {s[0]}
+                  <span className="mono" style={{ position: 'absolute', top: -5, left: -5, width: 19, height: 19, borderRadius: '50%', background: 'var(--grad)', color: '#fff', fontSize: 10.5, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
+                </div>
+                <div className="col" style={{ gap: 2, paddingTop: 2, flex: 1 }}>
+                  <span className="th h3" style={{ fontSize: 14.5 }}>{s[1]}</span>
+                  <span className="th tiny" style={{ lineHeight: 1.45 }}>{s[2]}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* tips */}
+          {r.tips && (
+            <>
+              <span className="eyebrow">เคล็ดลับ · tips</span>
+              <div className="col gap8" style={{ marginTop: 10 }}>
+                {r.tips.map((tp, i) => (
+                  <div key={i} className="row gap8" style={{ alignItems: 'flex-start', padding: '10px 13px', borderRadius: 13, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    <Icon name="sparkle" size={15} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 1 }} />
+                    <span className="th tiny" style={{ color: 'var(--text)', lineHeight: 1.45 }}>{tp}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* sticky play CTA */}
+        <div className="pad-x" style={{ paddingTop: 12, paddingBottom: 24, borderTop: '1px solid var(--border)' }}>
+          <button className="btn btn-primary btn-lg btn-block" onClick={() => onPlay && onPlay(game)}>
+            <span className="sheen" />
+            <Icon name="arrowR" size={20} stroke={2.6} /> <span className="th" style={{ fontWeight: 800 }}>เล่นเกมนี้</span>
+          </button>
         </div>
       </div>
     </div>
@@ -255,4 +351,45 @@ function Die({ face = 5, size = 40, style }) {
   );
 }
 
-Object.assign(window, { ICONS, Icon, Avatar, AvatarStack, Logo, GameCard, QuestTrack, Confetti, useToast, CardBack, CardFan, Token, Die });
+/* ───────────────── ComingSoonCard ───────────────── */
+function ComingSoonCard({ game, height = 164, onNotify }) {
+  return (
+    <div className="gamecard" style={{ height, cursor: 'default' }}>
+      <div className="glow" style={{ background: `linear-gradient(150deg, ${game.g[0]}, ${game.g[1]})`, filter: 'saturate(0.55)', opacity: 0.7 }} />
+      <div className="grain" />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(8,11,20,0.42)', backdropFilter: 'blur(1px)' }} />
+      <div style={{ position: 'absolute', right: -14, bottom: -18, fontSize: 96, opacity: 0.5,
+           filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.3)) grayscale(0.3)', transform: 'rotate(-8deg)' }}>{game.emoji}</div>
+      <div className="col" style={{ position: 'relative', height: '100%', padding: 16, justifyContent: 'space-between' }}>
+        <div className="row between" style={{ alignItems: 'flex-start', gap: 8 }}>
+          <span className="th" style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 10px', borderRadius: 9,
+                background: 'rgba(0,0,0,0.3)', color: 'rgba(255,255,255,0.9)' }}>{game.th_tag}</span>
+          <span className="th row gap6" style={{ alignItems: 'center', fontSize: 10.5, fontWeight: 800, letterSpacing: '0.02em', padding: '5px 9px', borderRadius: 8,
+                background: 'rgba(0,0,0,0.34)', color: '#fff', border: '1px solid rgba(255,255,255,0.28)', backdropFilter: 'blur(6px)' }}>
+            <Icon name="lock" size={12} /> {game.when}
+          </span>
+        </div>
+        <div className="row between" style={{ alignItems: 'flex-end' }}>
+          <div>
+            <div className="th" style={{ fontSize: 23, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>{game.th}</div>
+            <div className="row gap10" style={{ marginTop: 6, color: 'rgba(255,255,255,0.82)', fontSize: 12, fontWeight: 600 }}>
+              <span className="row gap6" style={{ alignItems: 'center' }}><Icon name="users" size={14} /> {game.players}</span>
+              <span style={{ opacity: 0.5 }}>·</span>
+              <span className="row gap6" style={{ alignItems: 'center' }}><Icon name="clock" size={14} /> {game.mins}'</span>
+            </div>
+          </div>
+          {onNotify && (
+            <button className="th tap row gap6" onClick={(e) => { e.stopPropagation(); onNotify(game); }}
+              style={{ alignItems: 'center', flexShrink: 0, fontSize: 12, fontWeight: 700, color: '#fff',
+                       padding: '8px 12px', borderRadius: 11, background: 'rgba(255,255,255,0.16)',
+                       border: '1px solid rgba(255,255,255,0.28)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+              <Icon name="bell" size={14} /> เตือนฉัน
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { ICONS, Icon, Avatar, AvatarStack, Logo, GameCard, ComingSoonCard, RulesSheet, QuestTrack, Confetti, useToast, CardBack, CardFan, Token, Die });

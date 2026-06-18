@@ -11,7 +11,12 @@ export interface CreateRoomSheetProps {
   player?: Player;
 }
 
-const MAX_PLAYER_OPTIONS = [5, 6, 7, 8, 9, 10];
+const DEFAULT_GAME_ID = 'avalon';
+
+/** Inclusive integer range [min, max] as an array, e.g. (2, 6) → [2,3,4,5,6]. */
+function rangeOptions(min: number, max: number): number[] {
+  return Array.from({ length: max - min + 1 }, (_, i) => min + i);
+}
 
 export function CreateRoomSheet({ open, onClose, onCreateRoom, player }: CreateRoomSheetProps) {
   const defaultName = `ห้องของ${player?.name ?? 'คุณ'}`;
@@ -22,9 +27,22 @@ export function CreateRoomSheet({ open, onClose, onCreateRoom, player }: CreateR
     if (open) setName(defaultName);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-  const [maxPlayers, setMaxPlayers] = useState(7);
+  const [gameId, setGameId] = useState(DEFAULT_GAME_ID);
   const [isPublic, setIsPublic] = useState(true);
-  const [gameId, setGameId] = useState('avalon');
+
+  // The selected game defines the valid player-count range. Room size options
+  // and the default cap follow the game, not a fixed list.
+  const game = GAMES.find(g => g.id === gameId) ?? GAMES[0];
+  const playerOptions = rangeOptions(game.minPlayers, game.maxPlayers);
+  const [maxPlayers, setMaxPlayers] = useState(game.maxPlayers);
+
+  // When the game changes, snap the room size back into its valid range
+  // (default to the game's cap).
+  useEffect(() => {
+    setMaxPlayers(prev =>
+      prev >= game.minPlayers && prev <= game.maxPlayers ? prev : game.maxPlayers,
+    );
+  }, [gameId, game.minPlayers, game.maxPlayers]);
 
   const handleCreate = () => {
     onCreateRoom({ name: name.trim() || defaultName, maxPlayers, isPublic, gameId });
@@ -66,11 +84,12 @@ export function CreateRoomSheet({ open, onClose, onCreateRoom, player }: CreateR
 
           {/* Max players */}
           <div className="col gap6" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <label className="label" style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted)' }}>
-              จำนวนผู้เล่นสูงสุด
+            <label className="label" style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted)', display: 'flex', justifyContent: 'space-between' }}>
+              <span>จำนวนผู้เล่นสูงสุด</span>
+              <span style={{ fontWeight: 700, color: 'var(--muted)' }}>{game.name} · {game.players} คน</span>
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {MAX_PLAYER_OPTIONS.map(n => (
+              {playerOptions.map(n => (
                 <button
                   key={n}
                   onClick={() => setMaxPlayers(n)}

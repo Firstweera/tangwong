@@ -17,6 +17,9 @@ export { GameCardPreview } from './components/GameCardPreview';
 export { GameInfoPanel } from './components/GameInfoPanel';
 export { StartGameButton } from './components/StartGameButton';
 
+export { AddBotTile, AddBotButton } from './components/AddBotTile';
+export type { AddBotControlProps } from './components/AddBotTile';
+
 export { ChatPanel } from './components/ChatPanel';
 export { ChatMessage } from './components/ChatMessage';
 export { SystemMessage } from './components/SystemMessage';

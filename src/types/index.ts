@@ -21,6 +21,8 @@ export interface Player {
   en: string;
   mascot: MascotKey;
   online: boolean;
+  /** True for filler bots added to a room (always ready, auto-played). */
+  bot?: boolean;
 }
 
 export type FriendStatus = 'in-room' | 'playing' | 'online' | 'away';
@@ -45,7 +47,12 @@ export interface Game {
   tag: string;
   th_tag: string;
   emoji: string;
+  /** Display range, e.g. "5–10". Keep in sync with min/maxPlayers. */
   players: string;
+  /** Fewest players this game supports. */
+  minPlayers: number;
+  /** Most players this game supports — caps room size on create. */
+  maxPlayers: number;
   mins: string;
   heat: GameHeat;
   g: [string, string];
@@ -72,10 +79,25 @@ export interface Quest {
   fails: number;
 }
 
+// ─── Chat ─────────────────────────────────────────────────────────────────
+
+export type ChatMessageKind = 'user' | 'system';
+
+export interface ChatReaction {
+  emoji: string;
+  /** playerIds who reacted with this emoji. */
+  by: string[];
+}
+
 export interface ChatMessage {
+  id: string;
+  kind: ChatMessageKind;
+  /** Sender playerId; empty string for system messages. */
   who: string;
   text: string;
-  t: string;
+  /** Epoch milliseconds. */
+  ts: number;
+  reactions: ChatReaction[];
 }
 
 // ─── Navigation ────────────────────────────────────────────────────────────

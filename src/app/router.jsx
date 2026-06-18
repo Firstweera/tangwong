@@ -26,7 +26,7 @@ export function renderScreen(screen, ctx) {
                               openEditProfile={openEditProfile} />;
     case 'lobby':   return <LobbyPage go={go} layout={lobbyLayout} showToast={showToast}
                               room={currentRoom} player={player} onLeave={leaveRoom} onUpdateSettings={updateRoomSettings} />;
-    case 'game':    return <GamePage go={go} showToast={showToast} />;
+    case 'game':    return <GamePage go={go} showToast={showToast} currentRoom={currentRoom} player={player} />;
     case 'result':  return <ResultPage go={go} payload={payload} showToast={showToast} player={player} />;
     default:        return <HomePage go={go} showToast={showToast} player={player} lastRoom={lastRoom}
                               openCreateRoom={openCreateRoom} joinRoom={joinRoom} rejoinRoom={rejoinRoom}

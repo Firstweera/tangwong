@@ -7,15 +7,38 @@ export interface LobbyFooterProps {
   onToggleReady?: () => void;
   onStart?: () => void;
   allReady?: boolean;
-  /** Host can start any time; non-hosts only toggle ready. */
+  /** Host can start; non-hosts only toggle ready. */
   isHost?: boolean;
+  /** Minimum players this game needs to start. */
+  minPlayers?: number;
+  /** Current player count in the room. */
+  playerCount?: number;
+  /** Players currently marked ready (for the "รอพร้อม" label). */
+  readyCount?: number;
 }
 
 /**
  * LobbyFooter — sticky action bar: ready toggle + start CTA + status hint.
- * Encapsulates the lobby's bottom controls for reuse across room types.
+ * Start needs the game's minimum player count AND everyone ready.
  */
-export function LobbyFooter({ meReady, onToggleReady, onStart, allReady, isHost = true }: LobbyFooterProps) {
+export function LobbyFooter({ meReady, onToggleReady, onStart, allReady = false, isHost = true, minPlayers = 0, playerCount = 0, readyCount = 0 }: LobbyFooterProps) {
+  const enoughPlayers = playerCount >= minPlayers;
+  const canStart = isHost && enoughPlayers && allReady;
+
+  const startLabel = !enoughPlayers
+    ? `ต้องการอีก ${minPlayers - playerCount} คน`
+    : !allReady
+      ? `รอพร้อม (${readyCount}/${playerCount})`
+      : 'เริ่มเกม';
+
+  const hint = !isHost
+    ? 'รอหัวห้องเริ่มเกม'
+    : !enoughPlayers
+      ? `เกมนี้ต้องการอย่างน้อย ${minPlayers} คน — เพิ่มบอทเพื่อเติมที่นั่ง`
+      : !allReady
+        ? 'รอให้ทุกคนกดพร้อม'
+        : 'ทุกคนพร้อมแล้ว — เริ่มได้เลย!';
+
   return (
     <BottomBar>
       <div className="row gap10">
@@ -26,10 +49,10 @@ export function LobbyFooter({ meReady, onToggleReady, onStart, allReady, isHost 
         >
           {meReady ? <><Icon name="check" size={18} stroke={3} /> พร้อม</> : 'กดพร้อม'}
         </button>
-        <StartGameButton onClick={onStart} style={{ flex: 1 }} />
+        <StartGameButton onClick={onStart} disabled={!canStart} label={startLabel} style={{ flex: 1 }} />
       </div>
       <div className="tiny center row" style={{ marginTop: 8, opacity: 0.7 }}>
-        {allReady ? 'ทุกคนพร้อมแล้ว — เริ่มได้เลย!' : isHost ? 'คุณคือหัวห้อง · เริ่มเกมได้ทุกเมื่อ' : 'รอหัวห้องเริ่มเกม'}
+        {hint}
       </div>
     </BottomBar>
   );

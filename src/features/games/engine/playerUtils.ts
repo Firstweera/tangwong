@@ -42,3 +42,14 @@ export function requirePlayer(players: GamePlayer[], id: string): GamePlayer {
   if (!p) throw new Error(`GamePlayer "${id}" not found`);
   return p;
 }
+
+/** Convert an engine GamePlayer back to a UI Player (for avatars, rosters). */
+export function gamePlayerToPlayer(gp: GamePlayer): Player {
+  return {
+    id: gp.id,
+    name: gp.nickname,
+    en: gp.nickname,
+    mascot: gp.mascot,
+    online: gp.isConnected,
+  };
+}

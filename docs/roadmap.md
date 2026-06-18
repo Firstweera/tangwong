@@ -97,6 +97,19 @@ Allow users to create and manage rooms.
 
 ✅ Completed
 
+Notes:
+
+- max-player options are derived from the selected game's range
+  (`Game.minPlayers`–`Game.maxPlayers`), not a fixed list
+- changing the game snaps room size back into the valid range (defaults to cap)
+- ranges: Avalon 5–10, Werewolf 6–16, Coup 2–6, Dixit 3–8
+
+Files:
+
+- src/types/index.ts (`Game.minPlayers` / `Game.maxPlayers`)
+- src/data.ts (per-game ranges)
+- src/features/room/components/CreateRoomSheet.tsx (range-driven selector)
+
 ---
 
 ## Lobby Components
@@ -204,19 +217,72 @@ Goal:
 Make lobby chat functional.
 
 Status:
-⚪ Not Started
+✅ Completed — 2026-06-17
 
 ## Features
 
 ### Send Message
 
+✅ Completed
+
+- functional composer (Enter or send button) appends to the chat store
+- sent as the guest player identity (`player.id`) → renders right-aligned
+- empty/whitespace messages ignored
+- auto-scrolls the stream to the newest message
+
 ### System Message
+
+✅ Completed
+
+- `kind: 'system'` messages rendered centred via SystemMessage
+- lobby seeds a welcome notice the first time a room's chat is empty
+- `sendSystem(text)` ready for engine/socket events (joins, ready, round start)
 
 ### Emoji Reactions
 
+✅ Completed
+
+- per-message reactions stored as `{ emoji, by: playerId[] }`
+- tap a bubble → EmojiReactionBar picker; tap a chip → toggle your vote
+- chips show emoji + count and highlight when you reacted
+
 ### Timestamps
 
+✅ Completed
+
+- messages store epoch-ms `ts`; shown as 24h `HH:MM` via `formatChatTime`
+- applies to both user bubbles and system notices
+
 ### Chat Store
+
+✅ Completed
+
+- `useChat(roomId, meId)` owns messages + persists per-room to localStorage
+  (key `tw_chat_<roomId>`), reloads on room change, caps history at 200
+- mirrors the guestStorage pattern (localStorage + hook, no extra deps)
+
+Files:
+
+- src/types/index.ts (ChatMessage evolved: id, kind, who, text, ts, reactions; ChatReaction)
+- src/features/chat/stores/chatStorage.ts
+- src/features/chat/hooks/useChat.ts
+- src/features/chat/utils.ts
+- src/features/chat/index.ts
+- src/features/lobby/components/ChatPanel.tsx (system + timestamps + reactions + auto-scroll)
+- src/features/lobby/components/ChatMessage.tsx (model-driven, timestamp, reaction chips)
+- src/features/lobby/components/SystemMessage.tsx (optional timestamp)
+- src/pages/LobbyPage.jsx (floating chat button, useChat wiring, system seed)
+- src/data.ts (LOBBY_CHAT demo seed migrated to new shape)
+
+Notes:
+
+- transport-free; mutations are local. The hook API (send/system/react) is the
+  seam Socket.io replaces in Epic 4 without touching callers.
+
+Follow-up:
+
+- replace local mutations with Socket.io chat sync (Epic 4 · Chat Sync)
+- emit system messages from real room events (join/leave/ready) once realtime lands
 
 ---
 
@@ -226,17 +292,46 @@ Goal:
 Turn TangWong into a real multiplayer platform.
 
 Status:
-⚪ Not Started
+🟡 In Progress — 2026-06-17 (cross-tab transport; Socket.io server deferred)
+
+Approach:
+A transport-agnostic realtime layer ships first. The current adapter is
+**cross-tab** (BroadcastChannel + a shared localStorage room snapshot), giving
+genuine multi-client sync — open two browser tabs to test join/leave/ready/chat.
+The same `RealtimeService` seam is satisfied by a Socket.io adapter later, so no
+feature code changes when the server lands.
+
+Files:
+
+- src/services/realtime/channel.ts (BroadcastChannel wrapper)
+- src/services/realtime/types.ts (SyncedRoom, RealtimeService contract)
+- src/services/realtime/index.ts
+- src/features/room/stores/roomRealtime.ts (shared room store + mutations)
+- src/features/room/hooks/useRealtimeRoom.ts (join/leave/ready/settings + heartbeat)
+- src/features/chat/hooks/useChat.ts (cross-tab chat sync)
+- src/pages/LobbyPage.jsx (mock PLAYERS/ready removed; live room wired)
 
 ## Backend
 
 ### Socket.io Server
 
+🔒 Deferred — cross-tab transport stands in for the prototype; the
+`RealtimeService` interface is the drop-in seam for a Node + Socket.io server.
+
 ### Room Service
+
+✅ Completed — `roomRealtime` store: create/join/leave, host handoff, settings,
+deterministic room id (`room_<code>`) so chat shares the room.
 
 ### Connection Management
 
+✅ Completed — presence heartbeat (3s) + stale-member pruning (10s); explicit
+leave removes self and notifies other clients.
+
 ### Reconnect Logic
+
+🟡 Partial — rejoin restores room membership + chat history (localStorage). Deep
+network-drop reconnect arrives with the Socket.io server.
 
 ---
 
@@ -244,13 +339,74 @@ Status:
 
 ### Player Join Sync
 
+✅ Completed — joining a room code makes the player appear for every client.
+
 ### Player Leave Sync
+
+✅ Completed — explicit leave removes immediately; a closed tab is pruned after
+the heartbeat timeout.
 
 ### Ready Sync
 
+✅ Completed — ready toggles broadcast; every client sees the live ready count.
+
 ### Chat Sync
 
+✅ Completed — messages, system notices, and reactions sync across clients
+sharing the room.
+
 ### Room Setting Sync
+
+✅ Completed — host edits (name, size, game, privacy) broadcast to all clients.
+
+---
+
+## Host Controls
+
+### Player Actions Menu (kick + transfer host)
+
+✅ Completed — 2026-06-17
+
+- host-only kebab (⋯) dropdown on each player, shown across list / grid / circle
+  layouts and hidden for the host and yourself
+- actions: **👑 โอนสิทธิ์เจ้าของห้อง** (transfer host) · **🚫 นำออกจากห้อง** (kick)
+- only available pre-start (the lobby is the pre-game screen)
+- kick: removes the player + broadcasts; the kicked client is detected via
+  `onRemoved`, toasted, and sent home — covers the "stranger joined the room I
+  made for friends" case
+- transfer host: hands the crown over; menus follow the new host instantly
+- built on a reusable `DropdownMenu` primitive (no UI library)
+
+### Add Bot
+
+✅ Completed — 2026-06-17
+
+- host-only "เพิ่มบอท" adds a synced filler bot (always ready, distinct mascot),
+  capped at the room max; bots show a 🤖 badge and are removable ("นำบอทออก")
+- lets a host reach the minimum player count solo; the roster feeds the game
+
+### Start Gate (minimum players + all ready)
+
+✅ Completed — 2026-06-17
+
+- Start needs `players.length >= game.minPlayers` **and** everyone ready; the CTA
+  shows "ต้องการอีก X คน" / "รอพร้อม (n/m)" / "เริ่มเกม" with a matching hint + banner
+
+Files:
+
+- src/components/ui/dropdown-menu/DropdownMenu.tsx (new, reusable)
+- src/features/room/components/PlayerActionsMenu.tsx (new)
+- src/features/room/hooks/useRealtimeRoom.ts (`kick`, `transferHost`, `onRemoved`)
+- src/features/room/stores/roomRealtime.ts (`transferHost`)
+- src/features/lobby/components/LobbyFooter.tsx (start gate + hint)
+- src/components/game/PlayerSeat.tsx + lobby Player{List,ListItem,Grid,Circle}.tsx (actions slot)
+- src/pages/LobbyPage.jsx
+
+---
+
+## Coming soon (previewed, not built)
+
+- **Voice channel** — dimmed with a "เร็วๆ นี้" badge in the lobby (`ComingSoon`)
 
 ---
 
@@ -355,27 +511,62 @@ Goal:
 First playable game.
 
 Status:
-⚪ Not Started
+🟡 In Progress — 2026-06-17 (engine + Phase A UI playable; realtime sync = Phase B)
 
-## Setup
+Structure:
+Games are now one folder per game under `src/features/games/`, with `engine/`
+as the shared core: `src/features/games/avalon/` holds Avalon's definition.
+
+## Engine (logic) — ✅ Completed
 
 ### Role Assignment
 
+✅ Completed — `buildPrivateState`: composition per player count (5–10), shuffled
+assignment; vision computed per role (Merlin sees evil except Mordred; Percival
+sees Merlin + Morgana; evil see each other).
+
 ### Team Assignment
 
----
+✅ Completed — quest team-size tables per player count; quest 4 needs 2 fails at 7+.
 
-## Gameplay
+Files:
+
+- src/features/games/avalon/types.ts (AvalonPublic / AvalonPrivate / phases)
+- src/features/games/avalon/setup.ts (roles, quests, vision, selectors)
+- src/features/games/avalon/phases.ts (state machine)
+- src/features/games/avalon/actions.ts (NOMINATE_TEAM, VOTE_TEAM, PLAY_MISSION_CARD, CONTINUE, ASSASSINATE)
+- src/features/games/avalon/winConditions.ts
+- src/features/games/avalon/config.ts + index.ts
+- src/features/games/index.ts (barrel)
+- src/features/games/engine/types.ts (GamePhase widened for per-game phases)
+
+Notes:
+
+- engine verified via a scripted playthrough: role counts, Merlin vision,
+  full quest loop, quest-4 two-fail rule, 3-fail evil win, 5-reject evil win
+- mission cards are stored secret + cleared on reveal (must be redacted in transit)
+
+## Gameplay (logic) — ✅ Completed
 
 ### Team Selection
 
+✅ Completed — `NOMINATE_TEAM` (leader-only, exact size); phases `teamProposal` → `teamVote`.
+
 ### Voting
+
+✅ Completed — `VOTE_TEAM`; strict-majority approve; reject rotates leader + counts toward the 5-reject loss.
 
 ### Mission
 
+✅ Completed — `PLAY_MISSION_CARD`; team-only, one card each.
+
 ### Success/Fail
 
+✅ Completed — resolves by required fail count; records per-quest outcome.
+
 ### Assassin Phase
+
+✅ Completed (logic) — `ASSASSINATE` after good reaches 3 quests; kills Merlin → evil win, else good win.
 
 ---
 
@@ -383,7 +574,55 @@ Status:
 
 ### Reveal Roles
 
+✅ Completed — ResultPage reveals every player's real role/side from the game payload.
+
 ### Winner Screen
+
+✅ Completed — ResultPage reads the `WinResult` (team + reason), shows the human's
+real role, quest recap, and full role reveal.
+
+---
+
+## UI — Phase A (single-client, bot-driven) — ✅ Completed — 2026-06-17
+
+Playable end-to-end: Home → Lobby → **Avalon** → Result. The human plays their
+own seat; bots auto-play every other seat (and all seats in 🤖 auto mode).
+
+Done:
+
+- `AvalonGame` orchestrator on `useGameEngine(avalonConfig)` — per-phase center,
+  action bar, round table, role strip, quest track, in-game chat
+- `AvalonTable` (ring seats) + `RoleRevealCard` (tap to view role + vision)
+- per-phase timer (auto-acts for an idle human on expiry)
+- bots (`nextBotAction` / `nextAutoActor`) drive every role; 🤖 toggle for full autoplay
+- GamePage bot-pads short rosters so a solo player can run a full match
+- engine `redactStateFor` (hidden-info view) + `gamePlayerToPlayer` bridge
+
+Files:
+
+- src/features/games/avalon/bot.ts
+- src/features/games/avalon/ui/{AvalonGame,AvalonTable,RoleRevealCard,index}.tsx
+- src/features/games/engine/view.ts, playerUtils.ts (gamePlayerToPlayer)
+- src/pages/GamePage.jsx (rebuilt on the engine), src/pages/ResultPage.jsx
+- src/app/router.jsx (room + player threaded to the game)
+
+Verified: 240 bot-driven games (5–10p) all completed; every win path occurs.
+
+### Rules Screen (from engine)
+
+✅ Completed — 2026-06-17
+
+- `RulesSheet` shows objective, composition, roles, how-to-play, win conditions
+  + tips; `getGameRules('avalon')` derives the facts from the engine
+  (config/setup/phases/win conditions) so they always match real play
+- opened from the Games tab (book button) and the lobby game selector ("อ่านกฎ")
+- games without an engine show a "coming soon" rules placeholder
+
+## UI — Phase B (realtime multiplayer) — ⚪ Not Started
+
+- host-authoritative `useRealtimeGame`: host runs the engine, redacts per player,
+  broadcasts; clients send action requests over the realtime channel
+- host disconnect / reconnect handling
 
 ---
 

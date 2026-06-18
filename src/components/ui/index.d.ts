@@ -11,14 +11,14 @@ export function Icon(props: {
 
 export function Avatar(props: {
   who?: Player; size?: number; ring?: string | boolean; dot?: boolean;
-  crown?: boolean; faded?: boolean; style?: CSSProperties; onClick?: () => void;
+  crown?: boolean; bot?: boolean; faded?: boolean; style?: CSSProperties; onClick?: () => void;
 }): ReactElement;
 
 export function AvatarStack(props: { people: Player[]; size?: number; max?: number }): ReactElement;
 
 export function Logo(props: { size?: number; showWord?: boolean }): ReactElement;
 
-export function GameCard(props: { game: Game; onClick?: () => void; height?: number; big?: boolean }): ReactElement;
+export function GameCard(props: { game: Game; onClick?: () => void; onRules?: (game: Game) => void; height?: number; big?: boolean }): ReactElement;
 
 export function QuestTrack(props: { results: Array<string | null>; current: number }): ReactElement;
 

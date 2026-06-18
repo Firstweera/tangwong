@@ -31,13 +31,18 @@ export interface RoomState {
 
 // ─── Game Phases ──────────────────────────────────────────────────────────────
 
+// The canonical generic phases, plus an escape hatch (`string & {}`) so each
+// game can declare its own phase ids (e.g. Avalon's 'teamProposal') while
+// keeping autocomplete for the known values.
 export type GamePhase =
   | 'lobby'
   | 'setup'
   | 'discussion'
   | 'voting'
   | 'resolution'
-  | 'end';
+  | 'end'
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  | (string & {});
 
 export interface PhaseTransition {
   to: GamePhase;

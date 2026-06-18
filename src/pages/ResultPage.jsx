@@ -5,20 +5,27 @@ import { BottomBar } from '../components/layout';
 import { PLAYERS, ROLES, ROLE_OF } from '../data';
 
 export default function ResultPage({ go, payload, showToast, player }) {
-  const { winner = 'good', reason = 'quests', results = ['success', 'success', 'fail', 'success', null] } = payload || {};
+  const {
+    winner = 'good', reason = 'quests',
+    results = ['success', 'success', 'fail', 'success', null],
+  } = payload || {};
   const good = winner === 'good';
-  const players = PLAYERS;
+  // Real game data when present; fall back to the demo roster for dev jumps.
+  const players = payload?.players ?? PLAYERS;
+  const roleOf = payload?.roles ?? ROLE_OF;
+  const youId = payload?.you ?? 'me';
+  const myRole = ROLES[roleOf[youId]] ?? ROLES.servant;
   const [revealAt, setRevealAt] = useState(0);
 
   useEffect(() => {
     const id = setInterval(() => setRevealAt(v => (v < players.length ? v + 1 : v)), 160);
     return () => clearInterval(id);
-  }, []);
+  }, [players.length]);
 
   const reasonText = {
     quests: good ? 'ฝ่ายดีทำภารกิจสำเร็จ 3 ครั้ง' : 'ฝ่ายชั่วทำลายภารกิจ 3 ครั้ง',
     reject: 'ทีมถูกปฏิเสธ 5 ครั้งติด — ฝ่ายชั่วชนะ',
-    assassin: 'นักลอบสังหารพบเมอร์ลิน',
+    assassin: good ? 'นักลอบสังหารพลาด — เมอร์ลินรอดชีวิต!' : 'นักลอบสังหารพบเมอร์ลิน',
   }[reason];
 
   const accent = good ? 'var(--good)' : 'var(--evil)';
@@ -53,8 +60,8 @@ export default function ResultPage({ go, payload, showToast, player }) {
                 <span style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', fontSize: 13, fontWeight: 800, background: 'var(--accent)', color: '#3a2406', padding: '1px 8px', borderRadius: 8 }}>MVP</span>
               </div>
               <div className="col" style={{ gap: 3, flex: 1 }}>
-                <span className="th h2" style={{ fontSize: 19 }}>คุณ · เมอร์ลิน 🧙</span>
-                <span className="th tiny" style={{ fontWeight: 600 }}>นำทางฝ่ายดีโดยไม่ถูกจับได้ตลอดเกม</span>
+                <span className="th h2" style={{ fontSize: 19 }}>คุณ · {myRole.th} {myRole.em}</span>
+                <span className="th tiny" style={{ fontWeight: 600 }}>{myRole.side === 'good' ? 'ฝ่ายดี · อัศวินโต๊ะกลม' : 'ฝ่ายชั่ว · สมุนของมอร์เดร็ด'}</span>
               </div>
               <div className="col center" style={{ gap: 0 }}>
                 <span className="th" style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent)' }}>+128</span>
@@ -69,7 +76,7 @@ export default function ResultPage({ go, payload, showToast, player }) {
           <h2 className="th h2" style={{ fontSize: 18, marginBottom: 12 }}>เปิดบทบาททั้งหมด</h2>
           <div className="col gap8">
             {players.map((p, i) => {
-              const role = ROLES[ROLE_OF[p.id]];
+              const role = ROLES[roleOf[p.id]] ?? ROLES.servant;
               const isGood = role.side === 'good';
               const shown = i < revealAt;
               return (
@@ -78,7 +85,7 @@ export default function ResultPage({ go, payload, showToast, player }) {
                   <div className="row gap12">
                     <Avatar who={p} size={42} />
                     <div className="col" style={{ gap: 1 }}>
-                      <span className="th h3" style={{ fontSize: 14.5 }}>{p.name} {p.id === 'me' && <span style={{ color: 'var(--primary)', fontSize: 11, fontWeight: 800 }}>· คุณ</span>}</span>
+                      <span className="th h3" style={{ fontSize: 14.5 }}>{p.name} {p.id === youId && <span style={{ color: 'var(--primary)', fontSize: 11, fontWeight: 800 }}>· คุณ</span>}</span>
                       <span className="th tiny" style={{ fontWeight: 600 }}>{role.th}</span>
                     </div>
                   </div>

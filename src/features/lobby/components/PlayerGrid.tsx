@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { Player } from '@/types';
 import { PlayerSeat } from '@/components/game';
 import { ReadyIndicator } from './ReadyIndicator';
@@ -7,13 +8,17 @@ export interface PlayerGridProps {
   isReady?: (player: Player) => boolean;
   hostId?: string;
   meId?: string;
+  /** Per-player action slot, e.g. a host actions menu. */
+  renderActions?: (player: Player) => ReactNode;
+  /** Extra trailing cell (e.g. an add-bot tile). */
+  extra?: ReactNode;
 }
 
 /**
  * PlayerGrid — 2-column grid of player seats (grid layout). Composes the generic
  * PlayerSeat with a ready footer.
  */
-export function PlayerGrid({ players, isReady, hostId, meId = 'me' }: PlayerGridProps) {
+export function PlayerGrid({ players, isReady, hostId, meId = 'me', renderActions, extra }: PlayerGridProps) {
   const host = hostId ?? players[0]?.id;
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -25,8 +30,10 @@ export function PlayerGrid({ players, isReady, hostId, meId = 'me' }: PlayerGrid
           you={p.id === meId}
           delay={i * 0.04}
           footer={isReady ? <ReadyIndicator ready={isReady(p)} /> : undefined}
+          actions={renderActions?.(p)}
         />
       ))}
+      {extra}
     </div>
   );
 }

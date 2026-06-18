@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Avatar, Logo } from '@/components/ui';
 import type { Player } from '@/types';
 
@@ -6,13 +7,17 @@ export interface PlayerCircleProps {
   isReady?: (player: Player) => boolean;
   readyCount?: number;
   hostId?: string;
+  /** Current-user id (defaults to "me"). */
+  meId?: string;
+  /** Per-player action slot, e.g. a host actions menu. */
+  renderActions?: (player: Player) => ReactNode;
 }
 
 /**
  * PlayerCircle — the ตั้งวง radial table layout: players seated around a ring
  * with a centred crest. Ready players get a green ring. Game-agnostic table view.
  */
-export function PlayerCircle({ players, isReady, readyCount = 0, hostId }: PlayerCircleProps) {
+export function PlayerCircle({ players, isReady, readyCount = 0, hostId, meId = 'me', renderActions }: PlayerCircleProps) {
   const n = players.length, R = 116, cx = 50, cy = 50;
   const host = hostId ?? players[0]?.id;
   return (
@@ -30,9 +35,17 @@ export function PlayerCircle({ players, isReady, readyCount = 0, hostId }: Playe
         const ang = (-90 + i * 360 / n) * Math.PI / 180;
         const x = cx + (R / 2.32) * Math.cos(ang);
         const y = cy + (R / 2.32) * Math.sin(ang);
+        const actions = renderActions?.(p);
         return (
           <div key={p.id} className="ring-seat rise" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${i * 0.05}s` }}>
-            <Avatar who={p} size={52} dot crown={p.id === host} ring={isReady?.(p) ? '#34D17E' : false} />
+            <div style={{ position: 'relative' }}>
+              <Avatar who={p} size={52} dot crown={p.id === host} ring={isReady?.(p) ? '#34D17E' : false} bot={p.bot} />
+              {actions && (
+                <div style={{ position: 'absolute', top: -6, right: -6, zIndex: 4 }}>
+                  {actions}
+                </div>
+              )}
+            </div>
             <span className="ring-name th">{p.name}</span>
           </div>
         );
