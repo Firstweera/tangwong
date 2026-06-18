@@ -262,3 +262,4 @@ inserted/updated/returned for someone else = FAIL → block 4.5.3.
 | Date | Tester | Result | Notes |
 |------|--------|--------|-------|
 | 2026-06-18 | Claude (static) | ✅ SQL audit | §5/§6 enforced in SQL; awaiting live two-device run + console kit |
+| 2026-06-18 | User (2 accounts) | ✅ chat sync | 2 real accounts, same room, two-way chat works live — confirms identity split, join-by-code, realtime delivery, chat RLS for members. Remaining: §5 console kit + other §3 cases |
