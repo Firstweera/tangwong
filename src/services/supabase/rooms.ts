@@ -54,17 +54,19 @@ function assemble(room: RoomRow, members: RoomPlayerRow[]): SyncedRoom {
 /** Fetch and assemble the current snapshot for a room code. */
 export async function fetchRoom(code: string): Promise<SyncedRoom | null> {
   if (!supabase) return null;
-  const { data: room } = await supabase.from('rooms').select('*').eq('code', code).maybeSingle();
+  const { data: room, error: roomErr } = await supabase.from('rooms').select('*').eq('code', code).maybeSingle();
+  if (roomErr) console.error('[fetchRoom] rooms error:', roomErr.message);
   if (!room) return null;
-  const { data: members } = await supabase
+  const { data: members, error: membersErr } = await supabase
     .from('room_players').select('*').eq('room_id', (room as RoomRow).id).order('joined_at');
+  if (membersErr) console.error('[fetchRoom] room_players error:', membersErr.message);
   return assemble(room as RoomRow, (members ?? []) as RoomPlayerRow[]);
 }
 
 /** Join (or create) the room, then return the fresh snapshot. */
 export async function joinRoom(code: string, player: Player, seed: Room): Promise<SyncedRoom | null> {
   if (!supabase) return null;
-  await supabase.rpc('join_room', {
+  const { error } = await supabase.rpc('join_room', {
     p_code: code,
     p_seed: {
       name: seed.name, gameId: seed.gameId, maxPlayers: seed.maxPlayers,
@@ -72,6 +74,10 @@ export async function joinRoom(code: string, player: Player, seed: Room): Promis
       nickname: player.name, mascot: player.mascot,
     },
   });
+  if (error) {
+    console.error('[joinRoom] RPC error:', error.message, error.details, error.hint);
+    return null;
+  }
   return fetchRoom(code);
 }
 

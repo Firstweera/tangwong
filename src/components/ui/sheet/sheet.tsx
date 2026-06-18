@@ -81,7 +81,7 @@ function SheetContent({ side = 'bottom', dismissable = true, className, style, c
 
   return (
     <div
-      className={cn('absolute inset-0 z-[60] flex', ALIGN[side])}
+      className={cn('fixed inset-0 z-60 flex', ALIGN[side])}
       style={{ background: 'rgba(4,6,12,0.58)', animation: 'dsFade var(--dur-base) var(--ease-out)' }}
       onMouseDown={onBackdrop}
     >
