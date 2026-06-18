@@ -35,3 +35,10 @@ export const supabase: SupabaseClient | null = isSupabaseEnabled
       },
     })
   : null;
+
+// Expose the client on `window` for manual RLS/security testing from the browser
+// console (see docs/verify-4.5.2.md §5). The anon key is public by design and RLS
+// is the real boundary, so this adds no risk — it just saves importing the module.
+if (typeof window !== 'undefined' && supabase) {
+  (window as unknown as { supabase: SupabaseClient }).supabase = supabase;
+}

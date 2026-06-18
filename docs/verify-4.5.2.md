@@ -233,29 +233,45 @@ project.
 
 ## §5 console test kit (run on the live app, authenticated client)
 
-Open the deployed app (signed in as a member of a room you created), then in the
-browser console — every call below **must fail or return 0 rows**:
+Open the app on a device that is **currently sitting in a room with at least one
+chat message** (create a room + send one message first). Open DevTools → Console
+and paste the whole block. It auto-discovers your room + a message id, then runs
+every "must be rejected" check. The client is on `window.supabase`.
 
 ```js
-const sb = window.supabase ?? (await import('/src/services/supabase/client.ts')).supabase;
-// 1. direct room insert — expect error (no insert policy)
-console.log('rooms.insert', await sb.from('rooms').insert({ code:'HACK1', name:'x', game_id:'avalon', host_id:'x' }));
-// 2. direct ready flip — expect error / 0 rows
-console.log('rp.update', await sb.from('room_players').update({ is_ready:true }).neq('player_id','__none__'));
-// 3. read a room you never joined — expect data: [] (use a real other room id)
-console.log('foreign chat', await sb.from('chat_messages').select('*').eq('room_id','00000000-0000-0000-0000-000000000000'));
-// 4. forge a chat message as someone else — expect error (player_id must = auth.uid)
-console.log('forge chat', await sb.from('chat_messages').insert({ room_id:'<your-room-uuid>', player_id:'someone-else', kind:'user', text:'forged' }));
-// 5. inject a system message directly — expect error (kind must be 'user')
-console.log('inject system', await sb.from('chat_messages').insert({ room_id:'<your-room-uuid>', player_id:null, kind:'system', text:'fake' }));
-// 6. direct reaction write — expect error (no update policy)
-console.log('react direct', await sb.from('chat_messages').update({ reactions:[] }).eq('id','<any-msg-id>'));
-// 7. read another user's profile — expect data: [] (owner-only)
-console.log('foreign profile', await sb.from('profiles').select('*').neq('id','__none__'));
+const sb = window.supabase;
+const me = (await sb.auth.getUser()).data.user.id;
+const roomId = (await sb.from('room_players').select('room_id').eq('player_id', me)).data?.[0]?.room_id;
+const msgId  = (await sb.from('chat_messages').select('id').eq('room_id', roomId).limit(1)).data?.[0]?.id;
+console.log('context →', { me, roomId, msgId });   // all three should be defined
+
+const show = (name, r) => console.log(name, r.error ? '✅ rejected: ' + r.error.message : (Array.isArray(r.data) && r.data.length === 0 ? '✅ 0 rows' : '❌ ALLOWED', r.data));
+
+// 1. direct room insert — must be rejected (no insert policy)
+show('1 rooms.insert ', await sb.from('rooms').insert({ code:'HACK1', name:'x', game_id:'avalon', host_id:me }));
+// 2. direct ready flip on any row — must be rejected (no update policy)
+show('2 rp.update   ', await sb.from('room_players').update({ is_ready:true }).eq('room_id', roomId).neq('player_id', me));
+// 3. read a room you never joined — must return 0 rows
+show('3 foreign chat', await sb.from('chat_messages').select('*').eq('room_id','00000000-0000-0000-0000-000000000000'));
+// 4. forge a message as someone else — must be rejected (player_id must = auth.uid)
+show('4 forge chat  ', await sb.from('chat_messages').insert({ room_id:roomId, player_id:'someone-else', kind:'user', text:'forged' }));
+// 5. inject a system message — must be rejected (kind must be 'user')
+show('5 inject sys  ', await sb.from('chat_messages').insert({ room_id:roomId, player_id:null, kind:'system', text:'fake' }));
+// 6. direct reaction write — must be rejected (no update policy)
+show('6 react direct', await sb.from('chat_messages').update({ reactions:[] }).eq('id', msgId));
+// 7. read another user's profile — must return 0 rows (owner-only)
+show('7 foreign prof', await sb.from('profiles').select('*').neq('id', me));
 ```
 
-A `{ error: {...} }` (RLS/permission) or `{ data: [] }` on each = PASS. Any row
-inserted/updated/returned for someone else = FAIL → block 4.5.3.
+Read PASS as: lines 1, 2, 4, 5, 6 print `✅ rejected: …`; lines 3, 7 print
+`✅ 0 rows`. Any `❌ ALLOWED` = a hole → **block 4.5.3** and report it.
+
+Sanity counter-check (this one **should succeed** — proves you really are a member
+and the kit isn't failing for the wrong reason):
+
+```js
+console.log('member read (should have rows):', (await sb.from('room_players').select('*').eq('room_id', roomId)).data);
+```
 
 ## Result log
 
