@@ -454,7 +454,7 @@ Follow-up:
 
 ## Phase 4.5.2 - Rooms + Realtime
 
-🟡 Implemented — 2026-06-18 (pending live verification with real Supabase keys)
+🟡 In Progress — 2026-06-18 (deployed; room join bug fixed; full verify-4.5.2.md pending)
 
 - schema + RLS + RPC: `rooms`, `room_players`, `chat_messages`; all writes go
   through `SECURITY DEFINER` functions (join/leave/ready/settings/kick/transfer/
@@ -467,11 +467,17 @@ Follow-up:
 - `useRealtimeRoom` / `useChat` now switch transport on `useSupabaseTransport`
   (`VITE_USE_SUPABASE=true`); default stays cross-tab so local dev is unchanged
 
+Bug fixes (2026-06-18):
+
+- **auth UID race + kick detection**: `useSupabaseRoom` now resolves `auth.uid()`
+  directly before joining; join effect gated on `authUid`; kick detection gated
+  on `synced=true` (first real DB snapshot) — fixed "separate rooms" symptom
+
 Files:
 
 - supabase/migrations/0002_rooms_chat.sql (new)
 - src/services/supabase/{rooms,chat}.ts (new), client.ts (`useSupabaseTransport`), index.ts
-- src/features/room/hooks/useRealtimeRoom.ts (transport switch)
+- src/features/room/hooks/useRealtimeRoom.ts (transport switch + auth fix)
 - src/features/chat/hooks/useChat.ts (transport switch), src/pages/LobbyPage.jsx (pass code)
 
 Verification:
@@ -490,7 +496,7 @@ Follow-up:
 
 ## Phase 4.5.4 - Deploy (Vercel + Supabase)
 
-🟡 Deploy-ready — 2026-06-18 (config + docs in place; first deploy pending)
+✅ Deployed — 2026-06-18 (live at <https://tangwong.vercel.app/>)
 
 - `vercel.json` — Vite framework preset + SPA catch-all rewrite so deep links /
   refreshes (`/join/:code`, `/lobby`, …) resolve to the app instead of 404
@@ -498,7 +504,13 @@ Follow-up:
   migration order (0001→0002), `.env.local`, Vercel env vars, and a pre/post
   deploy checklist with a two-device smoke test
 - `.env.example` confirmed complete (URL, anon key, `VITE_USE_SUPABASE`)
-- build + typecheck verified green
+- build + typecheck verified green; first Vercel deploy succeeded
+- Supabase project created, migrations applied, anonymous auth enabled
+- fixed darwin-arm64 native dep (`@tailwindcss/oxide-darwin-arm64` removed from
+  devDependencies) + pinned Node 20 via `.nvmrc` to unblock Vercel build
+- **responsive layout fix**: removed prototype phone/device frame; app now renders
+  as a real mobile web app (`max-width:480px` shell, `position:fixed` tabbar with
+  safe-area inset, real viewport scroll — no more phone-inside-phone on Safari)
 
 Note (not a blocker): `/join/:code` resolves to the SPA but does not yet
 auto-join from the URL — the in-memory router still expects the code pasted on
@@ -506,7 +518,11 @@ Home. URL → auto-join is a future feature; the rewrite is in place for when it
 
 Files:
 
-- vercel.json (new), DEPLOYMENT.md (new)
+- vercel.json (new), DEPLOYMENT.md (new), .nvmrc (new)
+- package.json (darwin-arm64 removed)
+- index.html, src/main.jsx, src/app/App.jsx, src/app/TabBar.jsx
+- src/styles/tokens.css, src/styles/reset.css, src/styles/layout.css,
+  src/styles/components.css
 
 Follow-up:
 

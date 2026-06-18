@@ -1,5 +1,67 @@
 # Changelog
 
+## 2026-06-18 — Fix: production responsive layout (remove device frame)
+
+Epic:
+Epic 4.5 - Supabase Backend (Phase 4.5.4 — Deploy)
+
+Removed the prototype phone/device frame so TangWong renders as a real mobile
+web app on Safari and Chrome instead of a phone mockup inside the phone screen.
+
+Completed:
+
+- `index.html`: replaced `#stage` + `#device-scaler` with a plain `#root` mount
+- `main.jsx`: mount to `#root`
+- `App.jsx`: removed `IOSDevice` wrapper, `scale` state, resize `useEffect`, and
+  the `transform:scale(…)` wrapper div — app content renders directly
+- `tokens.css`: removed `#stage`/`#device-scaler` rules; `.app` gains
+  `max-width:480px; margin:0 auto; min-height:100dvh` (centred mobile shell)
+- `reset.css`: `overflow:hidden` → `overflow-x:hidden` (allow real scroll);
+  `height:100%` → `min-height:100dvh` on html/body
+- `layout.css`: `.screen` changed from `position:absolute;inset:0` to
+  `flex:1; position:relative` (fills flex-column parent instead of overlapping)
+- `components.css`: `.tabbar` → `position:fixed; left:50%;
+  transform:translateX(-50%); bottom:calc(22px + env(safe-area-inset-bottom));
+  width:calc(min(100vw,480px)-28px)` — anchors to real viewport bottom
+- `TabBar.jsx`: bar variant updated with centred width + safe-area paddingBottom
+
+Files:
+
+- index.html, src/main.jsx
+- src/app/App.jsx, src/app/TabBar.jsx
+- src/styles/tokens.css, src/styles/reset.css, src/styles/layout.css,
+  src/styles/components.css
+
+## 2026-06-18 — Fix: Vercel build (darwin-arm64 native dep + Node 20)
+
+Resolved `npm install` failure on Vercel (Linux x64):
+
+- Removed `@tailwindcss/oxide-darwin-arm64` from `devDependencies` — it is a
+  Mac-ARM-only native binary that blocks install on Linux
+- Added `.nvmrc` pinning Node 20 to satisfy engine requirements from typescript
+  and supabase-js transitive deps
+
+Files: `package.json`, `package-lock.json`, `.nvmrc`
+
+## 2026-06-18 — Fix: room join (auth UID race + kick detection)
+
+Resolved two bugs that put players in separate rooms when using Supabase transport:
+
+1. Race condition — `joinRoom` was called before the anonymous Supabase session
+   was established, so `auth.uid()` was null → `join_room` RPC threw
+   "not authenticated"; the error was silently swallowed; each client stayed on
+   its own local seed room.
+2. ID mismatch — `player.id` is a locally-generated UUID (localStorage) while
+   Supabase stores `auth.uid()` as `player_id`; kick detection compared
+   `room.players[].id` (Supabase UIDs) against `meId` (local UUID) → always
+   false → player was immediately ejected back to Home.
+
+Fix: `useSupabaseRoom` now resolves `auth.uid()` via `supabase.auth.getSession()`
++ `onAuthStateChange`, delays `joinRoom` until `authUid` is set, and guards kick
+detection behind `synced=true` (first real DB snapshot).
+
+Files: `src/features/room/hooks/useRealtimeRoom.ts`
+
 ## 2026-06-18 — Deploy readiness (Vercel + Supabase + GitHub)
 
 Epic:
