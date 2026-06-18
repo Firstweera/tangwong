@@ -555,7 +555,19 @@ Follow-up (recommended spot-checks, non-blocking):
 
 ## Phase 4.5.3 - Game Sync + Hidden Info (Edge Function authority)
 
-⚪ Not Started
+🟡 In Progress — 2026-06-18 (design doc written; build not started)
+
+Design: see **docs/phase-4.5.3-plan.md** — commits Option B (Edge Function runs
+the existing TS engine as the authority), defines `game_states` (public) +
+`game_private` (owner-only RLS — the hidden-info boundary) + `game_actions`,
+the `game-start` / `game-action` functions, server-resolved bots, host-driven
+timers, and a B0–B7 build order. Hidden-info isolation rides on the RLS pattern
+verified in 4.5.2.
+
+Next: B0 (engine portability to Deno) + B1 (`0004_game_state.sql` + RLS).
+
+Follow-up (from 4.5.2, non-blocking): server-side presence pruning; emit
+join/leave/ready system messages from real events.
 
 ## Phase 4.5.4 - Deploy (Vercel + Supabase)
 
