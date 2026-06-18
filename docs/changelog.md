@@ -1,5 +1,135 @@
 # Changelog
 
+## 2026-06-18 — Deploy readiness (Vercel + Supabase + GitHub)
+
+Epic:
+Epic 4.5 - Supabase Backend (Phase 4.5.4 — Deploy)
+
+Prepares the project for its first GitHub → Supabase → Vercel deployment. No new
+features.
+
+Completed:
+
+- verified `npm run build` + `npx tsc --noEmit` pass
+- `vercel.json` — Vite framework preset (build `npm run build`, output `dist`) +
+  SPA catch-all rewrite so deep links / refreshes (`/join/:code`, `/lobby`, …)
+  resolve to `index.html` instead of 404
+- `DEPLOYMENT.md` — full guide: GitHub setup, Supabase project + anonymous auth,
+  migration order (0001→0002 with a realtime-publication check), `.env.local`,
+  Vercel env vars, and a pre/post-deploy checklist incl. a two-device smoke test
+- confirmed `.env.example` is complete and matches the env the app reads
+  (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_USE_SUPABASE`)
+- migrations 0001 + 0002 documented in `supabase/README.md` and `DEPLOYMENT.md`
+
+Honest caveat (documented, not a blocker):
+
+- the app uses an in-memory screen router, so `/join/:code` loads the SPA but
+  does not yet auto-join from the URL — wiring that is a future feature; the
+  rewrite is in place so the route won't 404 once it lands
+
+Files:
+
+- vercel.json (new), DEPLOYMENT.md (new)
+- docs/roadmap.md (Phase 4.5.4 → deploy-ready)
+
+## 2026-06-18 — Epic 4.5.2: verification checklist
+
+Added a detailed two-device verification checklist for the Supabase rooms/chat/
+realtime layer (docs/verify-4.5.2.md) to run before marking 4.5.2 Completed and
+before starting game sync (4.5.3). No implementation code.
+
+Covers: project setup (anon auth, migrations 0001+0002 in order, realtime
+publication, RLS active, RPC present + SECURITY DEFINER), local env + safe
+fallback, two-device functional cases (create / join-by-code / join-by-link /
+ready / chat / reactions / settings / kick / transfer host / add bot / leave /
+rejoin), presence (close tab / refresh / reconnect / stale / heartbeat),
+security/RLS (no direct table writes, non-member can't read, RPC-only mutations,
+chat insert + reaction policy), failure cases (invalid code, full room, kicked
+rejoin, non-host guards, missing env), and acceptance criteria split into
+must-pass / allowed-follow-up / must-block-4.5.3.
+
+Files:
+
+- docs/verify-4.5.2.md (new)
+- docs/roadmap.md (link the checklist as the 4.5.2 gate)
+
+## 2026-06-18 — Epic 4.5.2: Rooms + chat over Supabase (behind a flag)
+
+Epic:
+Epic 4.5 - Supabase Backend (Phase 4.5.2 — Rooms + Realtime)
+
+Status: implemented; pending live verification with real Supabase keys. The
+default transport stays cross-tab, so the working lobby is unchanged until
+`VITE_USE_SUPABASE=true`.
+
+Completed:
+
+- `0002_rooms_chat.sql` — `rooms`, `room_players`, `chat_messages` with RLS
+  (members read), realtime publication, and the **authority layer**: every write
+  is a `SECURITY DEFINER` RPC (`join_room`, `leave_room`, `set_ready`,
+  `update_settings`, `kick_player`, `transfer_host`, `add_bot`, `touch_presence`,
+  `toggle_reaction`, `send_system`). Clients never write these tables directly;
+  the one exception is members inserting their own user chat message (RLS-checked)
+- name + mascot denormalised onto `room_players` so clients can show opponents
+  without reading owner-only `profiles`
+- `roomService` / `chatService` — async, server-authoritative; assemble the same
+  `SyncedRoom` / `ChatMessage` shapes; realtime via Postgres changes
+- `useRealtimeRoom` / `useChat` split into Supabase + cross-tab implementations,
+  selected by `useSupabaseTransport`; same public surface so no caller changed
+  (LobbyPage just passes the room code for host system messages)
+
+Files:
+
+- supabase/migrations/0002_rooms_chat.sql (new), supabase/README.md
+- src/services/supabase/{rooms,chat}.ts (new), client.ts (`useSupabaseTransport`), index.ts
+- src/features/room/hooks/useRealtimeRoom.ts, src/features/chat/hooks/useChat.ts
+- src/pages/LobbyPage.jsx
+
+Next:
+
+- live test on two devices; presence pruning on the server; Phase 4.5.3 (game
+  sync + hidden info via Edge Function authority)
+
+## 2026-06-18 — Epic 4.5.1: Supabase foundation + anonymous auth
+
+Epic:
+Epic 4.5 - Supabase Backend (Phase 4.5.1 — Foundation + Auth)
+
+Direction (locked):
+Friends play across devices via **Supabase + Vercel** (free tier). Long-term
+authority is **Supabase Edge Functions + Postgres + RLS** — clients never write
+game state directly. Edge Functions are not built yet (Phase 4.5.3).
+
+Completed:
+
+- `@supabase/supabase-js` added; shared client created only when env is present
+  (`isSupabaseEnabled`) so the app still runs offline on the local guest
+- anonymous auth (`ensureSession` → `signInAnonymously`) gives every player a
+  stable, cross-device `auth.uid()` with no login wall
+- `profiles` table (id, nickname, mascot) + RLS (owner-only) — `0001_profiles.sql`
+- guest identity migration: the local `tw_guest` is upgraded onto the real uid on
+  first sign-in; a returning account's stored profile takes over nickname/mascot;
+  edits sync back to the backend best-effort
+- `linkGoogle()` seam in place for the later account upgrade (not wired into UI)
+- env setup: `.env.example`, `src/vite-env.d.ts`
+
+Scope guard (intentionally deferred):
+
+- no Edge Functions yet · no room/game tables yet — schema kept minimal and
+  evolves incrementally
+
+Files:
+
+- src/services/supabase/{client,auth,profiles,index}.ts (new)
+- src/features/guest/hooks/useGuest.ts (auth-aware migration + `ready`)
+- src/vite-env.d.ts (new), .env.example (new)
+- supabase/migrations/0001_profiles.sql (new), supabase/README.md (new)
+- docs/supabase-plan.md (new), docs/roadmap.md (Epic 4.5)
+
+Next:
+
+- Phase 4.5.2 — rooms + chat over Supabase (RPC + Realtime, behind `VITE_USE_SUPABASE`)
+
 ## 2026-06-17 — Game rules sheet (from engine) + add-bot UI polish
 
 Completed:

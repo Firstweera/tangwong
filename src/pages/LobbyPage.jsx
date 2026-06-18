@@ -87,7 +87,7 @@ export default function LobbyPage({ go, layout, showToast, room, player, onLeave
   const hasRules = !!getGameRules(currentGame.id);
 
   // ─── Local chat (Epic 3), now synced across tabs via the shared room id ─────
-  const { messages, sendMessage, sendSystem, toggleReaction } = useChat(liveRoom.id, meId);
+  const { messages, sendMessage, sendSystem, toggleReaction } = useChat(liveRoom.id, meId, liveRoom.code);
 
   // The host seeds a welcome notice once when the room's chat is empty.
   const seeded = useRef(false);

@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Player, Room, RoomSettings } from '@/types';
 import { createChannel } from '@/services/realtime';
 import type { CrossTabChannel, SyncedRoom, RealtimeRoomMessage } from '@/services/realtime';
+import { useSupabaseTransport, roomService } from '@/services/supabase';
 import { BOT_POOL } from '@/data';
 import * as store from '../stores/roomRealtime';
 
 const HEARTBEAT_MS = 3_000;
+const OFFLINE_MS = 10_000;
 
 export interface UseRealtimeRoomReturn {
   room: SyncedRoom;
@@ -32,12 +34,113 @@ export interface UseRealtimeRoomOptions {
   onRemoved?: () => void;
 }
 
+/** Pick a bot identity not already seated, like the cross-tab store does. */
+function makeBot(seated: Player[]): Player {
+  const used = new Set(seated.map(p => p.mascot));
+  const def = BOT_POOL.find(b => !used.has(b.mascot)) ?? BOT_POOL[seated.length % BOT_POOL.length];
+  const id = `bot_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
+  return { id, name: def.name, en: 'Bot', mascot: def.mascot, online: true, bot: true };
+}
+
 /**
- * useRealtimeRoom — joins the shared room for `seed.code`, keeps it synced across
- * tabs (BroadcastChannel + a presence heartbeat), and exposes room mutations.
- * Transport is swappable: the same surface is satisfied by a Socket.io adapter.
+ * useRealtimeRoom — joins the shared room for `seed.code`, keeps it synced, and
+ * exposes room mutations. Transport is selected by `useSupabaseTransport`:
+ * Supabase (server-authoritative, cross-device) or cross-tab (BroadcastChannel +
+ * localStorage). Both satisfy the same surface, so callers never change.
  */
 export function useRealtimeRoom(seed: Room, player: Player, options: UseRealtimeRoomOptions = {}): UseRealtimeRoomReturn {
+  // The transport flag is a build-time constant, so the branch taken never
+  // changes across renders — this conditional hook call is rules-of-hooks safe.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useSupabaseTransport ? useSupabaseRoom(seed, player, options) : useCrossTabRoom(seed, player, options);
+}
+
+// ─── Supabase transport (Phase 4.5.2) ───────────────────────────────────────
+
+function useSupabaseRoom(seed: Room, player: Player, options: UseRealtimeRoomOptions): UseRealtimeRoomReturn {
+  const code = seed.code;
+  const meId = player.id;
+  // Optimistic seed until the first fetch resolves (keeps `room` non-null).
+  const [room, setRoom] = useState<SyncedRoom>(() => ({ ...seed, ready: {}, presence: {} }));
+  const removedFiredRef = useRef(false);
+  const leftRef = useRef(false);
+  const onRemovedRef = useRef(options.onRemoved);
+  onRemovedRef.current = options.onRemoved;
+
+  const refresh = useCallback(async () => {
+    const next = await roomService.fetchRoom(code);
+    if (next) setRoom(next);
+    return next;
+  }, [code]);
+
+  useEffect(() => {
+    let unsub = () => {};
+    let beat = 0;
+    let active = true;
+
+    (async () => {
+      const joined = await roomService.joinRoom(code, player, seed);
+      if (!active) return;
+      if (joined) setRoom(joined);
+      const roomId = joined?.id ?? room.id;
+      unsub = roomService.subscribeRoom(roomId, () => { void refresh(); });
+      beat = window.setInterval(() => { void roomService.touchPresence(code); }, HEARTBEAT_MS);
+    })();
+
+    return () => {
+      active = false;
+      unsub();
+      if (beat) window.clearInterval(beat);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, meId]);
+
+  // Detect being kicked (no longer a member) and notify once.
+  useEffect(() => {
+    if (leftRef.current || removedFiredRef.current) return;
+    if (room.players.length > 0 && !room.players.some(p => p.id === meId)) {
+      removedFiredRef.current = true;
+      onRemovedRef.current?.();
+    }
+  }, [room, meId]);
+
+  const setReady = useCallback((ready: boolean) => {
+    void roomService.setReady(code, ready).then(refresh);
+  }, [code, refresh]);
+  const updateSettings = useCallback((settings: Partial<RoomSettings>) => {
+    void roomService.updateSettings(code, settings).then(refresh);
+  }, [code, refresh]);
+  const addBot = useCallback(() => {
+    void roomService.addBot(code, makeBot(room.players)).then(refresh);
+  }, [code, room.players, refresh]);
+  const kick = useCallback((playerId: string) => {
+    if (playerId === meId) return;
+    void roomService.kickPlayer(code, playerId).then(refresh);
+  }, [code, meId, refresh]);
+  const transferHost = useCallback((playerId: string) => {
+    void roomService.transferHost(code, playerId).then(refresh);
+  }, [code, refresh]);
+  const leave = useCallback(() => {
+    leftRef.current = true;
+    void roomService.leaveRoom(code);
+  }, [code]);
+
+  const now = Date.now();
+  const readyCount = room.players.filter(p => room.ready[p.id]).length;
+
+  return {
+    room,
+    players: room.players,
+    isReady: (p) => !!room.ready[p.id],
+    readyCount,
+    isOnline: (p) => !!p.bot || (room.presence[p.id] ?? 0) >= now - OFFLINE_MS,
+    setReady, updateSettings, addBot, kick, transferHost, leave,
+  };
+}
+
+// ─── Cross-tab transport (BroadcastChannel + localStorage) ───────────────────
+
+function useCrossTabRoom(seed: Room, player: Player, options: UseRealtimeRoomOptions): UseRealtimeRoomReturn {
   const code = seed.code;
   const meId = player.id;
 
@@ -99,11 +202,7 @@ export function useRealtimeRoom(seed: Room, player: Player, options: UseRealtime
   }, [code, broadcast]);
 
   const addBot = useCallback(() => {
-    const used = new Set(room.players.map(p => p.mascot));
-    const def = BOT_POOL.find(b => !used.has(b.mascot)) ?? BOT_POOL[room.players.length % BOT_POOL.length];
-    const id = `bot_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
-    const bot: Player = { id, name: def.name, en: 'Bot', mascot: def.mascot, online: true, bot: true };
-    const next = store.addBot(code, bot);
+    const next = store.addBot(code, makeBot(room.players));
     if (next) { setRoom(next); broadcast(); }
   }, [code, room.players, broadcast]);
 

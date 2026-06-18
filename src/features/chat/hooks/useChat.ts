@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import type { ChatMessage } from '@/types';
 import { createChannel } from '@/services/realtime';
 import type { CrossTabChannel, RealtimeChatMessage } from '@/services/realtime';
+import { useSupabaseTransport, chatService } from '@/services/supabase';
 import {
   loadMessages, saveMessages, clearMessages,
   createUserMessage, createSystemMessage,
@@ -19,12 +20,49 @@ export interface UseChatReturn {
 }
 
 /**
- * useChat — local chat store for one room, synced across tabs. Owns the message
- * list, persists it per-room to localStorage, and broadcasts changes so other
- * clients reload. Transport is swappable: Socket.io replaces the cross-tab
- * channel + storage behind the same API.
+ * useChat — room chat. Transport is selected by `useSupabaseTransport`: Supabase
+ * (chat_messages table + realtime) or cross-tab (localStorage + BroadcastChannel).
+ * `roomId` is the room's id in both cases; `code` is needed only for host-authored
+ * system messages over Supabase RPC.
  */
-export function useChat(roomId: string, meId: string): UseChatReturn {
+export function useChat(roomId: string, meId: string, code?: string): UseChatReturn {
+  // Build-time transport flag — branch is stable across renders (hooks-safe).
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useSupabaseTransport ? useSupabaseChat(roomId, meId, code) : useCrossTabChat(roomId, meId);
+}
+
+// ─── Supabase transport (Phase 4.5.2) ───────────────────────────────────────
+
+function useSupabaseChat(roomId: string, meId: string, code?: string): UseChatReturn {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  const refresh = useCallback(() => {
+    void chatService.fetchMessages(roomId).then(setMessages);
+  }, [roomId]);
+
+  useEffect(() => {
+    refresh();
+    const unsub = chatService.subscribeChat(roomId, refresh);
+    return unsub;
+  }, [roomId, refresh]);
+
+  const sendMessage = useCallback((text: string) => {
+    void chatService.sendMessage(roomId, meId, text).then(refresh);
+  }, [roomId, meId, refresh]);
+  const sendSystem = useCallback((text: string) => {
+    if (code) void chatService.sendSystem(code, text).then(refresh);
+  }, [code, refresh]);
+  const toggleReaction = useCallback((messageId: string, emoji: string) => {
+    void chatService.toggleReaction(messageId, emoji).then(refresh);
+  }, [refresh]);
+  const clear = useCallback(() => {}, []); // server chat isn't locally clearable
+
+  return { messages, sendMessage, sendSystem, toggleReaction, clear };
+}
+
+// ─── Cross-tab transport (localStorage + BroadcastChannel) ───────────────────
+
+function useCrossTabChat(roomId: string, meId: string): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessages(roomId));
   // Latest messages, for mutators that compute the next list without a stale closure.
   const ref = useRef(messages);

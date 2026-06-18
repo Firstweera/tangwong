@@ -410,6 +410,111 @@ Files:
 
 ---
 
+# Epic 4.5 - Supabase Backend
+
+Goal:
+Let friends play from different devices / networks, deployable for free
+(Supabase + Vercel). Long-term authority direction is **locked**: Supabase
+Edge Functions + Postgres + RLS — clients never write game state directly.
+
+Status:
+🟡 In Progress — 2026-06-18 (Phase 4.5.1 done; rooms/realtime next)
+
+Plan:
+See docs/supabase-plan.md for architecture, schema, RLS, and the phased plan.
+
+## Phase 4.5.1 - Foundation + Auth
+
+✅ Completed — 2026-06-18
+
+- anonymous Supabase auth (`signInAnonymously`) → stable cross-device `auth.uid()`
+- `profiles` table (id, nickname, mascot) + RLS (owner-only read/write)
+- guest identity migration: local `tw_guest` is upgraded onto the real uid; a
+  returning account's stored profile takes over nickname/mascot
+- env setup; the backend is opt-in — with no `.env.local` the app runs on the
+  local-only guest exactly as before
+- `linkGoogle()` seam present for later account upgrade (not yet in the UI)
+
+Files:
+
+- src/services/supabase/{client,auth,profiles,index}.ts (new)
+- src/features/guest/hooks/useGuest.ts (auth-aware migration)
+- src/vite-env.d.ts (new), .env.example (new)
+- supabase/migrations/0001_profiles.sql (new), supabase/README.md (new)
+
+Notes:
+
+- Edge Functions intentionally NOT implemented yet (Phase 4.5.3)
+- no game/room tables yet — schema kept minimal, evolves incrementally
+
+Follow-up:
+
+- Phase 4.5.2 — rooms + chat over Supabase (RPC + Realtime, behind VITE_USE_SUPABASE)
+- wire a "link Google account" button into the profile sheet
+
+## Phase 4.5.2 - Rooms + Realtime
+
+🟡 Implemented — 2026-06-18 (pending live verification with real Supabase keys)
+
+- schema + RLS + RPC: `rooms`, `room_players`, `chat_messages`; all writes go
+  through `SECURITY DEFINER` functions (join/leave/ready/settings/kick/transfer/
+  add_bot/touch_presence/toggle_reaction/send_system) — clients never write
+  these tables directly (`0002_rooms_chat.sql`)
+- display name + mascot are denormalised onto `room_players` so clients render
+  opponents without reading owner-only `profiles`
+- `roomService` / `chatService` — async, server-authoritative, realtime via
+  Postgres changes; same surface as the cross-tab store
+- `useRealtimeRoom` / `useChat` now switch transport on `useSupabaseTransport`
+  (`VITE_USE_SUPABASE=true`); default stays cross-tab so local dev is unchanged
+
+Files:
+
+- supabase/migrations/0002_rooms_chat.sql (new)
+- src/services/supabase/{rooms,chat}.ts (new), client.ts (`useSupabaseTransport`), index.ts
+- src/features/room/hooks/useRealtimeRoom.ts (transport switch)
+- src/features/chat/hooks/useChat.ts (transport switch), src/pages/LobbyPage.jsx (pass code)
+
+Verification:
+
+- run docs/verify-4.5.2.md end-to-end on two devices before marking ✅ Completed
+  and before starting 4.5.3 (security/RLS checks are the hard gate)
+
+Follow-up:
+
+- tune presence pruning (currently last_seen is updated but not server-pruned)
+- emit join/leave/ready system messages from real events
+
+## Phase 4.5.3 - Game Sync + Hidden Info (Edge Function authority)
+
+⚪ Not Started
+
+## Phase 4.5.4 - Deploy (Vercel + Supabase)
+
+🟡 Deploy-ready — 2026-06-18 (config + docs in place; first deploy pending)
+
+- `vercel.json` — Vite framework preset + SPA catch-all rewrite so deep links /
+  refreshes (`/join/:code`, `/lobby`, …) resolve to the app instead of 404
+- `DEPLOYMENT.md` — end-to-end guide: GitHub push, Supabase project + anon auth,
+  migration order (0001→0002), `.env.local`, Vercel env vars, and a pre/post
+  deploy checklist with a two-device smoke test
+- `.env.example` confirmed complete (URL, anon key, `VITE_USE_SUPABASE`)
+- build + typecheck verified green
+
+Note (not a blocker): `/join/:code` resolves to the SPA but does not yet
+auto-join from the URL — the in-memory router still expects the code pasted on
+Home. URL → auto-join is a future feature; the rewrite is in place for when it lands.
+
+Files:
+
+- vercel.json (new), DEPLOYMENT.md (new)
+
+Follow-up:
+
+- run the first GitHub → Vercel deploy; complete the post-deploy smoke test
+- wire URL `/join/:code` → auto-join (feature, separate task)
+
+---
+
 # Epic 5 - Generic Game Engine
 
 Goal:
