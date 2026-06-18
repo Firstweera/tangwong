@@ -10,6 +10,7 @@ import { buildRoom, buildRoomFromCode, parseInviteCode } from '../features/room/
 import { useGuest } from '../features/guest/hooks/useGuest.ts';
 import { CreateRoomSheet } from '../features/room/components/CreateRoomSheet.tsx';
 import { EditProfileSheet } from '../features/guest/components/EditProfileSheet.tsx';
+import { Analytics } from '@vercel/analytics/react';
 
 const TWEAK_DEFAULTS = {
   theme: 'dark',
@@ -131,6 +132,8 @@ export default function App() {
         <CreateRoomSheet open={createOpen} onClose={() => setCreateOpen(false)} onCreateRoom={handleFabCreate} player={player} />
         <EditProfileSheet open={editProfileOpen} onClose={() => setEditProfileOpen(false)} guest={guest} onSave={handleSaveProfile} onLogout={logout} showToast={showToast} />
       </div>
+
+      <Analytics />
 
       <TweaksPanel>
         <TweakSection label="ธีม · Theme" />
