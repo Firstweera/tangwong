@@ -14,6 +14,7 @@ export function createDefaultGuest(): GuestProfile {
     playerId: generatePlayerId(),
     nickname: 'ผู้เล่น',
     mascot: 'fox',
+    onboarded: false,
   };
 }
 
@@ -23,7 +24,9 @@ export function loadGuest(): GuestProfile {
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<GuestProfile>;
       if (parsed.playerId && parsed.nickname && parsed.mascot) {
-        return parsed as GuestProfile;
+        // Guests stored before onboarding existed are treated as already
+        // onboarded — they're returning users, not first-run.
+        return { onboarded: true, ...parsed } as GuestProfile;
       }
     }
   } catch {

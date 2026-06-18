@@ -96,24 +96,30 @@ function AvatarStack({ people, size = 30, max = 4 }) {
 }
 
 /* ───────────────── Logo ───────────────── */
-function Logo({ size = 34, showWord = true }) {
+function Logo({ size = 34, showWord = true, variant }) {
+  // full horizontal lockup image
+  if (variant === 'wordmark') {
+    return <img src="assets/logo-wordmark.png" alt="TangWong" draggable="false"
+      style={{ height: size, width: 'auto', display: 'block', filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.25))' }} />;
+  }
+  if (variant === 'illustration') {
+    return <img src="assets/logo-illustration.png" alt="TangWong" draggable="false"
+      style={{ width: size, height: 'auto', display: 'block', filter: 'drop-shadow(0 12px 28px rgba(0,0,0,0.3))' }} />;
+  }
+  // compact icon mark = the round illustration emblem
+  const mark = (
+    <img src="assets/logo-illustration.png" alt="TangWong" draggable="false"
+      style={{ height: size * 1.12, width: 'auto', display: 'block', flexShrink: 0,
+               filter: 'drop-shadow(0 5px 12px rgba(0,0,0,0.35))' }} />
+  );
+  if (!showWord) return mark;
   return (
     <div className="row gap10" style={{ alignItems: 'center' }}>
-      <div style={{ width: size, height: size, borderRadius: size * 0.32, background: 'var(--grad)',
-           position: 'relative', boxShadow: '0 6px 16px -6px rgba(109,94,249,0.8)', flexShrink: 0 }}>
-        {/* three dots gathered in a circle = ตั้งวง */}
-        <svg viewBox="0 0 36 36" width={size} height={size} style={{ position: 'absolute', inset: 0 }}>
-          <circle cx="18" cy="11" r="3.1" fill="#fff" />
-          <circle cx="11.2" cy="22" r="3.1" fill="#fff" fillOpacity="0.92" />
-          <circle cx="24.8" cy="22" r="3.1" fill="#fff" fillOpacity="0.82" />
-        </svg>
+      {mark}
+      <div className="col" style={{ lineHeight: 1 }}>
+        <span className="th" style={{ fontSize: size * 0.5, fontWeight: 800, letterSpacing: '-0.01em' }}>ตั้งวง</span>
+        <span style={{ fontSize: size * 0.27, fontWeight: 700, letterSpacing: '0.18em', color: 'var(--muted)', marginTop: 2 }}>TANGWONG</span>
       </div>
-      {showWord && (
-        <div className="col" style={{ lineHeight: 1 }}>
-          <span className="th" style={{ fontSize: size * 0.5, fontWeight: 800, letterSpacing: '-0.01em' }}>ตั้งวง</span>
-          <span style={{ fontSize: size * 0.27, fontWeight: 700, letterSpacing: '0.18em', color: 'var(--muted)', marginTop: 2 }}>TANGWONG</span>
-        </div>
-      )}
     </div>
   );
 }

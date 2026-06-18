@@ -49,9 +49,9 @@ export function ChatPanel({ messages, players, meId = 'me', onSend, onReact, onC
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 70, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={onClose} />
-      <div className="card-solid rise" role="dialog" aria-label="chat" style={{ position: 'relative', borderRadius: '26px 26px 0 0', maxHeight: '64%', display: 'flex', flexDirection: 'column', paddingBottom: 30 }}>
-        <div className="row between" style={{ padding: '14px 18px 8px' }}>
-          <div style={{ width: 40 }} />
+      <div className="card-solid rise" role="dialog" aria-label="chat" style={{ position: 'relative', borderRadius: '26px 26px 0 0', height: '72%', maxHeight: 620, minHeight: 380, display: 'flex', flexDirection: 'column', paddingBottom: 'calc(16px + env(safe-area-inset-bottom))' }}>
+        <div className="row between" style={{ padding: '12px 18px 6px', flexShrink: 0 }}>
+          <div style={{ width: 32 }} />
           <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--border-2)' }} />
           <button aria-label="close chat" className="row center" style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--surface-2)' }} onClick={onClose}>
             <Icon name="x" size={16} />
@@ -79,7 +79,7 @@ export function ChatPanel({ messages, players, meId = 'me', onSend, onReact, onC
             <EmojiReactionBar onReact={(emoji) => react(reactingId, emoji)} />
           </div>
         )}
-        <div className="row gap8 pad-x" style={{ paddingTop: 8 }}>
+        <div className="row gap8 pad-x" style={{ paddingTop: 8, flexShrink: 0 }}>
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}

@@ -41,12 +41,23 @@ function TabBar({ screen, go, navStyle, navLabels }) {
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [screen, setScreen] = useState('home');
+  const [screen, setScreen] = useState('welcome');
   const [payload, setPayload] = useState(null);
   const [scale, setScale] = useState(1);
   const [toastNode, showToast] = useToast();
 
   const go = (s, p = null) => { setPayload(p); setScreen(s); };
+
+  const onAuth = (info) => {
+    if (info.provider === 'guest') {
+      ME.mascot = info.mascot; ME.name = info.name; ME.guest = true;
+    } else {
+      ME.guest = false;
+      const names = { line: 'LINE', google: 'Google', apple: 'Apple' };
+      showToast(`เข้าสู่ระบบด้วย ${names[info.provider]} แล้ว`, '✅');
+    }
+    setScreen('home');
+  };
 
   // scale device to fit viewport
   useEffect(() => {
@@ -69,6 +80,7 @@ function App() {
 
   const screenEl = (() => {
     switch (screen) {
+      case 'welcome': return <WelcomeScreen onAuth={onAuth} />;
       case 'home':    return <HomeScreen go={go} showToast={showToast} />;
       case 'games':   return <GamesScreen go={go} showToast={showToast} />;
       case 'friends': return <FriendsScreen go={go} showToast={showToast} />;
@@ -111,6 +123,7 @@ function App() {
 
         <TweakSection label="ทางลัด · Jump to" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <TweakButton label="👋 Welcome" onClick={() => go('welcome')} />
           <TweakButton label="🏠 Home" onClick={() => go('home')} />
           <TweakButton label="🚪 Lobby" onClick={() => go('lobby')} />
           <TweakButton label="🛡️ Game" onClick={() => go('game')} />

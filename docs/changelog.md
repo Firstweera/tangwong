@@ -1,5 +1,61 @@
 # Changelog
 
+## 2026-06-18 — Feature: Welcome / onboarding entry + brand logo
+
+Added a first-run Welcome screen (ported from the updated prototype) and switched
+the logo to the new brand artwork.
+
+Completed:
+
+- **WelcomePage** (`src/pages/WelcomePage.jsx`): two-step entry — (1) sign in with
+  Google/Apple **or** continue as Guest; (2) guest setup: pick a mascot + nickname
+  (live avatar preview, 16-char cap) then "เริ่มเล่น". OAuth is previewed (shows a
+  "เร็วๆ นี้" toast) until accounts land in Epic 9; the guest path is fully wired.
+- **Onboarding flag**: `GuestProfile.onboarded` added. Brand-new guests start
+  `false` → land on Welcome; returning guests (stored profile, or a Supabase
+  profile on a new device) are `onboarded:true` and skip straight to Home.
+- **App routing**: initial screen is `welcome` when not onboarded; a returning
+  Supabase account that resolves async redirects off Welcome to Home.
+- **Logo**: now image-based with `variant` (`illustration` / `wordmark` /
+  default emblem+text), using `src/assets/brand/logo-*.webp`.
+- **Favicon**: `public/favicon.webp` (+ apple-touch-icon) wired in `index.html`.
+
+Files:
+
+- src/pages/WelcomePage.jsx (new)
+- src/app/router.jsx, src/app/App.jsx (welcome route + onboarding handlers)
+- src/components/ui/Logo.jsx (image variants)
+- src/features/guest/types/index.ts, stores/guestStorage.ts, hooks/useGuest.ts
+  (`onboarded` flag + reconciliation)
+- src/assets/brand/logo-illustration.webp, logo-wordmark.webp (new)
+- public/favicon.webp (new), index.html
+
+Follow-up:
+
+- wire real Google/Apple OAuth (Epic 9) into `onOAuth`
+- URL `/join/:code` deep link still lands on Welcome for first-run users
+
+## 2026-06-18 — Fix: lobby chat 400s + host identity after Supabase sync
+
+Epic:
+Epic 4.5 - Supabase Backend (Phase 4.5.2 — Rooms + Realtime)
+
+- chat keyed off the optimistic seed id (`room_<ts>_<rand>`) before `joinRoom`
+  resolved → `chat_messages.room_id` (uuid) rejected it (400) and `send_system`
+  fired before the room existed. `useSupabaseChat` now no-ops until `roomId` is a
+  real UUID.
+- `LobbyPage` used `player.id` (local) for host/ready checks, but Supabase stores
+  `auth.uid()` — host silently lost controls after sync. `useRealtimeRoom` now
+  exposes the resolved `meId`; the lobby uses it. Welcome notice seeds after sync.
+- Sheet overlay `absolute inset-0` → `fixed inset-0` (popup invisible after the
+  device-frame removal); `joinRoom`/`fetchRoom` now log errors instead of swallowing.
+
+Files:
+
+- src/features/chat/hooks/useChat.ts, src/features/room/hooks/useRealtimeRoom.ts
+- src/pages/LobbyPage.jsx, src/components/ui/sheet/sheet.tsx
+- src/services/supabase/rooms.ts
+
 ## 2026-06-18 — Fix: production responsive layout (remove device frame)
 
 Epic:

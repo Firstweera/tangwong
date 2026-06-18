@@ -22,12 +22,14 @@ const TWEAK_DEFAULTS = {
 
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [screen, setScreen] = useState('home');
   const [payload, setPayload] = useState(null);
   const [toastNode, showToast] = useToast();
 
   // ─── Guest identity ───────────────────────────────────────────────────────
-  const { guest, player, updateGuest } = useGuest();
+  const { guest, player, updateGuest, ready } = useGuest();
+
+  // First-run lands on Welcome (pick name + mascot); returning users skip it.
+  const [screen, setScreen] = useState(() => (guest.onboarded ? 'home' : 'welcome'));
 
   const [editProfileOpen, setEditProfileOpen] = useState(false);
 
@@ -38,6 +40,22 @@ export default function App() {
   const [lastRoom, setLastRoom] = useState(null);
 
   const go = (s, p = null) => { setPayload(p); setScreen(s); };
+
+  // ─── Onboarding (Welcome) ─────────────────────────────────────────────────
+  const completeGuestOnboarding = ({ mascot, name }) => {
+    updateGuest({ mascot, nickname: name, onboarded: true });
+    go('home');
+  };
+  const onOAuth = () => {
+    // Real account sign-in arrives in Epic 9; preview it for now.
+    showToast('การเข้าสู่ระบบด้วยบัญชีจะมาเร็วๆ นี้ — เล่นแบบ Guest ได้เลย', '🔜');
+  };
+
+  // A returning account (Supabase profile) resolves async; if we're still on
+  // Welcome once it lands, skip straight to home.
+  useEffect(() => {
+    if (ready && guest.onboarded && screen === 'welcome') go('home');
+  }, [ready, guest.onboarded, screen]);
 
   const createRoom = (settings) => {
     const room = buildRoom(settings, player);
@@ -96,6 +114,7 @@ export default function App() {
     createRoom, joinRoom, leaveRoom, rejoinRoom, updateRoomSettings,
     openCreateRoom: () => setCreateOpen(true),
     openEditProfile: () => setEditProfileOpen(true),
+    completeGuestOnboarding, onOAuth,
   });
 
   return (
@@ -126,6 +145,7 @@ export default function App() {
 
         <TweakSection label="ทางลัด · Jump to" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <TweakButton label="👋 Welcome" onClick={() => go('welcome')} />
           <TweakButton label="🏠 Home" onClick={() => go('home')} />
           <TweakButton label="🚪 Lobby" onClick={() => go('lobby')} />
           <TweakButton label="🛡️ Game" onClick={() => go('game')} />

@@ -1,4 +1,5 @@
 // router.jsx — maps the current screen id to its page element
+import WelcomePage from '../pages/WelcomePage.jsx';
 import HomePage from '../pages/HomePage.jsx';
 import LobbyPage from '../pages/LobbyPage.jsx';
 import GamePage from '../pages/GamePage.jsx';
@@ -15,8 +16,10 @@ export function renderScreen(screen, ctx) {
     currentRoom, lastRoom,
     createRoom, joinRoom, leaveRoom, rejoinRoom, updateRoomSettings,
     openCreateRoom, openEditProfile,
+    completeGuestOnboarding, onOAuth,
   } = ctx;
   switch (screen) {
+    case 'welcome': return <WelcomePage onGuest={completeGuestOnboarding} onOAuth={onOAuth} />;
     case 'home':    return <HomePage go={go} showToast={showToast} player={player} lastRoom={lastRoom}
                               openCreateRoom={openCreateRoom} joinRoom={joinRoom} rejoinRoom={rejoinRoom}
                               openEditProfile={openEditProfile} />;

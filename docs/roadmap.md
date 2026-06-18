@@ -209,6 +209,33 @@ Follow-up:
 - integrate player identity with Socket.io when Epic 4 starts
 - add EN nickname field for international display
 
+### Welcome / Onboarding
+
+✅ Completed — 2026-06-18
+
+First-run entry screen (ported from the updated prototype): sign in with
+Google/Apple **or** continue as Guest, then a guest-setup step (pick mascot +
+nickname with a live preview). OAuth is previewed with a "เร็วๆ นี้" toast until
+Epic 9; the guest path completes onboarding and enters Home.
+
+- `GuestProfile.onboarded` gates the screen: brand-new guests see Welcome;
+  returning guests (stored locally, or a Supabase profile on a new device) skip it
+- App initial screen = `welcome` when not onboarded; async Supabase reconciliation
+  redirects a returning account off Welcome to Home
+- brand logo switched to image artwork (`Logo` `variant`: illustration / wordmark /
+  emblem+text); favicon + apple-touch-icon added
+
+Files:
+- src/pages/WelcomePage.jsx (new)
+- src/app/router.jsx, src/app/App.jsx
+- src/components/ui/Logo.jsx
+- src/features/guest/{types/index.ts, stores/guestStorage.ts, hooks/useGuest.ts}
+- src/assets/brand/logo-illustration.webp, logo-wordmark.webp (new)
+- public/favicon.webp (new), index.html
+
+Follow-up:
+- wire real Google/Apple OAuth into `onOAuth` (Epic 9)
+
 ---
 
 # Epic 3 - Local Chat

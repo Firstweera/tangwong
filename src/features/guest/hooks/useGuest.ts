@@ -44,8 +44,9 @@ export function useGuest(): UseGuestReturn {
 
       let next: GuestProfile;
       if (remote) {
-        // Returning user — the backend profile is the source of truth.
-        next = { playerId: user.id, nickname: remote.nickname, mascot: remote.mascot };
+        // Returning user — the backend profile is the source of truth, and a
+        // stored profile means they've already been through onboarding.
+        next = { playerId: user.id, nickname: remote.nickname, mascot: remote.mascot, onboarded: true };
       } else {
         // First sign-in on this account — migrate the local guest under the uid.
         next = { ...local, playerId: user.id };
