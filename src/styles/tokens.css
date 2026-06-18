@@ -1,7 +1,5 @@
 /* ───────────────────────── app shell ───────────────────────── */
-html, body, #root {
-  min-height: 100dvh;
-}
+/* (html / body / #root layout lives in reset.css — body centres the column) */
 
 /* ───────────────────────── theme tokens ───────────────────────── */
 .app {
@@ -14,11 +12,18 @@ html, body, #root {
   --grad: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 115%);
   --grad-soft: linear-gradient(135deg, rgba(109,94,249,0.22), rgba(0,212,255,0.10));
   --grad-warm: linear-gradient(135deg, var(--accent), var(--primary));
-  width: 100%; min-height: 100dvh;
-  max-width: 480px; margin: 0 auto;
+  /* Mobile-first column: fills the viewport on phones, caps + centres on wider
+     screens. Fixed height + clipped so it acts as a self-contained app shell —
+     overlays (sheets, tab bar, toasts) scope to the column, internal regions
+     own their own scroll. */
+  width: 100%;
+  max-width: 520px;
+  height: 100dvh;
   position: relative;
+  overflow: hidden;
   display: flex; flex-direction: column;
   font-size: 15px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 30px 80px -30px rgba(0,0,0,0.6);
   transition: background 0.5s ease, color 0.3s ease;
 }
 .app[data-theme="dark"] {

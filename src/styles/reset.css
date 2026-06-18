@@ -1,13 +1,25 @@
 /* ───────────────────────── reset ───────────────────────── */
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { min-height: 100dvh; }
+html, body { height: 100%; }
 body {
   font-family: 'Plus Jakarta Sans', 'Noto Sans Thai', system-ui, sans-serif;
-  background: #06080f;
+  /* Ambient backdrop behind the centred app column so the gutters on wide
+     screens read as intentional rather than an empty void. */
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(109,94,249,0.16), transparent 60%),
+    radial-gradient(90% 60% at 50% 110%, rgba(0,212,255,0.10), transparent 60%),
+    #06080f;
   color: #fff;
-  overflow-x: hidden;
+  /* Mobile-first webview shell: the page never scrolls — the app column owns its
+     own internal scroll. Center the column on larger viewports. */
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
 }
+#root { width: 100%; display: flex; justify-content: center; }
 .th { font-family: 'Noto Sans Thai', 'Plus Jakarta Sans', sans-serif; }
 .mono { font-family: 'JetBrains Mono', monospace; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }

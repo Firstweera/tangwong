@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-06-18 — Layout: mobile-first webview app shell (responsive column)
+
+Reworked the shell into a self-contained, mobile-first column that fills the
+viewport on phones and caps + centres at ~520px on wider screens (fluid cap).
+
+Completed:
+
+- **`.app` app shell**: `max-width: 520px`, `height: 100dvh`, `position: relative`,
+  `overflow: hidden` — a fixed-height column that owns its layout; internal
+  `.scroll` regions scroll, the page itself never does.
+- **Body**: centres the column (`display:flex; justify-content:center`), adds an
+  ambient gradient backdrop so wide-screen gutters look intentional, and sets
+  `overflow:hidden` + `overscroll-behavior:none` (no webview bounce/pull-refresh).
+- **Overlays scope to the column**: Sheet backdrop back to `absolute inset-0`
+  (works now that `.app` has a real height); tab bar switched from
+  `position:fixed; min(100vw,480px)` to `position:absolute` inset within the
+  column. Sheets, tab bar, and toasts now stay inside the column at any width.
+- **Viewport meta**: `viewport-fit=cover, maximum-scale=1, user-scalable=no` for
+  webview embedding (notch safe-areas, no pinch-zoom) + `theme-color`.
+
+Files:
+
+- index.html
+- src/styles/reset.css, src/styles/tokens.css, src/styles/components.css
+- src/app/TabBar.jsx, src/components/ui/sheet/sheet.tsx
+
 ## 2026-06-18 — Feature: Account sheet (edit profile + link + logout)
 
 Upgraded the profile sheet into a fuller "บัญชีของฉัน" account screen, ported

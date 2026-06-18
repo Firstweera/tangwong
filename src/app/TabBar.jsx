@@ -25,7 +25,7 @@ export function TabBar({ screen, go, navStyle, navLabels, onFabPress }) {
     );
   };
   return (
-    <div className="tabbar" style={bar ? { left: '50%', transform: 'translateX(-50%)', width: 'min(100vw, 480px)', bottom: 0, borderRadius: '22px 22px 0 0', minHeight: 78, paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' } : {}}>
+    <div className="tabbar" style={bar ? { left: 0, right: 0, transform: 'none', bottom: 0, borderRadius: '22px 22px 0 0', minHeight: 78, paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' } : {}}>
       {left.map(t => <Item key={t.id} t={t} />)}
       <button className="tab-fab" onClick={onFabPress ?? (() => go('lobby'))} aria-label="create room"><Icon name="plus" size={26} stroke={2.6} /></button>
       {right.map(t => <Item key={t.id} t={t} />)}
