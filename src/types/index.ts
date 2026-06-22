@@ -117,7 +117,7 @@ export type ShowToastFn = (message: string, emoji?: string) => void;
 
 // ─── Room ───────────────────────────────────────────────────────────────────
 
-export type RoomStatus = 'waiting' | 'starting' | 'in-game';
+export type RoomStatus = 'waiting' | 'starting' | 'in-game' | 'ended';
 
 export interface RoomSettings {
   name: string;

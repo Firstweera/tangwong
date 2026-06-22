@@ -48,6 +48,39 @@ Create a scalable codebase before implementing gameplay.
 
 ✅ Completed
 
+### Modern Design Spec + Home Refresh
+
+✅ Completed — 2026-06-22
+
+Files:
+
+- PRODUCT.md
+- docs/superpowers/plans/2026-06-22-modern-design-spec-and-home-refresh.md
+- src/pages/DesignSpecPage.jsx
+- src/pages/HomePage.jsx
+- src/app/App.jsx
+- src/app/router.jsx
+- src/styles/components.css
+- src/styles/tokens.css
+- src/styles/reset.css
+- src/styles/animations.css
+
+Notes:
+
+- added `/design-spec` as a direct URL-accessible design direction page with
+  three options: Play Lobby Command Center, Cinematic Tabletop, and Lean Social
+  Utility
+- implemented Direction 1 as the first pass: Home now reads more like a modern
+  multiplayer room command surface while keeping the tabletop/felt identity
+- refreshed dark theme surface tokens and moved new Home/spec treatments into
+  reusable CSS classes
+
+Follow-up:
+
+- apply the same Direction 1 vocabulary to Lobby once realtime game sync resumes
+- add a full DESIGN.md capture with `/impeccable document`
+- consider a lightweight route helper before adding more URL-addressable pages
+
 ---
 
 ## UI Component Library
@@ -555,7 +588,7 @@ Follow-up (recommended spot-checks, non-blocking):
 
 ## Phase 4.5.3 - Game Sync + Hidden Info (Edge Function authority)
 
-🟡 In Progress — 2026-06-18 (design doc written; build not started)
+🟡 In Progress — 2026-06-22 (B4 written; deploy/runtime verification pending)
 
 Design: see **docs/phase-4.5.3-plan.md** — commits Option B (Edge Function runs
 the existing TS engine as the authority), defines `game_states` (public) +
@@ -588,7 +621,43 @@ Progress:
   game-start`** + run the hidden-info verify in `supabase/functions/README.md`
   (others' `game_private` must read back `[]`).
 
-Next: B3 (`game-action` — dispatch + server-side bots + persist + version guard).
+- **B3 — `game-action` Edge Function ✅ written** (2026-06-22, deploy pending):
+  `game-action/index.ts`: authenticated room-member action endpoint; reconstructs
+  full game state from `game_states` + all `game_private` rows with the service
+  role; dispatches through the shared TS engine; resolves `bot_*` seats on the
+  server; persists public/private snapshots with an optimistic `version` guard;
+  logs public-safe action rows (mission cards are redacted to `{ submitted: true }`);
+  writes `public_data.reveal` on end for ResultPage. Local checks:
+  `npm run verify:game-action`, TS transpile smoke, and `npm run build`.
+  **Action: deploy `game-start` + `game-action`, then run the verify steps in
+  `supabase/functions/README.md`.**
+
+- **B4 — realtime game client ✅ written** (2026-06-22, deploy pending):
+  `game.ts` adds the Supabase game read model (`game_states` + caller-owned
+  `game_private`) and `game-start` / `game-action` intent calls; `useRealtimeGame`
+  resolves the effective Supabase `auth.uid()`, fetches/subscribes to game rows,
+  and exposes `start` + `submitAction`; `GamePage` now branches on
+  `useSupabaseTransport`; `AvalonGame` has a state/action prop boundary while
+  keeping the local engine path for offline/dev play. Local checks:
+  `npm run verify:realtime-game` and `npm run build`.
+  Files:
+  `src/services/supabase/game.ts`,
+  `src/features/games/engine/useRealtimeGame.ts`,
+  `src/features/games/engine/index.ts`,
+  `src/services/supabase/index.ts`,
+  `src/pages/GamePage.jsx`,
+  `src/features/games/avalon/ui/AvalonGame.tsx`,
+  `src/types/index.ts`,
+  `scripts/verify-realtime-game.mjs`,
+  `package.json`.
+  Notes: online mode waits for the server snapshot and disables local bot/timer
+  automation; role reveal for ResultPage reads `public_data.reveal` when present,
+  then falls back to local private state. Follow-up: deploy/apply B1-B4 backend
+  pieces and verify with two real clients because local build cannot exercise
+  Supabase Realtime/RLS or Edge Function runtime.
+
+Next: B5 (host-driven timer tick / timeout path; server-side bot resolution
+already landed inside B3).
 
 Follow-up (from 4.5.2, non-blocking): server-side presence pruning; emit
 join/leave/ready system messages from real events.

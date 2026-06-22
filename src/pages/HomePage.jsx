@@ -7,31 +7,37 @@ import { parseInviteCode, roomExists } from '../features/room/roomUtils.ts';
 import { RulesSheet } from '../features/games/ui';
 import { getGameRules } from '../features/games';
 
-function RoundTableHero({ player }) {
+function HeroSignal({ icon, label, value }) {
+  return (
+    <div className="home-signal">
+      <span>{icon}</span>
+      <div className="col">
+        <strong className="th">{value}</strong>
+        <span>{label}</span>
+      </div>
+    </div>
+  );
+}
+
+function RoundTableHero({ player, onlineCount }) {
   const seats = [PLAYERS[1], PLAYERS[3], player, PLAYERS[4], PLAYERS[2]]; // cat, owl, you, panda, raccoon
   const pos = [[11, 65], [30, 50], [50, 44], [70, 50], [89, 65]];
   return (
     <div className="pad-x" style={{ paddingTop: 8 }}>
-      <div className="felt felt-stitch" style={{ position: 'relative', borderRadius: 26, height: 330, padding: '18px 18px 0', overflow: 'hidden',
-        boxShadow: '0 24px 54px -18px rgba(0,0,0,0.65), inset 0 0 0 2px rgba(255,215,138,0.45), inset 0 0 70px rgba(0,0,0,0.4)' }}>
-        {/* live badge */}
-        <div className="row gap6" style={{ position: 'absolute', top: 15, right: 15, zIndex: 3, fontSize: 11, fontWeight: 800, color: '#fff',
-          padding: '5px 10px', borderRadius: 9, background: 'rgba(0,0,0,0.34)', border: '1px solid rgba(255,255,255,0.16)', backdropFilter: 'blur(6px)', alignItems: 'center' }}>
-          <span style={{ width: 7, height: 7, borderRadius: 4, background: '#34D17E', boxShadow: '0 0 8px #34D17E' }} /> LIVE · 6 กำลังเล่น
+      <section className="home-hero felt">
+        <div className="home-hero-grid" />
+        <div className="home-live-pill">
+          <span className="live-dot" /> LIVE · {onlineCount + 1} พร้อมตั้งวง
         </div>
-        {/* headline */}
-        <div className="row gap6" style={{ marginBottom: 9, position: 'relative', zIndex: 2, alignItems: 'center', paddingRight: 130 }}>
-          <span style={{ fontSize: 14 }}>🎲</span>
-          <span className="eyebrow" style={{ color: 'rgba(255,255,255,0.82)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>social deduction</span>
+        <div className="home-hero-copy">
+          <span className="home-kicker th">Discord for board games</span>
+          <h1 className="th display">รวมเพื่อน<br /><span>เริ่มเกมในห้องเดียว</span></h1>
+          <p className="th">สร้างห้อง ชวนเพื่อน แล้วเล่นเกมจับโกหกแบบ realtime บนมือถือ</p>
         </div>
-        <h1 className="th display" style={{ fontSize: 36, color: '#fff', position: 'relative', zIndex: 2, textShadow: '0 2px 16px rgba(0,0,0,0.45)' }}>
-          รวมวง<br /><span style={{ color: 'var(--brass-1)' }}>เริ่มเกม</span>
-        </h1>
         {/* table scene */}
-        <div style={{ position: 'absolute', inset: 0 }}>
+        <div className="home-table-scene">
           {/* implied table felt ring under the cards */}
-          <div style={{ position: 'absolute', left: '50%', top: '63%', transform: 'translate(-50%,-50%)', width: '78%', height: '46%',
-            borderRadius: '50%', border: '2px dashed rgba(255,215,138,0.28)', boxShadow: 'inset 0 0 40px rgba(0,0,0,0.3)' }} />
+          <div className="home-table-ring" />
           {seats.map((p, i) => (
             <div key={i} className="col center gap4" style={{ position: 'absolute', left: pos[i][0] + '%', top: pos[i][1] + '%', transform: 'translate(-50%,-50%)' }}>
               <Avatar who={p} size={i === 2 ? 54 : 46} dot ring={i === 2 ? 'var(--brass-1)' : false} />
@@ -42,16 +48,19 @@ function RoundTableHero({ player }) {
           <div style={{ position: 'absolute', left: '23%', top: '82%', transform: 'translate(-50%,-50%) rotate(-8deg)' }}><Token kind="good" size={34} /></div>
           <div style={{ position: 'absolute', left: '77%', top: '83%', transform: 'translate(-50%,-50%) rotate(12deg)' }}><Die face={5} size={34} /></div>
         </div>
-      </div>
+        <div className="home-signals">
+          <HeroSignal icon="⚡" label="เร็วกว่าเปิดแชตกลุ่ม" value="30 วิ" />
+          <HeroSignal icon="🔒" label="แยกข้อมูลลับตามผู้เล่น" value="Hidden info" />
+        </div>
+      </section>
     </div>
   );
 }
 
 function StepDot({ n, title, sub, color }) {
   return (
-    <div className="row gap12" style={{ alignItems: 'flex-start' }}>
-      <div className="row center" style={{ width: 30, height: 30, borderRadius: 10, flexShrink: 0,
-           background: color, color: '#fff', fontWeight: 800, fontSize: 14 }}>{n}</div>
+    <div className="home-step row gap12" style={{ alignItems: 'flex-start' }}>
+      <div className="home-step-mark row center" style={{ background: color }}>{n}</div>
       <div className="col" style={{ gap: 1, paddingTop: 2 }}>
         <span className="th h3">{title}</span>
         <span className="tiny">{sub}</span>
@@ -133,24 +142,19 @@ export default function HomePage({ go, showToast, player, openCreateRoom, joinRo
       </div>
 
       {/* hero table scene */}
-      <RoundTableHero player={player} />
-      <div className="pad-x" style={{ paddingTop: 16 }}>
-        <p className="body" style={{ fontSize: 14.5, maxWidth: 320 }}>
-          Gather your friends around the table. สร้างห้อง ชวนเพื่อนมาล้อมวง แล้วเล่นบอร์ดเกมจับโกหกด้วยกันได้ทันที
-        </p>
-      </div>
+      <RoundTableHero player={player} onlineCount={onlineFriends.length} />
 
       {/* CTAs */}
-      <div className="pad-x col gap12" style={{ marginTop: 20 }}>
+      <div className="pad-x col gap12 home-command" style={{ marginTop: 18 }}>
         <button className="btn btn-primary btn-lg btn-block" onClick={() => openCreateRoom?.()}>
           <span className="sheen" />
           <Icon name="plus" size={22} stroke={2.6} />
           <span className="th">สร้างห้อง · Create Room</span>
         </button>
 
-        <div className="card row" style={{ padding: 6, gap: 6, height: 58 }}>
+        <div className="home-join row">
           <div className="row gap8" style={{ flex: 1, paddingLeft: 12, alignItems: 'center' }}>
-            <Icon name="qr" size={19} style={{ color: 'var(--muted)' }} />
+            <Icon name="qr" size={19} style={{ color: 'var(--primary-2)' }} />
             <input
               value={code}
               onChange={e => setCode(e.target.value.toUpperCase().slice(0, 24))}
@@ -175,8 +179,11 @@ export default function HomePage({ go, showToast, player, openCreateRoom, joinRo
 
       {/* online friends */}
       <div style={{ marginTop: 26 }}>
-        <div className="row between pad-x" style={{ marginBottom: 12 }}>
-          <h2 className="th h2">เพื่อนออนไลน์ <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 15 }}>{onlineFriends.length}</span></h2>
+        <div className="section-head row between pad-x">
+          <div>
+            <span className="section-label th">Live now</span>
+            <h2 className="th h2">เพื่อนออนไลน์ <span>{onlineFriends.length}</span></h2>
+          </div>
           <button className="tiny row gap6" style={{ fontWeight: 700, color: 'var(--primary)' }} onClick={() => showToast('ระบบเพื่อน เร็วๆ นี้', '👥')}>
             ทั้งหมด <Icon name="chevR" size={13} stroke={2.6} />
           </button>
@@ -205,8 +212,11 @@ export default function HomePage({ go, showToast, player, openCreateRoom, joinRo
 
       {/* featured games */}
       <div style={{ marginTop: 26 }}>
-        <div className="row between pad-x" style={{ marginBottom: 12 }}>
-          <h2 className="th h2">เกมยอดนิยม</h2>
+        <div className="section-head row between pad-x">
+          <div>
+            <span className="section-label th">Pick a table</span>
+            <h2 className="th h2">เกมยอดนิยม</h2>
+          </div>
           <button className="tiny row gap6" style={{ fontWeight: 700, color: 'var(--primary)' }} onClick={() => go('games')}>
             ดูทั้งหมด <Icon name="chevR" size={13} stroke={2.6} />
           </button>
@@ -221,8 +231,11 @@ export default function HomePage({ go, showToast, player, openCreateRoom, joinRo
 
       {/* how it works */}
       <div className="pad-x" style={{ marginTop: 28 }}>
-        <div className="card-solid col gap16" style={{ padding: 20 }}>
-          <h3 className="th h2" style={{ fontSize: 18 }}>เริ่มเล่นใน 30 วินาที</h3>
+        <div className="home-steps card-solid col gap16">
+          <div>
+            <span className="section-label th">Quick loop</span>
+            <h3 className="th h2" style={{ fontSize: 18 }}>เริ่มเล่นใน 30 วินาที</h3>
+          </div>
           <StepDot n="1" title="สร้างห้อง" sub="Create a room with one tap" color="var(--primary)" />
           <StepDot n="2" title="แชร์รหัส" sub="Share the code — friends join instantly" color="var(--secondary)" />
           <StepDot n="3" title="เริ่มเกม" sub="Pick a game and play together" color="var(--accent)" />

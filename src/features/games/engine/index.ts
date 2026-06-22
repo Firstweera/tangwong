@@ -7,3 +7,5 @@ export { GameEngine } from './engine';
 export { redactStateFor } from './view';
 export { useGameEngine } from './useGameEngine';
 export type { UseGameEngineReturn } from './useGameEngine';
+export { useRealtimeGame } from './useRealtimeGame';
+export type { UseRealtimeGameReturn } from './useRealtimeGame';

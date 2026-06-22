@@ -24,11 +24,30 @@ export interface AvalonGameProps {
   meId: string;
   onExit: () => void;
   onEnd: (state: S) => void;
+  externalState?: S | null;
+  onSubmitAction?: (type: string, payload: unknown) => void | Promise<void>;
+  onStartGame?: () => void | Promise<void>;
+  onlineMode?: boolean;
+  loading?: boolean;
   showToast?: (message: string, emoji?: string) => void;
 }
 
-export function AvalonGame({ roomState, players, meId, onExit, onEnd, showToast }: AvalonGameProps) {
-  const { state, start, dispatch, transitionTo } = useGameEngine<AvalonPublic, AvalonPrivate>(avalonConfig);
+export function AvalonGame({
+  roomState,
+  players,
+  meId,
+  onExit,
+  onEnd,
+  externalState = null,
+  onSubmitAction,
+  onStartGame,
+  onlineMode = false,
+  loading = false,
+  showToast,
+}: AvalonGameProps) {
+  const local = useGameEngine<AvalonPublic, AvalonPrivate>(avalonConfig);
+  const state = externalState ?? local.state;
+  const controlled = onlineMode || externalState !== null;
 
   const [roleOpen, setRoleOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -41,19 +60,24 @@ export function AvalonGame({ roomState, players, meId, onExit, onEnd, showToast 
   const chat = useChat(roomState.roomId, meId);
 
   // ─── Start + kick off role reveal ───────────────────────────────────────────
-  useEffect(() => { start(roomState); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (state?.public.phase === 'lobby') transitionTo('roleReveal');
+    if (controlled) return;
+    local.start(roomState);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (controlled) return;
+    if (state?.public.phase === 'lobby') local.transitionTo('roleReveal');
   }, [state?.public.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Bot autoplay ───────────────────────────────────────────────────────────
   useEffect(() => {
+    if (onlineMode) return;
     if (!state || state.winner) return;
     const actor = nextAutoActor(state, meId, autoAll);
     if (!actor) return;
     const action = nextBotAction(state, actor);
     if (!action) return;
-    const t = setTimeout(() => dispatch(action), BOT_DELAY);
+    const t = setTimeout(() => local.dispatch(action), BOT_DELAY);
     return () => clearTimeout(t);
   }, [state, autoAll]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -70,9 +94,10 @@ export function AvalonGame({ roomState, players, meId, onExit, onEnd, showToast 
     return () => clearInterval(id);
   }, [phase, leaderIndex, currentQuest]);
   useEffect(() => {
+    if (onlineMode) return;
     if (timeLeft !== 0 || !PHASE_TIMER[phase] || !state) return;
     const action = nextBotAction(state, meId); // play my default if I idled out
-    if (action) dispatch(action);
+    if (action) local.dispatch(action);
   }, [timeLeft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Toast vote outcomes on phase change ────────────────────────────────────
@@ -96,7 +121,22 @@ export function AvalonGame({ roomState, players, meId, onExit, onEnd, showToast 
     }
   }, [state?.winner]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!state || !pub) return <div className="screen" />;
+  if (!state || !pub) {
+    return (
+      <div className="screen col center" style={{ gap: 12 }}>
+        <span style={{ fontSize: 40 }}>{loading ? '⌛' : '🎴'}</span>
+        <span className="th h2">{loading ? 'กำลังโหลดเกม...' : 'รอเริ่มเกม'}</span>
+        {onlineMode && onStartGame && (
+          <button className="btn btn-primary btn-lg" onClick={() => void onStartGame()}>
+            <span className="sheen" />
+            <Icon name="check" size={19} stroke={3} />
+            <span className="th">เริ่มเกมออนไลน์</span>
+          </button>
+        )}
+        <button className="btn btn-glass btn-lg" onClick={onExit}>กลับห้อง</button>
+      </div>
+    );
+  }
 
   const myPriv = state.private[meId]?.data;
   const leaderId = pub.playerOrder[leaderIndex];
@@ -111,7 +151,13 @@ export function AvalonGame({ roomState, players, meId, onExit, onEnd, showToast 
   const failCount = pub.results.filter(r => r === 'fail').length;
   const goodWin = state.winner?.winnerTeam === 'good';
 
-  const act = (type: string, payload: unknown) => dispatch({ type, playerId: meId, payload });
+  const act = (type: string, payload: unknown) => {
+    if (controlled) {
+      void onSubmitAction?.(type, payload);
+    } else {
+      local.dispatch({ type, playerId: meId, payload });
+    }
+  };
 
   const seatTap = (id: string) => {
     if (phase === 'teamProposal' && iLead) {
@@ -182,7 +228,9 @@ export function AvalonGame({ roomState, players, meId, onExit, onEnd, showToast 
               <span className="mono" style={{ fontWeight: 700, color: timeLeft <= 10 ? 'var(--evil)' : 'var(--text)' }}>0:{String(timeLeft).padStart(2, '0')}</span>
             </div>
           )}
-          <button className="chip" onClick={() => setAutoAll(a => !a)} style={{ background: autoAll ? 'var(--grad-soft)' : 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>🤖 {autoAll ? 'ออโต้' : 'แมนนวล'}</button>
+          {onlineMode
+            ? <span className="chip" style={{ background: 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>ออนไลน์</span>
+            : <button className="chip" onClick={() => setAutoAll(a => !a)} style={{ background: autoAll ? 'var(--grad-soft)' : 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>🤖 {autoAll ? 'ออโต้' : 'แมนนวล'}</button>}
         </div>
         <IconButton onClick={() => setChatOpen(true)} style={{ width: 40, height: 40, borderRadius: 12 }}><Icon name="chat" size={18} /></IconButton>
       </div>

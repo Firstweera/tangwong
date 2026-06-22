@@ -15,6 +15,12 @@
 .spin-slow { animation: spin 26s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.float-soft { animation: floatSoft 5.5s ease-in-out infinite; }
+@keyframes floatSoft {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -5px, 0); }
+}
+
 /* ───────────────────────── component keyframes ───────────────────────── */
 @keyframes sheen { to { transform: translateX(120%); } }
 

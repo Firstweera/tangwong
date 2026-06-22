@@ -10,7 +10,10 @@ state and never see another player's role. See `docs/phase-4.5.3-plan.md`.
 - **`game-start`** (B2) — host-only. Builds the initial state (assigns roles +
   vision via the engine), writes the public snapshot + per-player private rows,
   flips the room to `in-game`. Idempotent (won't re-deal an already-started room).
-- `game-action` (B3) — not yet implemented.
+- **`game-action`** (B3) — authenticated room-member action entry point. Rebuilds
+  full state with the service role, dispatches through the shared engine,
+  resolves bot seats server-side, persists public/private snapshots with a
+  version guard, and logs public-safe actions.
 
 ## How the engine is shared (Option B1)
 
@@ -27,17 +30,28 @@ Requires the Supabase CLI (`brew install supabase/tap/supabase`) and a login
 
 ```sh
 supabase functions deploy game-start
+supabase functions deploy game-action
 ```
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` are injected
-automatically — no manual secrets needed for game-start.
+automatically — no manual secrets needed for the functions.
 
 > If the CLI fails to bundle the cross-directory `../../../src` imports, fallbacks
 > (in order): (a) keep `sloppy-imports` but vendor the engine under
 > `_shared/engine` (B3), or (b) add explicit `.ts` extensions to every local
 > import in the pure engine/avalon files and drop `sloppy-imports`.
 
-## Verify (after deploy + 0004 applied)
+## Local static verify
+
+This machine may not have Deno/Supabase CLI installed, so the repo includes a
+contract smoke check for the B3 function:
+
+```sh
+npm run verify:game-action
+npm run build
+```
+
+## Verify game-start (after deploy + 0004 applied)
 
 1. Host opens a room with ≥5 players (humans/bots), then calls game-start
    (wired into the UI in B4; for now invoke directly):
@@ -55,3 +69,24 @@ automatically — no manual secrets needed for game-start.
    console.log('others', (await sb.from('game_private').select('*').neq('player_id', me)).data); // [] (RLS)
    ```
 4. Non-host calling game-start must return `host only`.
+
+## Verify game-action (after game-start succeeds)
+
+1. Submit a legal host continue from role reveal:
+   ```js
+   await window.supabase.functions.invoke('game-action', {
+     body: { code: 'XXXXX', type: 'CONTINUE', payload: null }
+   })
+   ```
+   Expect `{ ok: true, phase: 'teamProposal' }` and `game_states.version`
+   increments by 1.
+2. Submit an illegal action from the wrong player/phase. Expect HTTP 400 with
+   the engine validation error.
+3. Mission card privacy check: after a mission member submits
+   `PLAY_MISSION_CARD`, `game_actions.payload` must show `{ submitted: true }`,
+   not the actual success/fail card.
+4. Bot resolution check: when the next legal actor is a `bot_*` seat, one
+   function call may advance through bot actions and returns `botActions > 0`.
+5. End-game reveal check: when the engine reaches a winner, `game_states.status`
+   and `rooms.status` become `ended`, and `public_data.reveal` contains final
+   role/side data for ResultPage.

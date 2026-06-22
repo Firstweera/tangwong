@@ -4,6 +4,7 @@ import HomePage from '../pages/HomePage.jsx';
 import LobbyPage from '../pages/LobbyPage.jsx';
 import GamePage from '../pages/GamePage.jsx';
 import ResultPage from '../pages/ResultPage.jsx';
+import DesignSpecPage from '../pages/DesignSpecPage.jsx';
 import { GamesPage } from '../pages/GamesPage.jsx';
 import { FriendsPage } from '../pages/FriendsPage.jsx';
 import { ProfilePage } from '../pages/ProfilePage.jsx';
@@ -31,6 +32,7 @@ export function renderScreen(screen, ctx) {
                               room={currentRoom} player={player} onLeave={leaveRoom} onUpdateSettings={updateRoomSettings} />;
     case 'game':    return <GamePage go={go} showToast={showToast} currentRoom={currentRoom} player={player} />;
     case 'result':  return <ResultPage go={go} payload={payload} showToast={showToast} player={player} />;
+    case 'design-spec': return <DesignSpecPage go={go} />;
     default:        return <HomePage go={go} showToast={showToast} player={player} lastRoom={lastRoom}
                               openCreateRoom={openCreateRoom} joinRoom={joinRoom} rejoinRoom={rejoinRoom}
                               clearLastRoom={clearLastRoom} openEditProfile={openEditProfile} />;

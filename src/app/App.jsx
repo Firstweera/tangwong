@@ -21,6 +21,14 @@ const TWEAK_DEFAULTS = {
   celebrate: true,
 };
 
+const screenFromPath = (fallback) => {
+  if (typeof window === 'undefined') return fallback;
+  if (window.location.pathname === '/design-spec') return 'design-spec';
+  return fallback;
+};
+
+const pathForScreen = (nextScreen) => (nextScreen === 'design-spec' ? '/design-spec' : '/');
+
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [payload, setPayload] = useState(null);
@@ -30,7 +38,7 @@ export default function App() {
   const { guest, player, updateGuest, logout, ready } = useGuest();
 
   // First-run lands on Welcome (pick name + mascot); returning users skip it.
-  const [screen, setScreen] = useState(() => (guest.onboarded ? 'home' : 'welcome'));
+  const [screen, setScreen] = useState(() => screenFromPath(guest.onboarded ? 'home' : 'welcome'));
 
   const [editProfileOpen, setEditProfileOpen] = useState(false);
 
@@ -40,7 +48,20 @@ export default function App() {
   const [currentRoom, setCurrentRoom] = useState(null);
   const [lastRoom, setLastRoom] = useState(null);
 
-  const go = (s, p = null) => { setPayload(p); setScreen(s); };
+  const go = (s, p = null) => {
+    setPayload(p);
+    setScreen(s);
+    if (typeof window !== 'undefined') {
+      const path = pathForScreen(s);
+      if (window.location.pathname !== path) window.history.pushState({ screen: s }, '', path);
+    }
+  };
+
+  useEffect(() => {
+    const onPop = () => setScreen(screenFromPath(guest.onboarded ? 'home' : 'welcome'));
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [guest.onboarded]);
 
   // ─── Onboarding (Welcome) ─────────────────────────────────────────────────
   const completeGuestOnboarding = ({ mascot, name }) => {
