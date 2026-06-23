@@ -18,6 +18,19 @@ type S = GameState<AvalonPublic, AvalonPrivate>;
 const BOT_DELAY = 900;
 const PHASE_TIMER: Record<string, number> = { teamProposal: 45, teamVote: 25, mission: 25 };
 
+/** Map a raw engine/network error to a short, friendly Thai message for players. */
+function friendlyGameError(raw: string): string {
+  const m = raw.toLowerCase();
+  if (m.includes('version conflict') || m.includes('retry')) return 'เกมเพิ่งอัปเดต ลองอีกครั้ง';
+  if (m.includes('not allowed in phase') || m.includes('invalid') || m.includes('already')) return 'ตานี้ทำรายการนั้นไม่ได้';
+  if (m.includes('host only') || m.includes('only the host') || m.includes('leader')) return 'เฉพาะหัวห้องเท่านั้น';
+  if (m.includes('not a room member') || m.includes('not authenticated')) return 'เซสชันหมดอายุ ลองเข้าห้องใหม่';
+  if (m.includes('not active') || m.includes('not in-game') || m.includes('not started')) return 'เกมไม่พร้อมรับรายการตอนนี้';
+  if (m.includes('timer has not expired')) return 'ยังหมดเวลาไม่ถึงเวลา';
+  if (m.includes('fetch') || m.includes('network') || m.includes('failed to') || m.includes('unable to')) return 'เชื่อมต่อไม่ได้ ลองอีกครั้ง';
+  return 'ทำรายการไม่สำเร็จ ลองอีกครั้ง';
+}
+
 export interface AvalonGameProps {
   roomState: RoomState;
   players: Player[];
@@ -30,6 +43,10 @@ export interface AvalonGameProps {
   onTimeout?: () => void | Promise<void>;
   onlineMode?: boolean;
   loading?: boolean;
+  /** An online action is in flight (server round-trip) — disables controls to prevent double-submit. */
+  busy?: boolean;
+  /** Latest online action/sync error; surfaced to the player as a toast. */
+  error?: string | null;
   showToast?: (message: string, emoji?: string) => void;
 }
 
@@ -45,6 +62,8 @@ export function AvalonGame({
   onTimeout,
   onlineMode = false,
   loading = false,
+  busy = false,
+  error = null,
   showToast,
 }: AvalonGameProps) {
   const local = useGameEngine<AvalonPublic, AvalonPrivate>(avalonConfig);
@@ -124,6 +143,18 @@ export function AvalonGame({
     if (from === 'teamVote' && phase === 'teamProposal') showToast?.(`ทีมถูกปฏิเสธ (${state.public.data.rejectCount}/5)`, '👎');
     prevPhase.current = phase;
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Surface online action / sync errors ─────────────────────────────────────
+  // The realtime hook clears its error to null before each action and sets it on
+  // failure, so `error` transitions falsy→message on every fresh failure. Toast
+  // once per occurrence (dedupe identical back-to-back messages).
+  const lastErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!error) { lastErrorRef.current = null; return; }
+    if (error === lastErrorRef.current) return;
+    lastErrorRef.current = error;
+    showToast?.(friendlyGameError(error), '⚠️');
+  }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Reset transient selections ──────────────────────────────────────────────
   useEffect(() => { setSelectedTeam([]); }, [phase, leaderIndex, currentQuest]);
@@ -266,17 +297,17 @@ export function AvalonGame({
       <div className="pad-x" style={{ paddingBottom: 24 }}>
         {phase === 'roleReveal' && (
           isHost
-            ? <button className="btn btn-primary btn-lg btn-block" onClick={() => act('CONTINUE', null)}><span className="sheen" /><Icon name="check" size={19} stroke={3} /> <span className="th">ฉันพร้อมแล้ว — เริ่มเกม</span></button>
+            ? <button className="btn btn-primary btn-lg btn-block" disabled={busy} onClick={() => act('CONTINUE', null)}><span className="sheen" /><Icon name="check" size={19} stroke={3} /> <span className="th">{busy ? 'กำลังเริ่ม...' : 'ฉันพร้อมแล้ว — เริ่มเกม'}</span></button>
             : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">รอหัวห้องเริ่มเกม...</span></button>
         )}
         {phase === 'teamProposal' && (
           iLead
-            ? <button className="btn btn-accent btn-lg btn-block" disabled={selectedTeam.length !== quest.size} onClick={() => act('NOMINATE_TEAM', { team: selectedTeam })}><span className="sheen" /><Icon name="flag" size={20} /> <span className="th">เสนอทีม ({selectedTeam.length}/{quest.size})</span></button>
+            ? <button className="btn btn-accent btn-lg btn-block" disabled={busy || selectedTeam.length !== quest.size} onClick={() => act('NOMINATE_TEAM', { team: selectedTeam })}><span className="sheen" /><Icon name="flag" size={20} /> <span className="th">เสนอทีม ({selectedTeam.length}/{quest.size})</span></button>
             : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">{byId(leaderId)?.name} กำลังเลือกทีม...</span></button>
         )}
         {phase === 'teamVote' && (
           !iVoted
-            ? <div className="row gap10"><button className="btn btn-evil btn-lg" style={{ flex: 1 }} onClick={() => act('VOTE_TEAM', { approve: false })}><Icon name="x" size={20} stroke={3} /> <span className="th">ปฏิเสธ</span></button><button className="btn btn-good btn-lg" style={{ flex: 1 }} onClick={() => act('VOTE_TEAM', { approve: true })}><Icon name="check" size={20} stroke={3} /> <span className="th">เห็นชอบ</span></button></div>
+            ? <div className="row gap10"><button className="btn btn-evil btn-lg" style={{ flex: 1 }} disabled={busy} onClick={() => act('VOTE_TEAM', { approve: false })}><Icon name="x" size={20} stroke={3} /> <span className="th">ปฏิเสธ</span></button><button className="btn btn-good btn-lg" style={{ flex: 1 }} disabled={busy} onClick={() => act('VOTE_TEAM', { approve: true })}><Icon name="check" size={20} stroke={3} /> <span className="th">เห็นชอบ</span></button></div>
             : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">รอผู้เล่นคนอื่นโหวต...</span></button>
         )}
         {phase === 'mission' && (
@@ -284,8 +315,8 @@ export function AvalonGame({
             ? <div className="col gap8">
                 <span className="tiny center row" style={{ justifyContent: 'center', fontWeight: 700 }}>คุณอยู่ในภารกิจ — เลือกการ์ด</span>
                 <div className="row gap10">
-                  <button className="btn btn-evil btn-lg" style={{ flex: 1, opacity: myPriv?.side === 'good' ? 0.45 : 1 }} disabled={myPriv?.side === 'good'} onClick={() => act('PLAY_MISSION_CARD', { card: 'fail' as QuestOutcome })}><Icon name="x" size={18} stroke={3} /> <span className="th">ทรยศ</span></button>
-                  <button className="btn btn-good btn-lg" style={{ flex: 1.3 }} onClick={() => act('PLAY_MISSION_CARD', { card: 'success' as QuestOutcome })}><Icon name="shield" size={19} /> <span className="th">ทำสำเร็จ</span></button>
+                  <button className="btn btn-evil btn-lg" style={{ flex: 1, opacity: myPriv?.side === 'good' ? 0.45 : 1 }} disabled={busy || myPriv?.side === 'good'} onClick={() => act('PLAY_MISSION_CARD', { card: 'fail' as QuestOutcome })}><Icon name="x" size={18} stroke={3} /> <span className="th">ทรยศ</span></button>
+                  <button className="btn btn-good btn-lg" style={{ flex: 1.3 }} disabled={busy} onClick={() => act('PLAY_MISSION_CARD', { card: 'success' as QuestOutcome })}><Icon name="shield" size={19} /> <span className="th">ทำสำเร็จ</span></button>
                 </div>
                 {myPriv?.side === 'good' && <span className="tiny center row" style={{ justifyContent: 'center', opacity: 0.65 }}>ฝ่ายดีต้องทำภารกิจให้สำเร็จเสมอ</span>}
               </div>
@@ -293,12 +324,12 @@ export function AvalonGame({
         )}
         {phase === 'questReveal' && (
           isHost
-            ? <button className="btn btn-primary btn-lg btn-block" onClick={() => act('CONTINUE', null)}><span className="sheen" /><span className="th">{successCount >= 3 ? 'สู่การลอบสังหาร' : 'ภารกิจต่อไป'}</span> <Icon name="arrowR" size={20} stroke={2.6} /></button>
+            ? <button className="btn btn-primary btn-lg btn-block" disabled={busy} onClick={() => act('CONTINUE', null)}><span className="sheen" /><span className="th">{successCount >= 3 ? 'สู่การลอบสังหาร' : 'ภารกิจต่อไป'}</span> <Icon name="arrowR" size={20} stroke={2.6} /></button>
             : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">รอหัวห้อง...</span></button>
         )}
         {phase === 'assassinate' && (
           iAmAssassin
-            ? <button className="btn btn-evil btn-lg btn-block" disabled={!assassinTarget} onClick={() => act('ASSASSINATE', { targetId: assassinTarget })}><span className="sheen" /><Icon name="sword" size={20} /> <span className="th">ลอบสังหาร{assassinTarget ? ` ${byId(assassinTarget)?.name}` : ''}</span></button>
+            ? <button className="btn btn-evil btn-lg btn-block" disabled={busy || !assassinTarget} onClick={() => act('ASSASSINATE', { targetId: assassinTarget })}><span className="sheen" /><Icon name="sword" size={20} /> <span className="th">ลอบสังหาร{assassinTarget ? ` ${byId(assassinTarget)?.name}` : ''}</span></button>
             : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">ฝ่ายชั่วกำลังเลือกเป้าหมาย...</span></button>
         )}
       </div>

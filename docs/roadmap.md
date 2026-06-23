@@ -751,7 +751,21 @@ Progress:
   the mobile reconnect path (`useRealtimeGame` re-fetches on a fresh client).
   Full run now **31/31 pass** (`verify:live-game`).
 
-Next: B7 — close out 4.5.3 (wire any remaining UI affordances; mark phase done).
+- **B7 — online play UX hardening (in progress)** (2026-06-23): closed two
+  production gaps in the online game UI found while reviewing the deployed flow
+  (impeccable `harden`): (1) **action failures were silent** — `submitAction` /
+  `timeout` errors (validation 400, version-conflict 409, network) set
+  `realtime.error` but nothing surfaced; now `AvalonGame` toasts a short, friendly
+  Thai message per failure (`friendlyGameError` maps engine/network errors, deduped
+  per occurrence). (2) **no in-flight guard** — action buttons (continue, nominate,
+  vote, mission, assassinate) now `disabled` while a server round-trip is in flight
+  (`busy`), preventing double-submit on slow mobile networks. `GamePage` threads
+  `busy`/`error` from `useRealtimeGame`; offline play unaffected. Build + verify green.
+  Files: `src/features/games/avalon/ui/AvalonGame.tsx`, `src/pages/GamePage.jsx`.
+
+Next: B7 cont. — manual two-device browser pass on tangwong.vercel.app (real UX +
+reconnect by tab close/reopen), then mark phase 4.5.3 ✅. Optional: impeccable
+`polish` pass on the in-game action bar.
 
 Follow-up (from 4.5.2, non-blocking): server-side presence pruning; emit
 join/leave/ready system messages from real events.

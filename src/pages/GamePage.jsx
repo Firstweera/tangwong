@@ -129,6 +129,8 @@ export default function GamePage({ go, showToast, currentRoom, player }) {
       onTimeout={onlineMode ? realtime.timeout : undefined}
       onlineMode={onlineMode}
       loading={realtime.loading || realtime.busy}
+      busy={onlineMode ? realtime.busy : false}
+      error={onlineMode ? realtime.error : null}
       showToast={showToast}
     />
   );
