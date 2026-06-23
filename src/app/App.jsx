@@ -11,6 +11,7 @@ import { useGuest } from '../features/guest/hooks/useGuest.ts';
 import { CreateRoomSheet } from '../features/room/components/CreateRoomSheet.tsx';
 import { EditProfileSheet } from '../features/guest/components/EditProfileSheet.tsx';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 const TWEAK_DEFAULTS = {
   themeMode: 'system',
@@ -170,6 +171,7 @@ export default function App() {
       </div>
 
       <Analytics />
+      <SpeedInsights />
 
       <TweaksPanel>
         <TweakSection label="ธีม · Theme" />
