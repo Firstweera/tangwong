@@ -229,6 +229,14 @@ export async function submitAction(code: string, type: string, payload: unknown)
   if (error) throw new Error(error.message);
 }
 
+export async function timeoutGame(code: string): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.functions.invoke('game-action', {
+    body: { code, type: 'TIMEOUT', payload: null },
+  });
+  if (error) throw new Error(error.message);
+}
+
 export function subscribeGame(roomId: string, onChange: () => void): () => void {
   const client = supabase;
   if (!client) return () => {};

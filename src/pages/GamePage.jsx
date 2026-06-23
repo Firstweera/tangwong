@@ -126,6 +126,7 @@ export default function GamePage({ go, showToast, currentRoom, player }) {
       externalState={onlineMode ? realtime.state : null}
       onSubmitAction={onlineMode ? realtime.submitAction : undefined}
       onStartGame={onlineMode ? realtime.start : undefined}
+      onTimeout={onlineMode ? realtime.timeout : undefined}
       onlineMode={onlineMode}
       loading={realtime.loading || realtime.busy}
       showToast={showToast}

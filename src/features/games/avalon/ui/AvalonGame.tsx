@@ -27,6 +27,7 @@ export interface AvalonGameProps {
   externalState?: S | null;
   onSubmitAction?: (type: string, payload: unknown) => void | Promise<void>;
   onStartGame?: () => void | Promise<void>;
+  onTimeout?: () => void | Promise<void>;
   onlineMode?: boolean;
   loading?: boolean;
   showToast?: (message: string, emoji?: string) => void;
@@ -41,6 +42,7 @@ export function AvalonGame({
   externalState = null,
   onSubmitAction,
   onStartGame,
+  onTimeout,
   onlineMode = false,
   loading = false,
   showToast,
@@ -55,6 +57,7 @@ export function AvalonGame({
   const [selectedTeam, setSelectedTeam] = useState<string[]>([]);
   const [assassinTarget, setAssassinTarget] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
+  const timeoutSentRef = useRef<string | null>(null);
 
   const byId = (id: string) => players.find(p => p.id === id);
   const chat = useChat(roomState.roomId, meId);
@@ -86,19 +89,31 @@ export function AvalonGame({
   const pub = state?.public.data;
   const leaderIndex = pub?.leaderIndex ?? 0;
   const currentQuest = pub?.currentQuest ?? 0;
+  const voteCount = Object.keys(pub?.votes ?? {}).length;
+  const missionCount = Object.keys(pub?.missionCards ?? {}).length;
+  const teamKey = pub?.proposedTeam?.join('|') ?? '';
+  const isHost = roomState.hostId === meId;
+  const timerKey = `${phase}:${leaderIndex}:${currentQuest}:${voteCount}:${missionCount}:${teamKey}`;
   useEffect(() => {
     const dur = PHASE_TIMER[phase];
     if (!dur) { setTimeLeft(0); return; }
+    timeoutSentRef.current = null;
     setTimeLeft(dur);
     const id = setInterval(() => setTimeLeft(t => (t > 0 ? t - 1 : 0)), 1000);
     return () => clearInterval(id);
-  }, [phase, leaderIndex, currentQuest]);
+  }, [phase, leaderIndex, currentQuest, voteCount, missionCount, teamKey]);
   useEffect(() => {
-    if (onlineMode) return;
     if (timeLeft !== 0 || !PHASE_TIMER[phase] || !state) return;
+    if (onlineMode) {
+      if (isHost && timeoutSentRef.current !== timerKey) {
+        timeoutSentRef.current = timerKey;
+        void onTimeout?.();
+      }
+      return;
+    }
     const action = nextBotAction(state, meId); // play my default if I idled out
     if (action) local.dispatch(action);
-  }, [timeLeft]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timeLeft, onlineMode, isHost, timerKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Toast vote outcomes on phase change ────────────────────────────────────
   const prevPhase = useRef<string>('lobby');
@@ -141,7 +156,6 @@ export function AvalonGame({
   const myPriv = state.private[meId]?.data;
   const leaderId = pub.playerOrder[leaderIndex];
   const iLead = leaderId === meId;
-  const isHost = roomState.hostId === meId;
   const quest = pub.quests[currentQuest];
   const iAmAssassin = myPriv?.role === 'assassin';
   const meOnTeam = pub.proposedTeam.includes(meId);

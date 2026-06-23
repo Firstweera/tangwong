@@ -13,7 +13,9 @@ state and never see another player's role. See `docs/phase-4.5.3-plan.md`.
 - **`game-action`** (B3) — authenticated room-member action entry point. Rebuilds
   full state with the service role, dispatches through the shared engine,
   resolves bot seats server-side, persists public/private snapshots with a
-  version guard, and logs public-safe actions.
+  version guard, and logs public-safe actions. B5 adds `TIMEOUT` as a host-only
+  server intent: the host client may request timer resolution, but the server
+  verifies `game_states.updated_at` before auto-acting.
 
 ## How the engine is shared (Option B1)
 
@@ -48,6 +50,7 @@ contract smoke check for the B3 function:
 
 ```sh
 npm run verify:game-action
+npm run verify:game-timeout
 npm run build
 ```
 
@@ -90,3 +93,18 @@ npm run build
 5. End-game reveal check: when the engine reaches a winner, `game_states.status`
    and `rooms.status` become `ended`, and `public_data.reveal` contains final
    role/side data for ResultPage.
+
+## Verify host-driven timeout (after deploy)
+
+1. Reach a timed phase (`teamProposal`, `teamVote`, or `mission`).
+2. Before the phase timer expires, call:
+   ```js
+   await window.supabase.functions.invoke('game-action', {
+     body: { code: 'XXXXX', type: 'TIMEOUT', payload: null }
+   })
+   ```
+   Expect HTTP 409 with `timer has not expired`.
+3. After the timer expires, call the same request from the host device. Expect
+   `{ ok: true }`, `game_states.version` increments, and `game_actions` contains
+   a public `TIMEOUT` audit row followed by the real engine action.
+4. Call the same request from a non-host device. Expect `host only`.

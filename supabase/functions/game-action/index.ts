@@ -52,6 +52,7 @@ interface GameStateRow {
   winner: unknown | null;
   status: string;
   version: number;
+  updated_at: string;
 }
 
 interface PrivateRow {
@@ -62,6 +63,39 @@ interface PrivateRow {
 const ENGINES: Record<string, GameEngineConfig<unknown, unknown>> = {
   avalon: avalonConfig as GameEngineConfig<unknown, unknown>,
 };
+
+const PHASE_TIMEOUT_SECONDS: Record<string, number> = {
+  teamProposal: 45,
+  teamVote: 25,
+  mission: 25,
+};
+
+const TIMEOUT_GRACE_MS = 750;
+
+function assertTimeoutElapsed(row: GameStateRow):
+  | { ok: true }
+  | { ok: false; status: number; error: string; retryAfterMs?: number } {
+  const phaseSeconds = PHASE_TIMEOUT_SECONDS[row.phase];
+  if (!phaseSeconds) return { ok: false, status: 400, error: 'phase has no timer' };
+
+  const updatedAt = Date.parse(row.updated_at);
+  if (!Number.isFinite(updatedAt)) {
+    return { ok: false, status: 500, error: 'game timer is unavailable' };
+  }
+
+  const requiredMs = phaseSeconds * 1000;
+  const elapsedMs = Date.now() - updatedAt;
+  if (elapsedMs + TIMEOUT_GRACE_MS < requiredMs) {
+    return {
+      ok: false,
+      status: 409,
+      error: 'timer has not expired',
+      retryAfterMs: Math.max(0, requiredMs - elapsedMs),
+    };
+  }
+
+  return { ok: true };
+}
 
 function buildRoomState(room: RoomRow, members: MemberRow[]): RoomState {
   const players: GamePlayer[] = members.map((m) => ({
@@ -143,6 +177,16 @@ function nextServerBotActor(state: AnyState): string | null {
   return null;
 }
 
+function nextTimedOutAction(state: AnyState): GameAction | null {
+  if (state.winner) return null;
+  const avalonState = state as unknown as GameState<AvalonPublic, AvalonPrivate>;
+  for (const player of state.room.players) {
+    const action = nextBotAction(avalonState, player.id);
+    if (action) return action;
+  }
+  return null;
+}
+
 function resolveBots(
   engine: GameEngine<unknown, unknown>,
   state: AnyState,
@@ -206,15 +250,41 @@ Deno.serve(async (req) => {
 
     const engine = new GameEngine(config);
     const roomState = buildRoomState(room as RoomRow, (members ?? []) as MemberRow[]);
-    const state = buildGameState(roomState, gameRow as GameStateRow, (privateRows ?? []) as PrivateRow[]);
-    const action: GameAction = { type, playerId: uid, payload: payload ?? null };
+    const row = gameRow as GameStateRow;
+    const state = buildGameState(roomState, row, (privateRows ?? []) as PrivateRow[]);
+    const actionLog: GameAction[] = [];
+    let action: GameAction = { type, playerId: uid, payload: payload ?? null };
+
+    if (type === 'TIMEOUT') {
+      if (uid !== room.host_id) return json({ error: 'host only' }, 403);
+      const timer = assertTimeoutElapsed(row);
+      if (!timer.ok) {
+        return json(
+          { error: timer.error, retryAfterMs: timer.retryAfterMs },
+          timer.status
+        );
+      }
+
+      const timedOutAction = nextTimedOutAction(state);
+      if (!timedOutAction) return json({ error: 'nothing to timeout' }, 409);
+      actionLog.push({
+        type: 'TIMEOUT',
+        playerId: uid,
+        payload: {
+          phase: state.public.phase,
+          actorId: timedOutAction.playerId,
+          actionType: timedOutAction.type,
+        },
+      });
+      action = timedOutAction;
+    }
 
     const result = engine.dispatch(state, action);
     if (!result.valid) return json({ error: result.error ?? 'invalid action' }, 400);
 
-    const actionLog: GameAction[] = [action];
+    actionLog.push(action);
     const nextState = resolveBots(engine, result.state as AnyState, actionLog);
-    const nextVersion = (gameRow as GameStateRow).version + 1;
+    const nextVersion = row.version + 1;
     const status = nextState.winner ? 'ended' : 'in-game';
 
     const { data: updated, error: updateErr } = await db
@@ -231,7 +301,7 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       })
       .eq('room_id', room.id)
-      .eq('version', (gameRow as GameStateRow).version)
+      .eq('version', row.version)
       .select('version')
       .maybeSingle();
     if (updateErr) return json({ error: updateErr.message }, 500);
@@ -264,7 +334,7 @@ Deno.serve(async (req) => {
       version: nextVersion,
       phase: nextState.public.phase,
       status,
-      botActions: actionLog.length - 1,
+      botActions: actionLog.filter((a) => a.playerId.startsWith('bot_')).length,
     });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);

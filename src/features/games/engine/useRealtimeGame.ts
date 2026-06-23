@@ -19,6 +19,7 @@ export interface UseRealtimeGameReturn {
   refresh: () => Promise<gameService.RealtimeGameSnapshot | null>;
   start: () => Promise<void>;
   submitAction: (type: string, payload: unknown) => Promise<void>;
+  timeout: () => Promise<void>;
 }
 
 export function useRealtimeGame(roomCode?: string | null, fallbackMeId?: string | null): UseRealtimeGameReturn {
@@ -108,6 +109,20 @@ export function useRealtimeGame(roomCode?: string | null, fallbackMeId?: string 
     }
   }, [roomCode, refresh]);
 
+  const timeout = useCallback(async () => {
+    if (!useSupabaseTransport || !roomCode) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await gameService.timeoutGame(roomCode);
+      await refresh();
+    } catch (err) {
+      if (mounted.current) setError(err instanceof Error ? err.message : 'Unable to resolve timeout');
+    } finally {
+      if (mounted.current) setBusy(false);
+    }
+  }, [roomCode, refresh]);
+
   return useMemo(() => ({
     enabled: useSupabaseTransport,
     room,
@@ -119,5 +134,6 @@ export function useRealtimeGame(roomCode?: string | null, fallbackMeId?: string 
     refresh,
     start,
     submitAction,
-  }), [room, state, meId, loading, busy, error, refresh, start, submitAction]);
+    timeout,
+  }), [room, state, meId, loading, busy, error, refresh, start, submitAction, timeout]);
 }

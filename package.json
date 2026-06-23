@@ -12,6 +12,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "verify:game-action": "node scripts/verify-game-action.mjs",
+    "verify:game-timeout": "node scripts/verify-game-timeout.mjs",
     "verify:realtime-game": "node scripts/verify-realtime-game.mjs"
   },
   "dependencies": {

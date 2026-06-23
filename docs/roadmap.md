@@ -630,7 +630,7 @@ Follow-up (recommended spot-checks, non-blocking):
 
 ## Phase 4.5.3 - Game Sync + Hidden Info (Edge Function authority)
 
-🟡 In Progress — 2026-06-22 (B4 written; deploy/runtime verification pending)
+🟡 In Progress — 2026-06-23 (B5 written; deploy/runtime verification pending)
 
 Design: see **docs/phase-4.5.3-plan.md** — commits Option B (Edge Function runs
 the existing TS engine as the authority), defines `game_states` (public) +
@@ -698,8 +698,30 @@ Progress:
   pieces and verify with two real clients because local build cannot exercise
   Supabase Realtime/RLS or Edge Function runtime.
 
-Next: B5 (host-driven timer tick / timeout path; server-side bot resolution
-already landed inside B3).
+- **B5 — host-driven timer tick / timeout path ✅ written** (2026-06-23, deploy pending):
+  `game-action/index.ts` now accepts the server intent `TIMEOUT`; only the
+  current room host may call it, and the function verifies elapsed time against
+  `game_states.updated_at` before choosing the next legal default action via
+  `nextBotAction` and dispatching it through the engine. Timeout actions are
+  audited in `game_actions` without exposing mission cards. The Supabase game
+  service exposes `timeoutGame`, `useRealtimeGame` exposes `timeout`, and
+  `AvalonGame` calls it once per expired online timer from the host client while
+  preserving the local offline timer path. Local checks: `npm run
+  verify:game-timeout`, `npm run verify:game-action`, `npm run
+  verify:realtime-game`, and `npm run build`.
+  Files:
+  `supabase/functions/game-action/index.ts`,
+  `src/services/supabase/game.ts`,
+  `src/features/games/engine/useRealtimeGame.ts`,
+  `src/features/games/avalon/ui/AvalonGame.tsx`,
+  `src/pages/GamePage.jsx`,
+  `scripts/verify-game-timeout.mjs`,
+  `package.json`.
+  Notes: host-driven timers pause if no host client is connected, matching the
+  MVP decision in `docs/phase-4.5.3-plan.md`. Follow-up: deploy `game-action`
+  and runtime-verify early timeout rejection plus expired timeout progression.
+
+Next: B6 (reconnect + end-game reveal verification path).
 
 Follow-up (from 4.5.2, non-blocking): server-side presence pruning; emit
 join/leave/ready system messages from real events.
