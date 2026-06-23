@@ -300,6 +300,47 @@ async function main() {
       console.log('  (run with --slow to also verify a real expired TIMEOUT progression)');
     }
 
+    // ── B6: reconnect / resume mid-match ──────────────────────────────────
+    // Simulate a page reload: a brand-new client adopts the guest's existing
+    // session (same auth.uid) and must resume the in-progress game from the
+    // server — current public state, own role, RLS still enforced, and the
+    // ability to act again. Non-mutating (the resume action is phase-illegal on
+    // purpose) so it doesn't disturb the full-match play below.
+    step('B6 — reconnect mid-match (fresh client, same identity)');
+    const guestSession = b.data?.session;
+    if (!guestSession?.access_token) {
+      ok('captured guest session for reconnect', false, 'no session tokens');
+    } else {
+      const guest2 = freshClient();
+      await guest2.auth.setSession({
+        access_token: guestSession.access_token,
+        refresh_token: guestSession.refresh_token,
+      });
+      const reUser = (await guest2.auth.getUser()).data?.user?.id;
+      ok('reconnected as the same identity', reUser === guestId, `uid=${reUser}`);
+
+      const { data: rePub } = await guest2.from('game_states')
+        .select('phase,status,public_data,version').eq('room_id', roomRow.id).single();
+      ok('resumes the in-progress public state', rePub?.phase === 'teamProposal' && rePub?.status === 'in-game',
+         `phase=${rePub?.phase} status=${rePub?.status}`);
+
+      const { data: reMine } = await guest2.from('game_private').select('*').eq('player_id', guestId);
+      ok('resumes own private role after reconnect',
+         (reMine?.length ?? 0) === 1 && !!reMine?.[0]?.private_data?.role,
+         `role=${reMine?.[0]?.private_data?.role}`);
+
+      const { data: reOthers } = await guest2.from('game_private').select('*').neq('player_id', guestId);
+      ok("reconnected client still cannot read others' roles", (reOthers?.length ?? 0) === 0,
+         `leaked=${reOthers?.length}`);
+
+      // Resume acting: a VOTE during teamProposal is phase-illegal, so it reaches
+      // engine validation (400) rather than the membership gate (403) — proving
+      // the reconnected client is authenticated AND recognised as a room member.
+      const reAct = await invoke(guest2, 'game-action', { code, type: 'VOTE_TEAM', payload: { approve: true } });
+      ok('reconnected client can act (reaches engine, not 403)', !reAct.ok && reAct.status === 400,
+         `status=${reAct.status} ${JSON.stringify(reAct.body)}`);
+    }
+
     // ── B6: play a full match to completion ───────────────────────────────
     step('B6 — play a full Avalon match to the end (always approve + Success)');
     const final = await playToEnd({ host, guest, hostId, guestId, code, roomId: roomRow.id });

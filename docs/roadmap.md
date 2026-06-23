@@ -741,9 +741,17 @@ Progress:
   `assassinate` → `end`. Asserts: game reaches `status='ended'` with a winner,
   `public_data.reveal` carries role+side for all 5 players, room flips to `ended`,
   and the guest can now read the public reveal (hidden info released only at end).
-  **26/26 pass.** Still pending under B6: reconnect/resume mid-match verification.
 
-Next: reconnect/resume verification, then B7 (close out 4.5.3).
+- **B6 — reconnect / resume mid-match ✅** (2026-06-23): the harness simulates a
+  page reload — a brand-new client adopts the guest's existing session (same
+  `auth.uid`) and resumes the in-progress game from the server: current public
+  phase, own private role, RLS still blocking others' roles, and the ability to
+  act again (a phase-illegal vote reaches engine validation `400`, not the
+  membership gate `403`, proving authenticated membership resumed). This mirrors
+  the mobile reconnect path (`useRealtimeGame` re-fetches on a fresh client).
+  Full run now **31/31 pass** (`verify:live-game`).
+
+Next: B7 — close out 4.5.3 (wire any remaining UI affordances; mark phase done).
 
 Follow-up (from 4.5.2, non-blocking): server-side presence pruning; emit
 join/leave/ready system messages from real events.
