@@ -47,11 +47,17 @@ export function PlayerSeat({
   return (
     <div
       className={cn('card-solid col center gap8 rise', className)}
-      style={{ padding: '16px 10px 12px', position: 'relative', animationDelay: `${delay}s` }}
+      style={{
+        padding: '16px 10px 12px',
+        position: 'relative',
+        animationDelay: `${delay}s`,
+        background: you ? 'var(--grad-soft)' : 'var(--surface-solid)',
+        borderColor: you ? 'color-mix(in srgb, var(--primary), transparent 52%)' : 'var(--border)',
+      }}
       onClick={onClick}
     >
       {you && (
-        <span style={{ position: 'absolute', top: 8, left: 10, fontSize: 9.5, fontWeight: 800, color: 'var(--primary)' }}>YOU</span>
+        <span style={{ position: 'absolute', top: 8, left: 10, fontSize: 9.5, fontWeight: 850, color: 'var(--primary)' }}>YOU</span>
       )}
       {actions && (
         <div style={{ position: 'absolute', top: 6, right: 6 }} onClick={(e) => e.stopPropagation()}>

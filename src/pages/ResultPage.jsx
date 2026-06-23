@@ -38,11 +38,11 @@ export default function ResultPage({ go, payload, showToast, player }) {
            background: `radial-gradient(circle, ${good ? 'rgba(76,141,255,0.35)' : 'rgba(255,92,108,0.32)'}, transparent 65%)`, filter: 'blur(10px)' }} />
       <div className="scroll" style={{ paddingBottom: 120 }}>
         {/* banner */}
-        <div className="col center pad-x" style={{ paddingTop: 86, textAlign: 'center' }}>
+        <div className="col center pad-x" style={{ paddingTop: 78, textAlign: 'center' }}>
           <div className="pop" style={{ fontSize: 74, lineHeight: 1, filter: 'drop-shadow(0 10px 24px rgba(0,0,0,0.4))' }}>{good ? '🛡️' : '🗡️'}</div>
-          <span className="eyebrow rise" style={{ color: accent, marginTop: 14 }}>{reason === 'assassin' ? 'การลอบสังหารสำเร็จ' : 'จบเกม · game over'}</span>
-          <h1 className="th display rise" style={{ fontSize: 42, marginTop: 6, color: accent }}>{good ? 'ฝ่ายดีชนะ!' : 'ฝ่ายชั่วชนะ!'}</h1>
-          <p className="th body rise" style={{ marginTop: 8, fontSize: 14.5 }}>{reasonText}</p>
+          <span className="chip rise" style={{ color: accent, marginTop: 14, borderColor: 'color-mix(in srgb, currentColor, transparent 65%)' }}>{reason === 'assassin' ? 'การลอบสังหาร' : 'game over'}</span>
+          <h1 className="th page-title rise" style={{ fontSize: 39, marginTop: 10, color: accent }}>{good ? 'ฝ่ายดีชนะ' : 'ฝ่ายชั่วชนะ'}</h1>
+          <p className="th page-subtitle rise" style={{ marginTop: 8, maxWidth: 320 }}>{reasonText}</p>
         </div>
 
         {/* quest recap */}
@@ -52,8 +52,7 @@ export default function ResultPage({ go, payload, showToast, player }) {
 
         {/* MVP */}
         <div className="pad-x" style={{ marginTop: 26 }}>
-          <div className="card" style={{ padding: 16, position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'var(--grad-soft)', opacity: 0.6 }} />
+          <div className="command-card" style={{ padding: 16 }}>
             <div className="row gap14" style={{ position: 'relative', alignItems: 'center' }}>
               <div style={{ position: 'relative' }}>
                 <Avatar who={player} size={62} ring="var(--accent)" />
@@ -73,15 +72,17 @@ export default function ResultPage({ go, payload, showToast, player }) {
 
         {/* role reveal */}
         <div className="pad-x" style={{ marginTop: 24 }}>
-          <h2 className="th h2" style={{ fontSize: 18, marginBottom: 12 }}>เปิดบทบาททั้งหมด</h2>
+          <div className="section-head"><h2 className="th section-title">เปิดบทบาททั้งหมด</h2><span className="section-note">{players.length} seats</span></div>
           <div className="col gap8">
             {players.map((p, i) => {
               const role = ROLES[roleOf[p.id]] ?? ROLES.servant;
               const isGood = role.side === 'good';
               const shown = i < revealAt;
               return (
-                <div key={p.id} className="card-solid row between" style={{ padding: '10px 14px', borderLeft: `3px solid ${isGood ? 'var(--good)' : 'var(--evil)'}`,
-                     opacity: shown ? 1 : 0, transform: shown ? 'none' : 'translateX(-8px)', transition: 'all 0.3s' }}>
+                <div key={p.id} className="status-card row between" style={{
+                     opacity: shown ? 1 : 0, transform: shown ? 'none' : 'translateX(-8px)', transition: 'all 0.3s',
+                     boxShadow: `inset 0 0 0 1px ${isGood ? 'rgba(76,141,255,0.15)' : 'rgba(255,92,108,0.15)'}`,
+                  }}>
                   <div className="row gap12">
                     <Avatar who={p} size={42} />
                     <div className="col" style={{ gap: 1 }}>

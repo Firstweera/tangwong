@@ -19,6 +19,13 @@ body {
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
 }
+body:has(.app[data-theme="light"]) {
+  background:
+    radial-gradient(110% 70% at 50% -10%, rgba(109,94,249,0.13), transparent 58%),
+    radial-gradient(90% 60% at 50% 112%, rgba(0,136,180,0.10), transparent 58%),
+    #edf1f7;
+  color: #121927;
+}
 #root { width: 100%; min-width: 0; display: flex; justify-content: center; overflow: hidden; }
 .th { font-family: 'Noto Sans Thai', 'Plus Jakarta Sans', sans-serif; }
 .mono { font-family: 'JetBrains Mono', monospace; }

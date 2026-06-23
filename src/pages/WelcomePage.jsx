@@ -37,9 +37,10 @@ export default function WelcomePage({ onGuest, onOAuth }) {
   const Backdrop = () => (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
       <div style={{
-        position: 'absolute', top: -60, left: '50%', transform: 'translateX(-50%)', width: 460, height: 420,
-        background: 'radial-gradient(circle, var(--primary), transparent 64%)', opacity: 0.22, filter: 'blur(12px)',
+        position: 'absolute', top: -80, left: '50%', transform: 'translateX(-50%)', width: 460, height: 360,
+        background: 'radial-gradient(circle, var(--primary), transparent 62%)', opacity: 0.18, filter: 'blur(10px)',
       }} />
+      <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)', backgroundSize: '28px 28px', maskImage: 'linear-gradient(#000, transparent 78%)', opacity: 0.28 }} />
     </div>
   );
 
@@ -47,16 +48,23 @@ export default function WelcomePage({ onGuest, onOAuth }) {
     <div className="screen screen-anim" style={{ display: 'flex', flexDirection: 'column' }}>
       <Backdrop />
       {/* brand block */}
-      <div className="col center" style={{ flex: 1, justifyContent: 'center', padding: '0 28px', position: 'relative', textAlign: 'center' }}>
-        <div className="pop"><Logo variant="illustration" size={248} /></div>
-        <div style={{ marginTop: 4 }}><Logo variant="wordmark" size={46} /></div>
-        <p className="th body" style={{ fontSize: 14.5, marginTop: 14, maxWidth: 280 }}>
-          รวมเพื่อน ล้อมวง เล่นบอร์ดเกมปาร์ตี้ด้วยกัน
-        </p>
+      <div className="col" style={{ flex: 1, justifyContent: 'center', padding: '28px 48px 0 24px', position: 'relative' }}>
+        <div className="command-card" style={{ padding: 20, minHeight: 360 }}>
+          <div className="row between" style={{ alignItems: 'flex-start' }}>
+            <Logo variant="wordmark" size={44} />
+          </div>
+          <div className="col center" style={{ minHeight: 210, justifyContent: 'center' }}>
+            <div className="pop"><Logo variant="illustration" size={210} /></div>
+          </div>
+          <h1 className="th page-title" style={{ fontSize: 29 }}>เปิดวงเกม<br />กับเพื่อน</h1>
+          <p className="th page-subtitle">
+            ห้องพร้อมแชต โหวต และบทบาทลับ<br />อ่านสถานะเกมง่ายบนมือถือ
+          </p>
+        </div>
       </div>
 
       {/* auth block */}
-      <div className="col gap10" style={{ padding: '20px 24px 32px', position: 'relative' }}>
+      <div className="col gap10" style={{ padding: '20px 48px 32px 24px', position: 'relative' }}>
         {oauth.map(([kind, label, bg, fg]) => (
           <button key={kind} className="btn btn-lg btn-block" onClick={() => onOAuth?.(kind)}
             style={{ background: bg, color: fg, border: kind === 'google' ? '1px solid var(--border-2)' : 'none', boxShadow: '0 8px 22px -12px rgba(0,0,0,0.6)' }}>
@@ -75,8 +83,8 @@ export default function WelcomePage({ onGuest, onOAuth }) {
           <span style={{ fontSize: 18 }}>🎭</span>
           <span className="th" style={{ fontWeight: 700 }}>เล่นเลยแบบกั๊ก · Guest</span>
         </button>
-        <p className="th tiny" style={{ textAlign: 'center', marginTop: 4, opacity: 0.65, lineHeight: 1.5 }}>
-          การเข้าใช้งานถือว่ายอมรับเงื่อนไขการใช้บริการ
+        <p className="th tiny" style={{ textAlign: 'center', marginTop: 4, color: 'var(--muted)', lineHeight: 1.5 }}>
+          Guest เล่นได้ทันที บัญชีจริงผูกตามมาภายหลัง
         </p>
       </div>
     </div>
@@ -93,8 +101,8 @@ export default function WelcomePage({ onGuest, onOAuth }) {
       </div>
 
       <div className="scroll" style={{ padding: '4px 24px 0' }}>
-        <h1 className="th h1" style={{ fontSize: 28 }}>สร้างตัวละคร</h1>
-        <p className="th body" style={{ marginTop: 6 }}>เลือกมาสคอตและตั้งชื่อเล่นของคุณ</p>
+        <h1 className="th page-title">สร้างตัวละคร</h1>
+        <p className="th page-subtitle">ชื่อและมาสคอตนี้จะใช้ในห้อง แชต และโต๊ะเกม</p>
 
         {/* preview */}
         <div className="col center" style={{ margin: '22px 0 18px' }}>
@@ -105,15 +113,15 @@ export default function WelcomePage({ onGuest, onOAuth }) {
         </div>
 
         {/* name input */}
-        <div className="card row" style={{ padding: '0 16px', height: 56, alignItems: 'center', marginBottom: 20 }}>
+        <div className="field-shell" style={{ marginBottom: 20 }}>
           <input value={name} onChange={e => setName(e.target.value.slice(0, 16))} maxLength={16}
             placeholder="ชื่อเล่น · nickname" className="th"
-            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: 'var(--text)', fontSize: 16, fontWeight: 700 }} />
+            style={{ fontSize: 16, fontWeight: 700 }} />
           <span className="th tiny mono" style={{ opacity: 0.6 }}>{name.length}/16</span>
         </div>
 
         {/* mascot picker */}
-        <span className="eyebrow">เลือกมาสคอต · pick your animal</span>
+        <div className="section-head"><span className="section-title th">เลือกมาสคอต</span><span className="section-note">12 ตัวเลือก</span></div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 12, paddingBottom: 130 }}>
           {GUEST_MASCOTS.map(k => {
             const active = k === mascot;

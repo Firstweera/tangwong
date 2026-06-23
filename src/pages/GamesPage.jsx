@@ -11,13 +11,18 @@ export function GamesPage({ go }) {
 
   return (
     <div className="scroll screen-anim" style={{ paddingBottom: 112 }}>
-      <div className="pad-x pad-top" style={{ paddingBottom: 6 }}>
-        <h1 className="th h1" style={{ fontSize: 28 }}>เลือกเกม</h1>
-        <p className="body" style={{ marginTop: 4 }}>{GAMES.length} เกมปาร์ตี้ พร้อมเล่นทันที</p>
+      <div className="page-head">
+        <div className="page-title-row">
+          <div>
+            <h1 className="th page-title">เลือกเกม</h1>
+            <p className="th page-subtitle">เกมปาร์ตี้สำหรับห้องเพื่อน พร้อมสถานะว่าตัวไหนเล่นได้ตอนนี้</p>
+          </div>
+          <span className="chip" style={{ marginTop: 2 }}>{GAMES.filter(g => g.available).length}/{GAMES.length} live</span>
+        </div>
       </div>
       <div className="row gap8" style={{ overflowX: 'auto', padding: '12px 20px', scrollbarWidth: 'none' }}>
         {cats.map(([c, on]) => (
-          <span key={c} className="chip th" style={{ flexShrink: 0, background: on ? 'var(--grad)' : 'var(--surface-2)', color: on ? '#fff' : 'var(--text)', border: on ? 'none' : '1px solid var(--border)' }}>{c}</span>
+          <span key={c} className="chip th" data-active={on ? 'true' : undefined} style={{ flexShrink: 0 }}>{c}</span>
         ))}
       </div>
       <div className="pad-x col gap12">

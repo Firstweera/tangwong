@@ -22,7 +22,7 @@ export function GameSelector({ game, onChange, onSelect, onRules, title = 'เ�
   return (
     <div>
       <div className="row between" style={{ marginBottom: 10 }}>
-        <h2 className="th h2" style={{ fontSize: 18 }}>{title}</h2>
+        <h2 className="th section-title">{title}</h2>
         <div className="row gap8">
           {onRules && <button className="chip" onClick={onRules}><Icon name="book" size={14} /> อ่านกฎ</button>}
           <button className="chip" onClick={onChange}><Icon name="dice" size={14} /> เปลี่ยนเกม</button>

@@ -51,7 +51,7 @@ export function LobbyFooter({ meReady, onToggleReady, onStart, allReady = false,
         </button>
         <StartGameButton onClick={onStart} disabled={!canStart} label={startLabel} style={{ flex: 1 }} />
       </div>
-      <div className="tiny center row" style={{ marginTop: 8, opacity: 0.7 }}>
+      <div className="tiny center row" style={{ marginTop: 8, color: 'var(--muted)', fontWeight: 700 }}>
         {hint}
       </div>
     </BottomBar>

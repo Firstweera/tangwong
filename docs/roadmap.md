@@ -81,6 +81,48 @@ Follow-up:
 - add a full DESIGN.md capture with `/impeccable document`
 - consider a lightweight route helper before adding more URL-addressable pages
 
+### Project Redesign System Pass
+
+✅ Completed — 2026-06-22
+
+Files:
+
+- DESIGN.md
+- src/app/App.jsx
+- src/styles/reset.css
+- src/styles/tokens.css
+- src/styles/layout.css
+- src/styles/components.css
+- src/pages/WelcomePage.jsx
+- src/pages/GamesPage.jsx
+- src/pages/FriendsPage.jsx
+- src/pages/ProfilePage.jsx
+- src/pages/ResultPage.jsx
+- src/components/game/PlayerSeat.tsx
+- src/features/lobby/components/RoomCodeDisplay.tsx
+- src/features/lobby/components/GameSelector.tsx
+- src/features/lobby/components/LobbyFooter.tsx
+
+Notes:
+
+- added the `Night Table Command Center` design direction as `DESIGN.md`
+- changed theme behavior to default to the user's device preference via
+  `prefers-color-scheme`, while keeping manual `system` / `dark` / `light`
+  overrides in Tweaks
+- tightened the shared surface, card, button, chip, page header, command-card,
+  field, and status-row vocabulary for dark and light themes
+- redesigned Welcome, Games, Friends, Profile, Lobby shared pieces, and Result
+  toward a consistent mobile product UI
+- fixed mobile shell/flex min-width guards after screenshot verification exposed
+  clipping on the Welcome screen
+
+Follow-up:
+
+- continue applying the same component vocabulary to sheets/modals and the game
+  phase controls after B5 timer sync
+- add a dedicated light-mode screenshot pass once browser automation can emulate
+  `prefers-color-scheme: light`
+
 ---
 
 ## UI Component Library

@@ -13,7 +13,7 @@ import { EditProfileSheet } from '../features/guest/components/EditProfileSheet.
 import { Analytics } from '@vercel/analytics/react';
 
 const TWEAK_DEFAULTS = {
-  theme: 'dark',
+  themeMode: 'system',
   accent: ['#6D5EF9', '#00D4FF'],
   lobbyLayout: 'grid',
   navStyle: 'float',
@@ -29,8 +29,14 @@ const screenFromPath = (fallback) => {
 
 const pathForScreen = (nextScreen) => (nextScreen === 'design-spec' ? '/design-spec' : '/');
 
+const readSystemTheme = () => {
+  if (typeof window === 'undefined') return 'dark';
+  return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+};
+
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [systemTheme, setSystemTheme] = useState(readSystemTheme);
   const [payload, setPayload] = useState(null);
   const [toastNode, showToast] = useToast();
 
@@ -62,6 +68,14 @@ export default function App() {
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, [guest.onboarded]);
+
+  useEffect(() => {
+    const media = window.matchMedia?.('(prefers-color-scheme: light)');
+    if (!media) return undefined;
+    const onChange = () => setSystemTheme(readSystemTheme());
+    media.addEventListener?.('change', onChange);
+    return () => media.removeEventListener?.('change', onChange);
+  }, []);
 
   // ─── Onboarding (Welcome) ─────────────────────────────────────────────────
   const completeGuestOnboarding = ({ mascot, name }) => {
@@ -131,6 +145,7 @@ export default function App() {
     '--grad': `linear-gradient(135deg, ${t.accent[0]} 0%, ${t.accent[1]} 115%)`,
     '--grad-soft': `linear-gradient(135deg, ${t.accent[0]}38, ${t.accent[1]}1f)`,
   };
+  const resolvedTheme = t.themeMode === 'system' ? systemTheme : t.themeMode;
 
   const screenEl = renderScreen(screen, {
     go, showToast, payload, lobbyLayout: t.lobbyLayout,
@@ -144,7 +159,7 @@ export default function App() {
 
   return (
     <React.Fragment>
-      <div className="app" data-theme={t.theme} style={{ ...accentVars }}>
+      <div className="app" data-theme={resolvedTheme} data-theme-mode={t.themeMode} style={{ ...accentVars }}>
         <div className="screen" key={screen}>
           {screenEl}
         </div>
@@ -158,7 +173,11 @@ export default function App() {
 
       <TweaksPanel>
         <TweakSection label="ธีม · Theme" />
-        <TweakRadio label="โหมดสี" value={t.theme} options={['dark', 'light']} onChange={v => setTweak('theme', v)} />
+        <TweakRadio label="โหมดสี" value={t.themeMode} options={[
+          { value: 'system', label: 'ตามเครื่อง' },
+          { value: 'dark', label: 'Dark' },
+          { value: 'light', label: 'Light' },
+        ]} onChange={v => setTweak('themeMode', v)} />
         <TweakColor label="สีหลัก · Accent" value={t.accent}
           options={[['#6D5EF9', '#00D4FF'], ['#FF6FA3', '#FF9F43'], ['#34D17E', '#00D4FF'], ['#8B5CF6', '#6D5EF9']]}
           onChange={v => setTweak('accent', v)} />
