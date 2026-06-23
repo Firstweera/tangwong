@@ -734,7 +734,16 @@ Progress:
   `CONTINUE → teamProposal` with version increment, illegal-action 400, early
   TIMEOUT 409, non-host TIMEOUT 403.
 
-Next: B6 (reconnect + end-game reveal verification path).
+- **B6 — full-match + end-game reveal verified ✅** (2026-06-23): `verify:live-game`
+  now plays a complete Avalon match against production — the harness supplies the
+  two humans' legal moves (the server auto-resolves bot seats after each action),
+  always approving teams and playing Success, which drives loyal to 3 quest wins →
+  `assassinate` → `end`. Asserts: game reaches `status='ended'` with a winner,
+  `public_data.reveal` carries role+side for all 5 players, room flips to `ended`,
+  and the guest can now read the public reveal (hidden info released only at end).
+  **26/26 pass.** Still pending under B6: reconnect/resume mid-match verification.
+
+Next: reconnect/resume verification, then B7 (close out 4.5.3).
 
 Follow-up (from 4.5.2, non-blocking): server-side presence pruning; emit
 join/leave/ready system messages from real events.

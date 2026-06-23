@@ -92,6 +92,80 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const randomCode = () =>
   Array.from({ length: 5 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
 const botId = () => `bot_${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Play a full Avalon match to completion against the live authority. The server
+// auto-resolves bot seats after every human action, so the harness only needs to
+// supply the two humans' (host + guest) legal moves, all derivable from
+// public_data. Strategy: always approve teams and always play Success, which
+// drives the loyal side to 3 quest wins → assassinate → end (winner = whether the
+// assassin hits Merlin). Returns the final game_states row, or null if it never
+// resolves within the iteration budget.
+async function playToEnd({ host, guest, hostId, guestId, code, roomId }) {
+  const humans = new Map([[hostId, host], [guestId, guest]]);
+  const isHuman = (id) => humans.has(id);
+  let lastVersion = -1;
+  let stuck = 0;
+
+  for (let i = 0; i < 100; i += 1) {
+    const { data: gs } = await host
+      .from('game_states')
+      .select('phase,status,version,public_data,winner')
+      .eq('room_id', roomId)
+      .single();
+    if (!gs) return null;
+    if (gs.status === 'ended' || gs.phase === 'end' || gs.winner) return gs;
+
+    const P = gs.public_data || {};
+    const order = P.playerOrder || [];
+    let acted = false;
+
+    if (gs.phase === 'roleReveal' || gs.phase === 'questReveal') {
+      acted = (await invoke(host, 'game-action', { code, type: 'CONTINUE', payload: null })).ok;
+    } else if (gs.phase === 'teamProposal') {
+      const leader = order[P.leaderIndex];
+      if (isHuman(leader)) {
+        const size = P.quests?.[P.currentQuest]?.size ?? 2;
+        const team = order.slice(0, size);
+        acted = (await invoke(humans.get(leader), 'game-action',
+          { code, type: 'NOMINATE_TEAM', payload: { team } })).ok;
+      }
+    } else if (gs.phase === 'teamVote') {
+      for (const [id, client] of humans) {
+        if (!(id in (P.votes || {}))) {
+          if ((await invoke(client, 'game-action', { code, type: 'VOTE_TEAM', payload: { approve: true } })).ok) acted = true;
+        }
+      }
+    } else if (gs.phase === 'mission') {
+      for (const [id, client] of humans) {
+        if ((P.proposedTeam || []).includes(id) && !(id in (P.missionCards || {}))) {
+          if ((await invoke(client, 'game-action', { code, type: 'PLAY_MISSION_CARD', payload: { card: 'success' } })).ok) acted = true;
+        }
+      }
+    } else if (gs.phase === 'assassinate') {
+      for (const [id, client] of humans) {
+        const { data: mine } = await client.from('game_private')
+          .select('private_data').eq('player_id', id).maybeSingle();
+        if (mine?.private_data?.role === 'assassin') {
+          const target = order.find((p) => p !== id) || order[0];
+          acted = (await invoke(client, 'game-action', { code, type: 'ASSASSINATE', payload: { targetId: target } })).ok;
+          break;
+        }
+      }
+    }
+
+    // When the resting actor is a bot (transient race) the harness sends nothing;
+    // wait briefly and re-read rather than busy-looping.
+    if (!acted && gs.version === lastVersion) {
+      if (++stuck >= 6) return gs; // genuinely stuck — let caller assert/fail
+      await sleep(400);
+    } else {
+      stuck = 0;
+    }
+    lastVersion = gs.version;
+  }
+  return null; // iteration budget exhausted
+}
 
 async function main() {
   console.log(`\n\x1b[1mTangWong live game harness\x1b[0m → ${URL}`);
@@ -224,6 +298,32 @@ async function main() {
       }
     } else {
       console.log('  (run with --slow to also verify a real expired TIMEOUT progression)');
+    }
+
+    // ── B6: play a full match to completion ───────────────────────────────
+    step('B6 — play a full Avalon match to the end (always approve + Success)');
+    const final = await playToEnd({ host, guest, hostId, guestId, code, roomId: roomRow.id });
+    ok('game reached an end state', !!final && (final.status === 'ended' || final.winner),
+       final ? `phase=${final.phase} status=${final.status} winner=${JSON.stringify(final.winner)}` : 'no final state (stuck/budget)');
+
+    if (final) {
+      const reveal = final.public_data?.reveal;
+      const revealCount = reveal ? Object.keys(reveal).length : 0;
+      ok('end-game reveal present for all players', revealCount === 5,
+         `reveal entries=${revealCount}`);
+      ok('reveal carries role + side', !!reveal && Object.values(reveal).every((r) => r?.role && r?.side),
+         reveal ? JSON.stringify(Object.values(reveal)[0]) : 'no reveal');
+
+      const { data: endRoom } = await host.from('rooms').select('status').eq('id', roomRow.id).single();
+      ok('room status = ended', endRoom?.status === 'ended', `status=${endRoom?.status}`);
+
+      // After the game ends, hidden info is intentionally released via the public
+      // reveal — confirm the guest can now see every role through public_data.
+      const { data: guestView } = await guest.from('game_states')
+        .select('public_data').eq('room_id', roomRow.id).single();
+      ok('guest can read the public end-game reveal', (guestView?.public_data?.reveal &&
+         Object.keys(guestView.public_data.reveal).length === 5),
+         `guest sees ${Object.keys(guestView?.public_data?.reveal ?? {}).length} roles`);
     }
   } catch (err) {
     fail++;
