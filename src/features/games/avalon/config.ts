@@ -1,11 +1,11 @@
 // Avalon — the complete GameEngineConfig wiring state, phases, actions, and win
 // conditions together. Register this with the engine (useGameEngine) to play.
 import type { GameEngineConfig } from '../engine';
-import type { AvalonPublic, AvalonPrivate } from './types';
-import { buildPublicState, buildPrivateState } from './setup';
-import { AVALON_PHASES } from './phases';
-import { AVALON_ACTIONS } from './actions';
-import { AVALON_WIN_CONDITIONS } from './winConditions';
+import type { AvalonPublic, AvalonPrivate } from './types.ts';
+import { buildPublicState, buildPrivateState } from './setup.ts';
+import { AVALON_PHASES } from './phases.ts';
+import { AVALON_ACTIONS } from './actions.ts';
+import { AVALON_WIN_CONDITIONS } from './winConditions.ts';
 
 export const avalonConfig: GameEngineConfig<AvalonPublic, AvalonPrivate> = {
   id: 'avalon',

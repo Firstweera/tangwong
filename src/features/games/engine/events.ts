@@ -1,5 +1,5 @@
 // Event factory helpers — keep event creation consistent across games.
-import type { GameEvent, GameEventType, GamePhase } from './types';
+import type { GameEvent, GameEventType, GamePhase } from './types.ts';
 
 let _counter = 0;
 

@@ -2,8 +2,8 @@
 // public data, and these `condition` transitions decide where the engine moves
 // next (the engine auto-advances after each dispatched action).
 import type { PhaseConfig, GameState } from '../engine';
-import type { AvalonPublic } from './types';
-import { successCount, failCount } from './setup';
+import type { AvalonPublic } from './types.ts';
+import { successCount, failCount } from './setup.ts';
 
 const pub = (s: GameState<unknown, unknown>) => s.public.data as AvalonPublic;
 

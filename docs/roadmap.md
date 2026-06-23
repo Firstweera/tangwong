@@ -630,7 +630,7 @@ Follow-up (recommended spot-checks, non-blocking):
 
 ## Phase 4.5.3 - Game Sync + Hidden Info (Edge Function authority)
 
-🟡 In Progress — 2026-06-23 (B5 written; deploy/runtime verification pending)
+🟡 In Progress — 2026-06-23 (B2/B3/B5 deployed + runtime-verified on production; B6/B7 next)
 
 Design: see **docs/phase-4.5.3-plan.md** — commits Option B (Edge Function runs
 the existing TS engine as the authority), defines `game_states` (public) +
@@ -718,8 +718,21 @@ Progress:
   `scripts/verify-game-timeout.mjs`,
   `package.json`.
   Notes: host-driven timers pause if no host client is connected, matching the
-  MVP decision in `docs/phase-4.5.3-plan.md`. Follow-up: deploy `game-action`
-  and runtime-verify early timeout rejection plus expired timeout progression.
+  MVP decision in `docs/phase-4.5.3-plan.md`.
+
+- **Deploy + runtime verify ✅** (2026-06-23): `game-start` + `game-action`
+  deployed to project `lvhhzigrjqtlmzdokvfa`. Edge Function bundling fixes
+  needed for Supabase's Deno bundler (which ignores `deno.json` `sloppy-imports`
+  server-side): `_shared/supabase.ts` imports `npm:@supabase/supabase-js@2`
+  directly, and every relative import in the pure engine/avalon files now carries
+  an explicit `.ts` extension (`allowImportingTsExtensions` keeps tsc/Vite green).
+  A live two-client harness (`scripts/e2e-live-game.mjs`, `npm run
+  verify:live-game`) drives anon auth → room + bots → game-start → game-action →
+  TIMEOUT against production and asserts the RLS hidden-info gate: **21/21 pass**.
+  Confirmed: host-only game-start (403 for others), `roleReveal` snapshot,
+  per-player `game_private` rows readable only by their owner (0 leaked),
+  `CONTINUE → teamProposal` with version increment, illegal-action 400, early
+  TIMEOUT 409, non-host TIMEOUT 403.
 
 Next: B6 (reconnect + end-game reveal verification path).
 

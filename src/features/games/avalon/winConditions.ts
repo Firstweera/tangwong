@@ -1,7 +1,7 @@
 // Avalon win conditions — checked by the engine after every action.
 import type { WinCondition, WinResult, GameState } from '../engine';
-import type { AvalonPublic, AvalonPrivate } from './types';
-import { failCount } from './setup';
+import type { AvalonPublic, AvalonPrivate } from './types.ts';
+import { failCount } from './setup.ts';
 
 type State = GameState<AvalonPublic, AvalonPrivate>;
 

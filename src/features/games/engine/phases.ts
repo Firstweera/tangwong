@@ -1,6 +1,6 @@
 // Phase management — defaults, transition helpers, and action gating.
-import type { GamePhase, PhaseConfig, GameState, GameEvent } from './types';
-import { systemEvent } from './events';
+import type { GamePhase, PhaseConfig, GameState, GameEvent } from './types.ts';
+import { systemEvent } from './events.ts';
 
 // ─── Default phase definitions ────────────────────────────────────────────────
 // Games override this by supplying their own phases array in GameEngineConfig.

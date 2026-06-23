@@ -1,6 +1,6 @@
 // React hook — wraps GameEngine for use in pages/components.
 import { useState, useCallback, useMemo } from 'react';
-import { GameEngine } from './engine';
+import { GameEngine } from './engine.ts';
 import type {
   GameEngineConfig,
   GameState,
@@ -9,7 +9,7 @@ import type {
   DispatchResult,
   RoomState,
   WinResult,
-} from './types';
+} from './types.ts';
 
 export interface UseGameEngineReturn<TPublic, TPrivate> {
   state: GameState<TPublic, TPrivate> | null;

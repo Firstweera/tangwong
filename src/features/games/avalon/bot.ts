@@ -3,8 +3,8 @@
 // a full game and verify the engine end-to-end. Reads full state (Phase A,
 // single-client); host-authoritative bots come with Phase B.
 import type { GameAction, GameState } from '../engine';
-import type { AvalonPublic, AvalonPrivate } from './types';
-import { currentLeaderId, currentQuestRule } from './setup';
+import type { AvalonPublic, AvalonPrivate } from './types.ts';
+import { currentLeaderId, currentQuestRule } from './setup.ts';
 
 type S = GameState<AvalonPublic, AvalonPrivate>;
 

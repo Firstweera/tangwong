@@ -4,9 +4,9 @@
 import { ROLES } from '../../../data.ts';
 import type { RoleKey } from '../../../types/index.ts';
 import type { GameRules, RuleStep } from '../rules';
-import { avalonConfig } from './config';
-import { AVALON_PHASES } from './phases';
-import { roleSetFor, compositionFor, questsFor } from './setup';
+import { avalonConfig } from './config.ts';
+import { AVALON_PHASES } from './phases.ts';
+import { roleSetFor, compositionFor, questsFor } from './setup.ts';
 
 // Per-phase blurbs; the title + which phases exist/order come from the engine.
 const STEP_META: Record<string, { emoji: string; desc: string }> = {

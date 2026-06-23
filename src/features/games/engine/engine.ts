@@ -12,15 +12,15 @@ import type {
   WinResult,
   ActionResult,
   RoomState,
-} from './types';
-import { systemEvent, playerEvent } from './events';
+} from './types.ts';
+import { systemEvent, playerEvent } from './events.ts';
 import {
   isValidTransition,
   applyPhaseTransition,
   getAllowedActions,
   isActionAllowed,
   shouldAutoAdvance,
-} from './phases';
+} from './phases.ts';
 
 export class GameEngine<TPublic = unknown, TPrivate = unknown> {
   constructor(private readonly config: GameEngineConfig<TPublic, TPrivate>) {}

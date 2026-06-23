@@ -3,7 +3,7 @@ import { ensureSession } from '@/services/supabase/auth';
 import { useSupabaseTransport } from '@/services/supabase/client';
 import * as gameService from '@/services/supabase/game';
 import type { SyncedRoom } from '@/services/realtime';
-import type { GameState } from './types';
+import type { GameState } from './types.ts';
 import type { AvalonPrivate, AvalonPublic } from '../avalon/types';
 
 type S = GameState<AvalonPublic, AvalonPrivate>;

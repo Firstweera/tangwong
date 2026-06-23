@@ -2,8 +2,8 @@
 // only mutate public data; phase transitions are decided by the condition
 // transitions in phases.ts (run by the engine after each dispatch).
 import type { ActionDef, GameState } from '../engine';
-import type { AvalonPublic, AvalonPrivate, QuestOutcome } from './types';
-import { currentLeaderId, currentQuestRule, successCount } from './setup';
+import type { AvalonPublic, AvalonPrivate, QuestOutcome } from './types.ts';
+import { currentLeaderId, currentQuestRule, successCount } from './setup.ts';
 
 type State = GameState<AvalonPublic, AvalonPrivate>;
 

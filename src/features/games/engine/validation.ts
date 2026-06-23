@@ -1,8 +1,8 @@
 // Composable action validators.
 // Each validator is a pure function: (state, action) => ActionResult.
 // Compose them with composeValidators() to build game-specific rules.
-import type { GameAction, GameState, ActionResult, PhaseConfig } from './types';
-import { isActionAllowed } from './phases';
+import type { GameAction, GameState, ActionResult, PhaseConfig } from './types.ts';
+import { isActionAllowed } from './phases.ts';
 
 // ─── Primitive validators ─────────────────────────────────────────────────────
 

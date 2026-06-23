@@ -3,7 +3,7 @@
 import type { RoleKey, RoleSide } from '../../../types/index.ts';
 import { ROLES } from '../../../data.ts';
 import type { GamePlayer } from '../engine';
-import type { AvalonPublic, AvalonPrivate, QuestRule, SeenPlayer } from './types';
+import type { AvalonPublic, AvalonPrivate, QuestRule, SeenPlayer } from './types.ts';
 
 // ─── Tables ─────────────────────────────────────────────────────────────────
 
