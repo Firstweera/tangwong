@@ -98,6 +98,15 @@ export default function LobbyPage({ go, layout, showToast, room, player, onLeave
     if (messages.length === 0) sendSystem(`ยินดีต้อนรับสู่ ${liveRoom.name}`);
   }, [isUuid, isHost, messages.length, sendSystem, liveRoom.name]);
 
+  // Everyone follows the host into the match. When the host presses Start, the
+  // game-start Edge Function flips rooms.status to 'in-game'; the realtime room
+  // subscription delivers that to every client, so non-host players (and anyone
+  // rejoining an already-started room) navigate into the game here. The host has
+  // already navigated via handleStart (which is what triggers game-start).
+  useEffect(() => {
+    if (liveRoom.status === 'in-game') go('game');
+  }, [liveRoom.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const toggleMe = () => setReady(!meReady);
 
   const handleBack = () => {
