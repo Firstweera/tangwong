@@ -15,12 +15,14 @@ export function Header({ left, title, subtitle, right }) {
 }
 
 // IconButton — the 42×42 rounded icon button used in every header
-export function IconButton({ children, onClick, style }) {
+export function IconButton({ children, onClick, style, ...rest }) {
   return (
     <button
+      type="button"
       className="row center"
       style={{ width: 42, height: 42, borderRadius: 13, background: 'var(--surface-2)', border: '1px solid var(--border)', ...style }}
       onClick={onClick}
+      {...rest}
     >
       {children}
     </button>

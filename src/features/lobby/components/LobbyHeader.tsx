@@ -15,10 +15,10 @@ export interface LobbyHeaderProps {
 export function LobbyHeader({ title, subtitle, onBack, onSettings }: LobbyHeaderProps) {
   return (
     <Header
-      left={onBack ? <IconButton onClick={onBack}><Icon name="chevL" size={20} /></IconButton> : undefined}
+      left={onBack ? <IconButton onClick={onBack} aria-label="กลับ"><Icon name="chevL" size={20} /></IconButton> : undefined}
       title={title}
       subtitle={subtitle}
-      right={onSettings ? <IconButton onClick={onSettings}><Icon name="settings" size={19} /></IconButton> : undefined}
+      right={onSettings ? <IconButton onClick={onSettings} aria-label="ตั้งค่าห้อง"><Icon name="settings" size={19} /></IconButton> : undefined}
     />
   );
 }

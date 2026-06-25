@@ -5,6 +5,6 @@ export function Screen(props: { children?: ReactNode; style?: CSSProperties; scr
 export function ScrollScreen(props: { children?: ReactNode; bottomPad?: number; style?: CSSProperties }): ReactElement;
 
 export function Header(props: { left?: ReactNode; title?: ReactNode; subtitle?: ReactNode; right?: ReactNode }): ReactElement;
-export function IconButton(props: { children?: ReactNode; onClick?: () => void; style?: CSSProperties }): ReactElement;
+export function IconButton(props: { children?: ReactNode; onClick?: () => void; style?: CSSProperties; 'aria-label'?: string; disabled?: boolean; title?: string }): ReactElement;
 
 export function BottomBar(props: { children?: ReactNode; paddingBottom?: number }): ReactElement;

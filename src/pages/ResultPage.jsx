@@ -135,7 +135,7 @@ export default function ResultPage({ go, payload, showToast, player }) {
 
       <BottomBar paddingBottom={26}>
         <div className="row gap10">
-          <button className="btn btn-glass btn-lg" style={{ flex: '0 0 auto', width: 64 }} onClick={() => go('home')}><Icon name="home" size={22} /></button>
+          <button className="btn btn-glass btn-lg" aria-label="กลับหน้าหลัก" style={{ flex: '0 0 auto', width: 64 }} onClick={() => go('home')}><Icon name="home" size={22} /></button>
           {online && !isHost ? (
             <button className="btn btn-glass btn-lg" style={{ flex: 1 }} disabled>
               <span className="th" style={{ fontWeight: 800 }}>รอหัวห้องเริ่มใหม่...</span>

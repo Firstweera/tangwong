@@ -801,8 +801,17 @@ Next: visual confirm hero + vote reveal on device, then mark phase 4.5.3 ✅.
   `services/supabase/game.ts`, `engine/useRealtimeGame.ts`, `pages/ResultPage.jsx`,
   `pages/GamePage.jsx`.
 
-Next: P4 — optional impeccable `polish` pass (action bar / result / hero), then
-device smoke-test the invite + rematch flows.
+- **P4 — polish pass (a11y) ✅** (2026-06-25, impeccable `polish`): fixed the real
+  "Buttons must have discernible text" defect seen in DevTools — icon-only buttons
+  across the core loop now have `aria-label` (game exit/chat, result home, lobby
+  back/settings, home bell/invite, chat close). Root-caused the shared
+  `layout/IconButton` dropping a11y props → now forwards `...rest` (one fix, all
+  call sites benefit). No pixels changed. Files: `components/layout/Header.jsx`
+  (+ `.d.ts`), `AvalonGame.tsx`, `ResultPage.jsx`, `HomePage.jsx`,
+  `LobbyHeader.tsx`, `ChatSheet.jsx`.
+
+Next: device smoke-test invite + rematch on tangwong.vercel.app, then "Avalon
+shippable" is done — choose game #2 (Salem) or social layer (accounts/friends).
 
 Follow-up (from 4.5.2, non-blocking): server-side presence pruning; emit
 join/leave/ready system messages from real events.

@@ -24,7 +24,7 @@ export function ChatSheet({ onClose }) {
         <div className="row between" style={{ padding: '14px 18px 8px' }}>
           <div style={{ width: 40 }} />
           <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--border-2)' }} />
-          <button className="row center" style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--surface-2)' }} onClick={onClose}>
+          <button aria-label="ปิดแชต" className="row center" style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--surface-2)' }} onClick={onClose}>
             <Icon name="x" size={16} />
           </button>
         </div>

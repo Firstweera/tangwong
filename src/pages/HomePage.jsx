@@ -133,7 +133,7 @@ export default function HomePage({ go, showToast, player, openCreateRoom, joinRo
       <div className="row between pad-x pad-top" style={{ paddingBottom: 10 }}>
         <Logo size={32} />
         <div className="row gap10">
-          <button className="row center" style={{ width: 42, height: 42, borderRadius: 13, background: 'var(--surface-2)', border: '1px solid var(--border)', position: 'relative' }}>
+          <button aria-label="การแจ้งเตือน" className="row center" style={{ width: 42, height: 42, borderRadius: 13, background: 'var(--surface-2)', border: '1px solid var(--border)', position: 'relative' }}>
             <Icon name="bell" size={20} />
             <span style={{ position: 'absolute', top: 9, right: 10, width: 8, height: 8, borderRadius: 4, background: 'var(--accent)', boxShadow: '0 0 0 2px var(--surface-solid)' }} />
           </button>
@@ -190,7 +190,7 @@ export default function HomePage({ go, showToast, player, openCreateRoom, joinRo
         </div>
         <div className="row gap16" style={{ overflowX: 'auto', padding: '4px 20px 6px', scrollbarWidth: 'none' }}>
           <div className="col center gap8" style={{ flexShrink: 0 }}>
-            <button className="row center" style={{ width: 56, height: 56, borderRadius: '50%', border: '2px dashed var(--border-2)', color: 'var(--muted)' }} onClick={() => showToast('เชิญเพื่อน', '✉️')}>
+            <button aria-label="เชิญเพื่อน" className="row center" style={{ width: 56, height: 56, borderRadius: '50%', border: '2px dashed var(--border-2)', color: 'var(--muted)' }} onClick={() => showToast('เชิญเพื่อน', '✉️')}>
               <Icon name="plus" size={22} />
             </button>
             <span className="tiny" style={{ fontWeight: 600 }}>เชิญ</span>

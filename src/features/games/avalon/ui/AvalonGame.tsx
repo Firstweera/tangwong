@@ -286,7 +286,7 @@ export function AvalonGame({
 
       {/* top bar */}
       <div className="row between pad-x pad-top" style={{ paddingBottom: 6 }}>
-        <IconButton onClick={onExit} style={{ width: 40, height: 40, borderRadius: 12 }}><Icon name="exit" size={18} /></IconButton>
+        <IconButton onClick={onExit} aria-label="ออกจากเกม" style={{ width: 40, height: 40, borderRadius: 12 }}><Icon name="exit" size={18} /></IconButton>
         <div className="row gap8">
           {PHASE_TIMER[phase] > 0 && (
             <div className="chip" style={{ background: 'var(--surface)', borderColor: 'var(--border-2)' }}>
@@ -298,7 +298,7 @@ export function AvalonGame({
             ? <span className="chip" style={{ background: 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>ออนไลน์</span>
             : <button className="chip" onClick={() => setAutoAll(a => !a)} style={{ background: autoAll ? 'var(--grad-soft)' : 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>🤖 {autoAll ? 'ออโต้' : 'แมนนวล'}</button>}
         </div>
-        <IconButton onClick={() => setChatOpen(true)} style={{ width: 40, height: 40, borderRadius: 12 }}><Icon name="chat" size={18} /></IconButton>
+        <IconButton onClick={() => setChatOpen(true)} aria-label="เปิดแชต" style={{ width: 40, height: 40, borderRadius: 12 }}><Icon name="chat" size={18} /></IconButton>
       </div>
 
       {/* quest track */}
