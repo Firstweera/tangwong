@@ -382,9 +382,14 @@ async function main() {
        `phase=${fresh?.phase} status=${fresh?.status} v=${fresh?.version}`);
     ok('rematch cleared the old end-game reveal', !fresh?.public_data?.reveal, 'no stale reveal');
 
-    const { count: freshPriv } = await host.from('game_private')
-      .select('*', { count: 'exact', head: true }).eq('room_id', roomRow.id);
-    ok('fresh private rows re-dealt for all 5', freshPriv === 5, `rows=${freshPriv}`);
+    // game_private is owner-only RLS, so each client only ever sees its own row;
+    // verify both humans got a fresh role (the re-deal) rather than counting all 5.
+    const { data: hostPriv } = await host.from('game_private').select('private_data').eq('player_id', hostId);
+    const { data: guestPriv } = await guest.from('game_private').select('private_data').eq('player_id', guestId);
+    ok('rematch re-dealt fresh roles to both humans',
+       hostPriv?.length === 1 && !!hostPriv[0]?.private_data?.role &&
+       guestPriv?.length === 1 && !!guestPriv[0]?.private_data?.role,
+       `host=${hostPriv?.[0]?.private_data?.role} guest=${guestPriv?.[0]?.private_data?.role}`);
 
     const { data: endRoom2 } = await host.from('rooms').select('status').eq('id', roomRow.id).single();
     ok('room flipped back to in-game', endRoom2?.status === 'in-game', `status=${endRoom2?.status}`);
