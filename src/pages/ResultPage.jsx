@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Icon, Avatar, QuestTrack, Confetti } from '../components/ui';
 import { BottomBar } from '../components/layout';
 import { PLAYERS, ROLES, ROLE_OF } from '../data';
+import { useSupabaseTransport, gameService } from '../services/supabase';
 
 export default function ResultPage({ go, payload, showToast, player }) {
   const {
@@ -16,6 +17,34 @@ export default function ResultPage({ go, payload, showToast, player }) {
   const youId = payload?.you ?? 'me';
   const myRole = ROLES[roleOf[youId]] ?? ROLES.servant;
   const [revealAt, setRevealAt] = useState(0);
+
+  // ─── Rematch (online) ────────────────────────────────────────────────────────
+  const online = useSupabaseTransport && !!payload?.code && !!payload?.roomId;
+  const isHost = !!payload?.isHost;
+  const [rematching, setRematching] = useState(false);
+
+  // Everyone on the result screen watches for a fresh game: when the host starts
+  // a rematch, game-start writes a new in-game snapshot → navigate into it.
+  useEffect(() => {
+    if (!online) return;
+    const unsub = gameService.subscribeGame(payload.roomId, async () => {
+      const status = await gameService.fetchGameStatus(payload.roomId);
+      if (status === 'in-game') go('game');
+    });
+    return unsub;
+  }, [online, payload?.roomId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleRematch = async () => {
+    if (!online) { go('lobby'); return; }   // offline/local: back to the lobby
+    if (!isHost || rematching) return;       // non-host waits for the host
+    setRematching(true);
+    try {
+      await gameService.startGame(payload.code, true); // re-deal; subscription navigates everyone
+    } catch {
+      setRematching(false);
+      showToast?.('เริ่มเกมใหม่ไม่สำเร็จ ลองอีกครั้ง', '⚠️');
+    }
+  };
 
   useEffect(() => {
     const id = setInterval(() => setRevealAt(v => (v < players.length ? v + 1 : v)), 160);
@@ -107,10 +136,16 @@ export default function ResultPage({ go, payload, showToast, player }) {
       <BottomBar paddingBottom={26}>
         <div className="row gap10">
           <button className="btn btn-glass btn-lg" style={{ flex: '0 0 auto', width: 64 }} onClick={() => go('home')}><Icon name="home" size={22} /></button>
-          <button className="btn btn-primary btn-lg" style={{ flex: 1 }} onClick={() => go('lobby')}>
-            <span className="sheen" />
-            <Icon name="dice" size={20} /> <span className="th" style={{ fontWeight: 800 }}>เล่นอีกครั้ง</span>
-          </button>
+          {online && !isHost ? (
+            <button className="btn btn-glass btn-lg" style={{ flex: 1 }} disabled>
+              <span className="th" style={{ fontWeight: 800 }}>รอหัวห้องเริ่มใหม่...</span>
+            </button>
+          ) : (
+            <button className="btn btn-primary btn-lg" style={{ flex: 1 }} disabled={rematching} onClick={handleRematch}>
+              <span className="sheen" />
+              <Icon name="dice" size={20} /> <span className="th" style={{ fontWeight: 800 }}>{rematching ? 'กำลังเริ่ม...' : 'เล่นอีกครั้ง'}</span>
+            </button>
+          )}
         </div>
       </BottomBar>
     </div>

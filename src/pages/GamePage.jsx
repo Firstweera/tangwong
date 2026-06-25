@@ -83,6 +83,10 @@ export default function GamePage({ go, showToast, currentRoom, player }) {
       players,
       roles,
       you: meId,
+      // Online rematch context (absent for offline/local play).
+      code: onlineMode ? currentRoom?.code : null,
+      roomId: onlineMode ? roomState.roomId : null,
+      isHost: roomState.hostId === meId,
     });
   };
 

@@ -217,10 +217,18 @@ export async function fetchGame(code: string): Promise<RealtimeGameSnapshot> {
   };
 }
 
-export async function startGame(code: string): Promise<void> {
+export async function startGame(code: string, restart = false): Promise<void> {
   if (!supabase) return;
-  const { error } = await supabase.functions.invoke('game-start', { body: { code } });
+  const body = restart ? { code, restart: true } : { code };
+  const { error } = await supabase.functions.invoke('game-start', { body });
   if (error) throw new Error(error.message);
+}
+
+/** Current game status for a room ('in-game' | 'ended'), or null if no game. */
+export async function fetchGameStatus(roomId: string): Promise<string | null> {
+  if (!supabase) return null;
+  const { data } = await supabase.from('game_states').select('status').eq('room_id', roomId).maybeSingle();
+  return (data as { status?: string } | null)?.status ?? null;
 }
 
 export async function submitAction(code: string, type: string, payload: unknown): Promise<void> {

@@ -17,7 +17,7 @@ export interface UseRealtimeGameReturn {
   busy: boolean;
   error: string | null;
   refresh: () => Promise<gameService.RealtimeGameSnapshot | null>;
-  start: () => Promise<void>;
+  start: (restart?: boolean) => Promise<void>;
   submitAction: (type: string, payload: unknown) => Promise<void>;
   timeout: () => Promise<void>;
 }
@@ -81,12 +81,12 @@ export function useRealtimeGame(roomCode?: string | null, fallbackMeId?: string 
     return gameService.subscribeGame(roomId, () => { void refresh(); });
   }, [roomId, refresh]);
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (restart = false) => {
     if (!useSupabaseTransport || !roomCode) return;
     setBusy(true);
     setError(null);
     try {
-      await gameService.startGame(roomCode);
+      await gameService.startGame(roomCode, restart);
       await refresh();
     } catch (err) {
       if (mounted.current) setError(err instanceof Error ? err.message : 'Unable to start game');

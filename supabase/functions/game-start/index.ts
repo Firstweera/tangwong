@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
     const uid = await callerId(req);
     if (!uid) return json({ error: 'not authenticated' }, 401);
 
-    const { code } = await req.json().catch(() => ({}));
+    const { code, restart } = await req.json().catch(() => ({}));
     if (!code) return json({ error: 'missing code' }, 400);
 
     const db = adminClient();
@@ -40,10 +40,17 @@ Deno.serve(async (req) => {
     const config = ENGINES[room.game_id];
     if (!config) return json({ error: `game not supported: ${room.game_id}` }, 400);
 
-    // Idempotent: never re-deal roles for an already-started room.
+    // Idempotent: never re-deal roles for an already-started room — UNLESS the
+    // host explicitly requests a rematch (restart), which clears the finished
+    // game so the engine deals fresh roles into the same room + roster.
     const { data: existing } = await db
       .from('game_states').select('room_id').eq('room_id', room.id).maybeSingle();
-    if (existing) return json({ ok: true, already: true });
+    if (existing && !restart) return json({ ok: true, already: true });
+    if (existing && restart) {
+      await db.from('game_actions').delete().eq('room_id', room.id);
+      await db.from('game_private').delete().eq('room_id', room.id);
+      await db.from('game_states').delete().eq('room_id', room.id);
+    }
 
     // Build the roster (humans + bots) from room_players.
     const { data: members, error: memErr } = await db

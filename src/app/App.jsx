@@ -30,6 +30,13 @@ const screenFromPath = (fallback) => {
 
 const pathForScreen = (nextScreen) => (nextScreen === 'design-spec' ? '/design-spec' : '/');
 
+// Invite deep link: /join/<CODE> → auto-join that room once the guest is ready.
+const pendingJoinFromPath = () => {
+  if (typeof window === 'undefined') return null;
+  const m = window.location.pathname.match(/^\/join\/([A-Za-z0-9]{4,8})\/?$/);
+  return m ? m[1].toUpperCase().slice(0, 5) : null;
+};
+
 const readSystemTheme = () => {
   if (typeof window === 'undefined') return 'dark';
   return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
@@ -54,6 +61,9 @@ export default function App() {
   const [createOpen, setCreateOpen] = useState(false);
   const [currentRoom, setCurrentRoom] = useState(null);
   const [lastRoom, setLastRoom] = useState(null);
+  // Room code captured from a /join/<CODE> invite link, consumed once the guest
+  // is onboarded + session-ready (below). Survives the Welcome onboarding step.
+  const [pendingJoin, setPendingJoin] = useState(pendingJoinFromPath);
 
   const go = (s, p = null) => {
     setPayload(p);
@@ -107,6 +117,15 @@ export default function App() {
     setCurrentRoom(room);
     go('lobby');
   };
+
+  // Consume an invite deep link once the guest is onboarded + session-ready.
+  // (A first-time visitor onboards on Welcome first; pendingJoin survives that.)
+  useEffect(() => {
+    if (!pendingJoin || !ready || !guest.onboarded) return;
+    if (currentRoom) { setPendingJoin(null); return; }
+    joinRoom(pendingJoin);
+    setPendingJoin(null);
+  }, [pendingJoin, ready, guest.onboarded, currentRoom]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const leaveRoom = () => {
     if (currentRoom) setLastRoom(currentRoom);

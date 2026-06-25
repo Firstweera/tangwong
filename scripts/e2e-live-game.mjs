@@ -366,6 +366,28 @@ async function main() {
          Object.keys(guestView.public_data.reveal).length === 5),
          `guest sees ${Object.keys(guestView?.public_data?.reveal ?? {}).length} roles`);
     }
+
+    // ── P2: rematch — host re-deals a fresh game into the same room ────────
+    step('P2 — rematch (game-start restart re-deals the same room)');
+    const rematch = await invoke(host, 'game-start', { code, restart: true });
+    ok('rematch accepted', rematch.ok, JSON.stringify(rematch.body));
+
+    const guestRematchBlocked = await invoke(guest, 'game-start', { code, restart: true });
+    ok('non-host rematch rejected (403)', !guestRematchBlocked.ok && guestRematchBlocked.status === 403,
+       `status=${guestRematchBlocked.status}`);
+
+    const { data: fresh } = await host.from('game_states').select('phase,status,version,public_data').eq('room_id', roomRow.id).single();
+    ok('fresh game dealt (roleReveal, in-game, v0)',
+       fresh?.phase === 'roleReveal' && fresh?.status === 'in-game' && fresh?.version === 0,
+       `phase=${fresh?.phase} status=${fresh?.status} v=${fresh?.version}`);
+    ok('rematch cleared the old end-game reveal', !fresh?.public_data?.reveal, 'no stale reveal');
+
+    const { count: freshPriv } = await host.from('game_private')
+      .select('*', { count: 'exact', head: true }).eq('room_id', roomRow.id);
+    ok('fresh private rows re-dealt for all 5', freshPriv === 5, `rows=${freshPriv}`);
+
+    const { data: endRoom2 } = await host.from('rooms').select('status').eq('id', roomRow.id).single();
+    ok('room flipped back to in-game', endRoom2?.status === 'in-game', `status=${endRoom2?.status}`);
   } catch (err) {
     fail++;
     console.log(`\n\x1b[31mFATAL: ${err.message}\x1b[0m`);

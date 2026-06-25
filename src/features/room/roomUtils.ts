@@ -26,7 +26,10 @@ export function generateRoomId(): string {
 }
 
 export function generateInviteLink(code: string): string {
-  return `https://tangwong.app/join/${code}`;
+  const base = typeof window !== 'undefined' && window.location?.origin
+    ? window.location.origin
+    : 'https://tangwong.vercel.app';
+  return `${base}/join/${code}`;
 }
 
 // Extracts a room code from raw input or an invite link
