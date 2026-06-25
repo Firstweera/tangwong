@@ -212,12 +212,28 @@ export function AvalonGame({
     }
   };
 
+  // ─── Vote reveal (Avalon votes are public once everyone has voted) ───────────
+  const voteYes = Object.values(pub.votes).filter(Boolean).length;
+  const voteNo = Object.keys(pub.votes).length - voteYes;
+  const allVoted = pub.playerOrder.length > 0 && Object.keys(pub.votes).length === pub.playerOrder.length;
+  // Reveal each seat's approve/reject the moment the vote resolves, and keep it
+  // visible through the mission so the loyal side can read the table.
+  const votesRevealed = allVoted && (phase === 'teamVote' || phase === 'mission');
+
   // ─── Per-seat badge ──────────────────────────────────────────────────────────
   const badge = (id: string) => {
     if (phase === 'assassinate' && assassinTarget === id) {
       return <span className="seat-token" style={{ background: 'var(--evil)', fontSize: 11 }}>🗡️</span>;
     }
-    if (pub.proposedTeam.includes(id) && (phase === 'teamProposal' || phase === 'teamVote' || phase === 'mission')) {
+    if (votesRevealed && id in pub.votes) {
+      const yes = pub.votes[id];
+      return (
+        <span className="seat-token" style={{ background: yes ? 'var(--good)' : 'var(--evil)', color: '#fff' }}>
+          <Icon name={yes ? 'check' : 'x'} size={11} stroke={3.5} />
+        </span>
+      );
+    }
+    if (pub.proposedTeam.includes(id) && (phase === 'teamProposal' || phase === 'teamVote')) {
       return <span className="seat-token" style={{ background: 'var(--accent)', color: '#3a2406' }}><Icon name="check" size={11} stroke={3.5} /></span>;
     }
     if (phase === 'teamVote' && id in pub.votes) {
@@ -245,7 +261,12 @@ export function AvalonGame({
       <div className="col center"><span className="th" style={{ fontSize: 17, fontWeight: 800 }}>โหวตทีมนี้?</span><span className="tiny" style={{ fontWeight: 700, marginTop: 6 }}>{Object.keys(pub.votes).length}/{pub.playerOrder.length} โหวตแล้ว</span></div>
     );
     if (phase === 'mission') return (
-      <div className="col center"><div className="spin-slow" style={{ fontSize: 34 }}>⚔️</div><span className="th tiny" style={{ fontWeight: 700, marginTop: 6 }}>{Object.keys(pub.missionCards).length}/{pub.proposedTeam.length} ส่งการ์ดแล้ว</span></div>
+      <div className="col center"><div className="spin-slow" style={{ fontSize: 34 }}>⚔️</div><span className="th tiny" style={{ fontWeight: 700, marginTop: 6 }}>{Object.keys(pub.missionCards).length}/{pub.proposedTeam.length} ส่งการ์ดแล้ว</span>
+        <span className="tiny" style={{ fontWeight: 700, marginTop: 4, display: 'inline-flex', gap: 8 }}>
+          <span style={{ color: 'var(--good)' }}>✓ {voteYes}</span>
+          <span style={{ color: 'var(--evil)' }}>✗ {voteNo}</span>
+        </span>
+      </div>
     );
     if (phase === 'questReveal' && pub.lastQuest) return (
       <div className="col center pop"><span style={{ fontSize: 40 }}>{pub.lastQuest.outcome === 'success' ? '🛡️' : '💥'}</span><span className="th" style={{ fontSize: 18, fontWeight: 800, color: pub.lastQuest.outcome === 'success' ? 'var(--good)' : 'var(--evil)' }}>{pub.lastQuest.outcome === 'success' ? 'ภารกิจสำเร็จ' : 'ภารกิจล้มเหลว'}</span><span className="tiny" style={{ fontWeight: 700 }}>{pub.lastQuest.fails} ใบทรยศ</span></div>

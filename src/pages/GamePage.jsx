@@ -69,8 +69,12 @@ export default function GamePage({ go, showToast, currentRoom, player }) {
   const handleEnd = (state) => {
     const w = state.winner;
     const reason = w.conditionId === 'assassin' ? 'assassin' : w.conditionId === 'evil-hammer' ? 'reject' : 'quests';
+    // reveal is { playerId: { role, side } } from the server (all players);
+    // extract the role key for ResultPage. Offline/local play has no reveal blob,
+    // so fall back to state.private (which holds every role locally).
     const reveal = state.public.data.reveal ?? {};
-    const roles = { ...reveal };
+    const roles = {};
+    for (const [pid, r] of Object.entries(reveal)) roles[pid] = r?.role ?? r;
     Object.values(state.private).forEach(pp => { roles[pp.playerId] = pp.data.role; });
     go('result', {
       winner: w.winnerTeam,

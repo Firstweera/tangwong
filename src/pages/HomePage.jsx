@@ -21,7 +21,7 @@ function HeroSignal({ icon, label, value }) {
 
 function RoundTableHero({ player, onlineCount }) {
   const seats = [PLAYERS[1], PLAYERS[3], player, PLAYERS[4], PLAYERS[2]]; // cat, owl, you, panda, raccoon
-  const pos = [[11, 65], [30, 50], [50, 44], [70, 50], [89, 65]];
+  const pos = [[12, 42], [31, 28], [50, 21], [69, 28], [88, 42]];
   return (
     <div className="pad-x" style={{ paddingTop: 8 }}>
       <section className="home-hero felt">
@@ -44,9 +44,9 @@ function RoundTableHero({ player, onlineCount }) {
             </div>
           ))}
           {/* center: fanned deck + chip + die */}
-          <div style={{ position: 'absolute', left: '50%', top: '80%', transform: 'translate(-50%,-50%)' }}><CardFan count={5} w={42} h={58} /></div>
-          <div style={{ position: 'absolute', left: '23%', top: '82%', transform: 'translate(-50%,-50%) rotate(-8deg)' }}><Token kind="good" size={34} /></div>
-          <div style={{ position: 'absolute', left: '77%', top: '83%', transform: 'translate(-50%,-50%) rotate(12deg)' }}><Die face={5} size={34} /></div>
+          <div style={{ position: 'absolute', left: '50%', top: '72%', transform: 'translate(-50%,-50%)' }}><CardFan count={5} w={42} h={58} /></div>
+          <div style={{ position: 'absolute', left: '20%', top: '74%', transform: 'translate(-50%,-50%) rotate(-8deg)' }}><Token kind="good" size={34} /></div>
+          <div style={{ position: 'absolute', left: '80%', top: '75%', transform: 'translate(-50%,-50%) rotate(12deg)' }}><Die face={5} size={34} /></div>
         </div>
         <div className="home-signals">
           <HeroSignal icon="⚡" label="เร็วกว่าเปิดแชตกลุ่ม" value="30 วิ" />

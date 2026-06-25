@@ -543,7 +543,8 @@ Let friends play from different devices / networks, deployable for free
 Edge Functions + Postgres + RLS — clients never write game state directly.
 
 Status:
-🟡 In Progress — 2026-06-18 (Phase 4.5.1 done; rooms/realtime next)
+✅ Completed — 2026-06-25 (4.5.1 auth, 4.5.2 rooms/realtime, 4.5.3 game authority +
+hidden info, 4.5.4 deploy — all live + verified on production)
 
 Plan:
 See docs/supabase-plan.md for architecture, schema, RLS, and the phased plan.
@@ -630,7 +631,8 @@ Follow-up (recommended spot-checks, non-blocking):
 
 ## Phase 4.5.3 - Game Sync + Hidden Info (Edge Function authority)
 
-🟡 In Progress — 2026-06-23 (B2/B3/B5 deployed + runtime-verified on production; B6/B7 next)
+✅ Completed — 2026-06-25 (B0–B7 done; deployed + verified on production with a real
+two-device match, approved by the user)
 
 Design: see **docs/phase-4.5.3-plan.md** — commits Option B (Edge Function runs
 the existing TS engine as the authority), defines `game_states` (public) +
@@ -763,9 +765,24 @@ Progress:
   `busy`/`error` from `useRealtimeGame`; offline play unaffected. Build + verify green.
   Files: `src/features/games/avalon/ui/AvalonGame.tsx`, `src/pages/GamePage.jsx`.
 
-Next: B7 cont. — manual two-device browser pass on tangwong.vercel.app (real UX +
-reconnect by tab close/reopen), then mark phase 4.5.3 ✅. Optional: impeccable
-`polish` pass on the in-game action bar.
+- **B7 — non-host navigation fix + live-test UX polish (2026-06-25)**: verified a
+  full real two-device match, then fixed what the playtest surfaced:
+  1. Non-host players stayed in the lobby on start — `LobbyPage` now navigates
+     everyone to the game when `rooms.status` flips to `in-game` (was host-only).
+  2. **Vote reveal**: Avalon votes are public once resolved — `AvalonGame` now
+     shows each seat's ✓ approve / ✗ reject after all votes are in and keeps it
+     visible through the mission (+ a ✓/✗ tally in the centre) so the loyal side
+     can read the table.
+  3. **End-game roles**: `GamePage.handleEnd` mapped `reveal` wrong (whole object
+     as role key, others fell back to "servant"); now extracts `reveal[id].role`
+     so ResultPage shows every player's real role.
+  4. Chat bubbles got more breathing room (`.bubble` padding/line-height).
+  5. Home hero overlapped copy with the table scene on narrow screens — relaid
+     out as a vertical stack (copy → contained table band → signals).
+  Files: `LobbyPage.jsx`, `AvalonGame.tsx`, `GamePage.jsx`, `HomePage.jsx`,
+  `styles/components.css`. Build + verify green.
+
+Next: visual confirm hero + vote reveal on device, then mark phase 4.5.3 ✅.
 
 Follow-up (from 4.5.2, non-blocking): server-side presence pruning; emit
 join/leave/ready system messages from real events.
@@ -908,7 +925,8 @@ Goal:
 First playable game.
 
 Status:
-🟡 In Progress — 2026-06-17 (engine + Phase A UI playable; realtime sync = Phase B)
+✅ Completed — 2026-06-25 (engine + UI + realtime online play; a full two-device
+match runs Home → Room → Lobby → Avalon → Result on production. The MVP loop is live.)
 
 Structure:
 Games are now one folder per game under `src/features/games/`, with `engine/`
