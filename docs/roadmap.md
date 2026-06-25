@@ -784,6 +784,26 @@ Progress:
 
 Next: visual confirm hero + vote reveal on device, then mark phase 4.5.3 ✅.
 
+## Avalon shippable — invite + rematch (2026-06-25)
+
+- **P1 — invite deep-link join ✅**: `/join/<CODE>` auto-joins once the guest is
+  onboarded + session-ready (survives Welcome); URL cleans to `/` after joining;
+  `generateInviteLink` uses the real origin (was the dead `tangwong.app`). SPA
+  rewrite for `/join/*` already in `vercel.json`. Files: `app/App.jsx`,
+  `features/room/roomUtils.ts`.
+- **P2 — rematch ✅ (deployed + verified)**: `game-start` accepts host-only
+  `{ restart: true }` — clears the finished game and re-deals fresh roles into the
+  same room/roster. ResultPage host taps "เล่นอีกครั้ง"; everyone on the result
+  screen subscribes to `game_states` and follows into the fresh game; non-host
+  sees "รอหัวห้องเริ่มใหม่". `verify:live-game` now 37/37 on production
+  (rematch: host-only 403 gate, fresh roleReveal v0, reveal cleared, both humans
+  re-dealt). Files: `supabase/functions/game-start/index.ts`,
+  `services/supabase/game.ts`, `engine/useRealtimeGame.ts`, `pages/ResultPage.jsx`,
+  `pages/GamePage.jsx`.
+
+Next: P4 — optional impeccable `polish` pass (action bar / result / hero), then
+device smoke-test the invite + rematch flows.
+
 Follow-up (from 4.5.2, non-blocking): server-side presence pruning; emit
 join/leave/ready system messages from real events.
 
