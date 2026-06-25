@@ -10,6 +10,11 @@ our own Thai/English names and descriptions.
 Status: reference for B1 (engine) / B3 (UI). Update this doc first if a rule
 changes, then the engine — the doc is the source of truth for play behaviour.
 
+Mechanics references (folk-game rules, **adapted** — names/text are our own):
+online-station.net/entertainment/690636 (Thai community ruleset) and the common
+Werewolf/Mafia rules. The Thai community rule we follow: **a lynch needs a strict
+majority** (เสียงเกินครึ่งจึงโดนเผา).
+
 ---
 
 ## 1. Teams & objective
@@ -71,9 +76,20 @@ optional **night action**, and what it **sees** at setup.
 | **Seer** | good | inspect one player → learn `evil` / `not-evil` | nothing (learns over time) |
 | **Doctor** (Guardian) | good | protect one player from the night kill | nothing |
 
-Future roles (not in MVP, design later): Hunter (takes someone down on death),
-Witch (one save + one kill potion), Drunk/Minion variants, neutral roles (Jester,
-Tanner). Add as new `ActionDef`s + setup vision; the framework already supports it.
+"Doctor" is also commonly called **Bodyguard / Guardian** — same ability.
+
+Future roles (not in MVP, design later), confirmed by the community ruleset:
+
+- **Hunter** — when eliminated (lynched or killed), immediately takes one other
+  living player down with them.
+- **Witch** — has two one-time potions for the whole game: one **save** (negate a
+  night kill) and one **kill** (eliminate a player at night).
+- plus later: Drunk/Minion variants and neutral roles (Jester, Tanner) with their
+  own win conditions.
+
+Add each as a new `ActionDef` + setup vision; the framework already supports it.
+Note: Hunter needs a **death-triggered action** (an elimination that opens a
+follow-up choice) — design that hook when Hunter lands, not in the MVP.
 
 ### Role abilities — exact behaviour
 
@@ -105,9 +121,10 @@ Tanner). Add as new `ActionDef`s + setup vision; the framework already supports 
 ## 4. Voting / lynch rules (dayVote → resolve)
 
 - Each **living** player casts at most one vote for a living target, or abstains.
-- The target with the **most** votes is lynched (plurality, not majority).
-- **Tie / no majority**: on a tie for the top, **no one is lynched** that day
-  (MVP). (Alternatives for later: random among tied, or a runoff revote.)
+- A target is lynched only with a **strict majority** — more than half of the
+  **living** players vote for the same target (เสียงเกินครึ่งจึงโดนเผา).
+- **No majority** (votes split, or a tie for the top): **no one is lynched** that
+  day. (Alternatives for later: runoff revote among the top targets.)
 - A lynched player's role is **revealed** publicly.
 - Abstaining is allowed; if everyone abstains, no lynch.
 - Votes are **public** as they are cast (Werewolf-style open voting) so the
@@ -179,6 +196,7 @@ table to balance, not final.)
 - Reveal a lynched/killed player's role? **Yes** (classic, easier to follow).
 - Doctor self-save? **Allowed**, but not the same target two nights running.
 - First-night kill? **Yes** (no protected first night in MVP).
-- Lynch tie? **No elimination** (MVP).
+- Lynch threshold? **Strict majority of the living**; no majority / tie → **no
+  elimination** (MVP).
 - Wolf target selection with multiple wolves? **Any wolf locks the pack target**
   (simple, deterministic); revisit to require wolf consensus later.
