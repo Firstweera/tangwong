@@ -1136,6 +1136,9 @@ werewolves see each other), phases (`night → dawn → dayDiscuss → dayVote �
 resolve → loop`), actions (`WEREWOLF_KILL`, `SEER_PEEK`, `DOCTOR_SAVE`,
 `LYNCH_VOTE`, `CONTINUE`), win conditions (werewolves ≥ villagers → evil; all
 werewolves dead → good), bot per role.
+**Rules spec (source of truth for play behaviour):** `docs/games/werewolf-rules.md`
+— mechanics, role abilities, night-resolution order, composition table, hidden-info
+model, and the engine build checklist. Update that doc first, then the engine.
 
 ### B2 - Register Werewolf
 ⚪ Not Started — one entry each in the client + server registries (A1/A2).
