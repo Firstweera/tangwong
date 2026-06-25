@@ -1070,10 +1070,96 @@ Verified: 240 bot-driven games (5–10p) all completed; every win path occurs.
 
 ---
 
+# Epic 6.5 - Generic Game Framework + Werewolf (Game #2)
+
+Status:
+🟡 Planned — 2026-06-25 (direction set by user: build a generic game framework,
+then ship Werewolf as game #2 before Salem)
+
+Goal:
+Turn "add a new game" into a clean, well-scoped task by removing the remaining
+Avalon hard-codes and introducing shared extension points, then prove it by
+shipping Werewolf — which reuses the existing engine while adding day/night
+cycles, player elimination, and night-action hidden roles. This strengthens the
+engine before the more complex Salem 1692.
+
+Sequencing decision (locked): **Salem 1692 is deferred to after Werewolf.**
+Social features (accounts, friends, invitations, match history) come **after
+TangWong has at least three fully playable games.**
+
+Grounding (from the current code):
+- Engine core is already game-agnostic: `GameEngine`, `PhaseConfig` +
+  `PhaseTransition` (a `when:'condition'` transition already supports a cyclic
+  day/night loop), `WinCondition`, `ActionDef`, and `redactStateFor` need no
+  changes for Werewolf. Werewolf-sees-werewolf rides the same setup-time private
+  `sees` pattern as Avalon's vision; dead-role reveal rides public data.
+- The remaining Avalon couplings to remove:
+  - `game-action` imports `nextBotAction` from `avalon/bot` directly and hard-codes
+    `gameId === 'avalon'` for the end-game reveal blob.
+  - `game-start` already uses `ENGINES` / `FIRST_PHASE` maps (extend, don't rework).
+  - `GamePage` hard-branches to `AvalonGame` and `=== 'avalon'` checks.
+  - No generic player alive/eliminated concept (Avalon never removed players).
+
+## Phase A - Generic Game Framework (de-couple + extension points)
+
+### A1 - Server game registry
+⚪ Not Started — `supabase/functions/_shared/games.ts`: `gameId → { config,
+nextBotAction, firstPhase, revealForPublic }`. `game-start` + `game-action` read
+from it; delete the direct avalon imports + `gameId === 'avalon'` branches.
+
+### A2 - Client game registry
+⚪ Not Started — `src/features/games/registry.ts`: `gameId → { config, meta, ui,
+rules }`, consolidating what is scattered today (avalonConfig, AvalonGame, the
+`GAMES` list, rules). `GamePage` routes the in-game UI through it.
+
+### A3 - Player lifecycle convention
+⚪ Not Started — `isAlive` / `alivePlayers` / `eliminate` helpers in
+`engine/playerUtils` with the convention that alive/eliminated lives in TPublic;
+"all-voted" / active-player logic counts only the living.
+
+### A4 - Shared GameShell UI
+⚪ Not Started — extract the common in-game chrome from `AvalonGame` (top bar:
+exit / phase / timer / chat, round table, role strip, action-bar slot, chat
+panel, end overlay) into a reusable `<GameShell>`; re-skin Avalon onto it.
+**Highest risk** — must verify Avalon still plays unchanged (backend covered by
+`verify:live-game`; UI needs a real visual pass).
+
+### A5 - Simultaneous night-action helper (optional)
+⚪ Not Started — extract Avalon's mission-card "collect private submissions →
+resolve when all in" into a reusable helper for Werewolf's night.
+
+## Phase B - Werewolf (Game #2)
+
+### B1 - Werewolf engine
+⚪ Not Started — roles (werewolf, villager, seer, doctor, …), setup (deal +
+werewolves see each other), phases (`night → dawn → dayDiscuss → dayVote →
+resolve → loop`), actions (`WEREWOLF_KILL`, `SEER_PEEK`, `DOCTOR_SAVE`,
+`LYNCH_VOTE`, `CONTINUE`), win conditions (werewolves ≥ villagers → evil; all
+werewolves dead → good), bot per role.
+
+### B2 - Register Werewolf
+⚪ Not Started — one entry each in the client + server registries (A1/A2).
+
+### B3 - Werewolf UI
+⚪ Not Started — compose `<GameShell>` with werewolf-specific center + action bar:
+night/day theming, elimination display, role reveal on death, night-action panel.
+
+### B4 - Lobby + rules
+⚪ Not Started — add Werewolf to the `GAMES` selector and the rules screen.
+
+### B5 - Deploy + verify
+⚪ Not Started — deploy registry-driven `game-start` / `game-action`; extend
+`verify:live-game` to play a full Werewolf match to a winner on production.
+
+Suggested order: A1 → A2 → A3 (enablers, low–med risk) → A4 (GameShell, high
+risk, verify Avalon) → B1 → … → B5.
+
+---
+
 # Epic 7 - Salem 1692
 
 Status:
-🔒 Future
+🔒 Future — deferred until after Werewolf (Epic 6.5)
 
 ## Features
 
