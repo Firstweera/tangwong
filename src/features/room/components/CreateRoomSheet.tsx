@@ -9,6 +9,8 @@ export interface CreateRoomSheetProps {
   onClose: () => void;
   onCreateRoom: (settings: RoomSettings) => void;
   player?: Player;
+  /** Pre-select a game when opening from a specific game card. */
+  initialGameId?: string;
 }
 
 const DEFAULT_GAME_ID = 'avalon';
@@ -18,16 +20,19 @@ function rangeOptions(min: number, max: number): number[] {
   return Array.from({ length: max - min + 1 }, (_, i) => min + i);
 }
 
-export function CreateRoomSheet({ open, onClose, onCreateRoom, player }: CreateRoomSheetProps) {
+export function CreateRoomSheet({ open, onClose, onCreateRoom, player, initialGameId }: CreateRoomSheetProps) {
   const defaultName = `ห้องของ${player?.name ?? 'คุณ'}`;
   const [name, setName] = useState(defaultName);
 
-  // Reset name default when sheet opens fresh (e.g. after nickname change)
+  // Reset name default and pre-selected game when sheet opens.
   useEffect(() => {
-    if (open) setName(defaultName);
+    if (open) {
+      setName(defaultName);
+      if (initialGameId) setGameId(initialGameId);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-  const [gameId, setGameId] = useState(DEFAULT_GAME_ID);
+  const [gameId, setGameId] = useState(initialGameId ?? DEFAULT_GAME_ID);
   const [isPublic, setIsPublic] = useState(true);
 
   // The selected game defines the valid player-count range. Room size options

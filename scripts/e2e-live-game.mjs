@@ -167,6 +167,98 @@ async function playToEnd({ host, guest, hostId, guestId, code, roomId }) {
   return null; // iteration budget exhausted
 }
 
+// Drive a full Werewolf match against the live backend.
+// The server resolves bot night actions synchronously after each human game-action,
+// so the harness only needs to supply the two humans' moves (role-based night
+// actions + day votes). Strategy: always vote for the first alive non-self player;
+// this guarantees a lynch each day and drives the game to an end.
+async function playWerewolfToEnd({ host, guest, hostId, guestId, code, roomId }) {
+  const humans = new Map([[hostId, host], [guestId, guest]]);
+  let lastVersion = -1;
+  let stuck = 0;
+
+  for (let i = 0; i < 120; i++) {
+    const { data: gs } = await host
+      .from('game_states')
+      .select('phase,status,version,public_data,winner')
+      .eq('room_id', roomId)
+      .single();
+    if (!gs) return null;
+    if (gs.status === 'ended' || gs.phase === 'end' || gs.winner) return gs;
+
+    const P = gs.public_data || {};
+    const order = P.playerOrder || [];
+    const eliminated = P.eliminatedPlayers || [];
+    const aliveOrder = order.filter(id => !eliminated.includes(id));
+    const nightActors = P.nightActors || [];
+    const votes = P.votes || {};
+    let acted = false;
+
+    if (['roleReveal', 'dawn', 'dayDiscuss', 'resolve'].includes(gs.phase)) {
+      acted = (await invoke(host, 'game-action', { code, type: 'CONTINUE', payload: null })).ok;
+
+    } else if (gs.phase === 'night') {
+      for (const [id, client] of humans) {
+        if (eliminated.includes(id)) continue;
+        if (nightActors.includes(id)) continue;
+        const { data: mine } = await client
+          .from('game_private').select('private_data')
+          .eq('room_id', roomId)
+          .eq('player_id', id).maybeSingle();
+        const priv = mine?.private_data;
+        if (!priv) continue;
+
+        if (priv.role === 'werewolf') {
+          const wolfIds = [id, ...(priv.sees || [])];
+          const target = aliveOrder.find(p => !wolfIds.includes(p));
+          if (target) acted = (await invoke(client, 'game-action', { code, type: 'WEREWOLF_KILL', payload: { targetId: target } })).ok || acted;
+
+        } else if (priv.role === 'seer') {
+          const checked = (priv.seerHistory || []).map(h => h.playerId);
+          const target = aliveOrder.find(p => p !== id && !checked.includes(p)) || aliveOrder.find(p => p !== id);
+          if (target) acted = (await invoke(client, 'game-action', { code, type: 'SEER_PEEK', payload: { targetId: target } })).ok || acted;
+
+        } else if (priv.role === 'doctor') {
+          const lastProtected = priv.doctorLastProtected;
+          const target = aliveOrder.find(p => p !== lastProtected) || aliveOrder[0];
+          if (target) acted = (await invoke(client, 'game-action', { code, type: 'DOCTOR_SAVE', payload: { targetId: target } })).ok || acted;
+
+        } else if (priv.role === 'cupid' && P.dayCount === 1 && !P.lovers) {
+          // Pick any 2 alive non-self players
+          const candidates = aliveOrder.filter(p => p !== id);
+          if (candidates.length >= 2) {
+            acted = (await invoke(client, 'game-action', {
+              code, type: 'CUPID_LINK', payload: { targetIds: [candidates[0], candidates[1]] },
+            })).ok || acted;
+          }
+
+        } else if (priv.role === 'spellcaster') {
+          const target = aliveOrder.find(p => p !== id);
+          if (target) acted = (await invoke(client, 'game-action', { code, type: 'SILENCE', payload: { targetId: target } })).ok || acted;
+        }
+        // villager / cupid (nights 2+): no night action — server bots handle remaining roles
+      }
+
+    } else if (gs.phase === 'dayVote') {
+      for (const [id, client] of humans) {
+        if (eliminated.includes(id)) continue;
+        if (id in votes) continue;
+        const target = aliveOrder.find(p => p !== id) || null;
+        acted = (await invoke(client, 'game-action', { code, type: 'LYNCH_VOTE', payload: { targetId: target } })).ok || acted;
+      }
+    }
+
+    if (!acted && gs.version === lastVersion) {
+      if (++stuck >= 8) return gs;
+      await sleep(400);
+    } else {
+      stuck = 0;
+    }
+    lastVersion = gs.version;
+  }
+  return null;
+}
+
 async function main() {
   console.log(`\n\x1b[1mTangWong live game harness\x1b[0m → ${URL}`);
   console.log(`mode: ${SLOW ? 'slow (waits out a real phase timer)' : 'fast (core checks)'}`);
@@ -175,6 +267,8 @@ async function main() {
   const guest = freshClient();
   const code = randomCode();
   let cleanup = async () => {};
+  let wCode = '';
+  let wCleanup = async () => {};
 
   try {
     // ── auth ────────────────────────────────────────────────────────────
@@ -393,13 +487,76 @@ async function main() {
 
     const { data: endRoom2 } = await host.from('rooms').select('status').eq('id', roomRow.id).single();
     ok('room flipped back to in-game', endRoom2?.status === 'in-game', `status=${endRoom2?.status}`);
+
+
+    // ── Werewolf: game-start + full match ────────────────────────────────────
+    step('Werewolf — create room (5p), start game, play to completion');
+    wCode = randomCode();
+    const wSeed = {
+      name: '[e2e] werewolf room',
+      gameId: 'werewolf',
+      maxPlayers: 7,
+      isPublic: false,
+      inviteLink: `https://tangwong.app/join/${wCode}`,
+    };
+    await host.rpc('join_room', { p_code: wCode, p_seed: { ...wSeed, nickname: 'WHost', mascot: 'fox' } });
+    await guest.rpc('join_room', { p_code: wCode, p_seed: { ...wSeed, nickname: 'WGuest', mascot: 'owl' } });
+    for (let i = 0; i < 3; i++) {
+      await host.rpc('add_bot', { p_code: wCode, p_bot: { id: botId(), name: `WBot ${i + 1}`, mascot: ['cat', 'panda', 'rabbit'][i] } });
+    }
+    wCleanup = async () => {
+      try { await guest.rpc('leave_room', { p_code: wCode }); } catch {}
+      try { await host.rpc('leave_room', { p_code: wCode }); } catch {}
+    };
+
+
+    const { data: wr } = await host.from('rooms').select('id,status').eq('code', wCode).single();
+    ok('werewolf room created', !!wr?.id, wr?.id);
+
+    const wStart = await invoke(host, 'game-start', { code: wCode });
+    ok('werewolf game-start ok', wStart.ok, JSON.stringify(wStart.body));
+
+    const { data: wgs0 } = await host.from('game_states').select('phase,status').eq('room_id', wr.id).single();
+    ok('werewolf starts at roleReveal', wgs0?.phase === 'roleReveal', `phase=${wgs0?.phase}`);
+    ok('werewolf room status = in-game', wgs0?.status === 'in-game', `status=${wgs0?.status}`);
+
+    const { data: wPriv } = await guest
+      .from('game_private').select('private_data')
+      .eq('room_id', wr.id)
+      .eq('player_id', guestId);
+    ok('werewolf private row has role + team',
+       !!wPriv?.[0]?.private_data?.role && !!wPriv?.[0]?.private_data?.team,
+       `role=${wPriv?.[0]?.private_data?.role} team=${wPriv?.[0]?.private_data?.team}`);
+
+    const wFinal = await playWerewolfToEnd({ host, guest, hostId, guestId, code: wCode, roomId: wr.id });
+    ok('werewolf reached end state', !!wFinal && (wFinal.status === 'ended' || wFinal.winner),
+       wFinal ? `phase=${wFinal.phase} status=${wFinal.status} winner=${JSON.stringify(wFinal.winner)}` : 'stuck/budget');
+
+    if (wFinal?.public_data?.reveal) {
+      const wReveal = wFinal.public_data.reveal;
+      ok('werewolf reveal present for all 5 players', Object.keys(wReveal).length === 5,
+         `entries=${Object.keys(wReveal).length}`);
+      ok('werewolf reveal has role + team per entry',
+         Object.values(wReveal).every(r => r?.role && r?.team),
+         JSON.stringify(Object.values(wReveal)[0]));
+    }
+
+    const { data: wAudit } = await host
+      .from('game_actions').select('type,payload').eq('room_id', wr.id)
+      .in('type', ['WEREWOLF_KILL', 'SEER_PEEK', 'DOCTOR_SAVE']);
+    const allRedacted = (wAudit ?? []).every(r => r.payload?.submitted === true && !r.payload?.targetId);
+    ok('night action payloads redacted in audit log',
+       !wAudit || wAudit.length === 0 || allRedacted,
+       `${(wAudit ?? []).length} private actions checked`);
+
   } catch (err) {
     fail++;
     console.log(`\n\x1b[31mFATAL: ${err.message}\x1b[0m`);
   } finally {
     step('Cleanup');
     await cleanup();
-    console.log(`  room ${code} — both humans left (empty room is deleted)`);
+    console.log(`  room ${code} — both humans left`);
+    await wCleanup();
   }
 
   console.log(`\n\x1b[1mResult:\x1b[0m ${pass} passed, ${fail} failed`);

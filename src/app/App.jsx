@@ -59,6 +59,7 @@ export default function App() {
   // ─── Room state ─────────────────────────────────────────────────────────
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [createInitialGame, setCreateInitialGame] = useState(null);
   const [currentRoom, setCurrentRoom] = useState(null);
   const [lastRoom, setLastRoom] = useState(null);
   // Room code captured from a /join/<CODE> invite link, consumed once the guest
@@ -172,7 +173,7 @@ export default function App() {
     guest, player,
     currentRoom, lastRoom,
     createRoom, joinRoom, leaveRoom, rejoinRoom, clearLastRoom, updateRoomSettings,
-    openCreateRoom: () => setCreateOpen(true),
+    openCreateRoom: (gameId) => { setCreateInitialGame(gameId ?? null); setCreateOpen(true); },
     openEditProfile: () => setEditProfileOpen(true),
     completeGuestOnboarding, onOAuth,
   });
@@ -183,9 +184,9 @@ export default function App() {
         <div className="screen" key={screen}>
           {screenEl}
         </div>
-        {isMainTab(screen) && <TabBar screen={screen} go={go} navStyle={t.navStyle} navLabels={t.navLabels} onFabPress={() => setCreateOpen(true)} />}
+        {isMainTab(screen) && <TabBar screen={screen} go={go} navStyle={t.navStyle} navLabels={t.navLabels} onFabPress={() => { setCreateInitialGame(null); setCreateOpen(true); }} />}
         {toastNode}
-        <CreateRoomSheet open={createOpen} onClose={() => setCreateOpen(false)} onCreateRoom={handleFabCreate} player={player} />
+        <CreateRoomSheet open={createOpen} onClose={() => setCreateOpen(false)} onCreateRoom={handleFabCreate} player={player} initialGameId={createInitialGame} />
         <EditProfileSheet open={editProfileOpen} onClose={() => setEditProfileOpen(false)} guest={guest} onSave={handleSaveProfile} onLogout={logout} showToast={showToast} />
       </div>
 

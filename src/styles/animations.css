@@ -33,6 +33,13 @@
 
 @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translateX(-50%); } }
 
+/* ─── Werewolf timer urgency ─────────────────────────────────────────────── */
+.ww-timer-urgent { animation: wwTimerPulse 0.9s ease-in-out infinite; }
+@keyframes wwTimerPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.05ms !important; }
 }

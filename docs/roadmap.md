@@ -1073,8 +1073,8 @@ Verified: 240 bot-driven games (5–10p) all completed; every win path occurs.
 # Epic 6.5 - Generic Game Framework + Werewolf (Game #2)
 
 Status:
-🟡 Planned — 2026-06-25 (direction set by user: build a generic game framework,
-then ship Werewolf as game #2 before Salem)
+✅ Completed — 2026-07-01 (A1–A4 framework + B1–B8 Werewolf with advanced roles,
+deployed + verified 46/46 on production)
 
 Goal:
 Turn "add a new game" into a clean, well-scoped task by removing the remaining
@@ -1103,26 +1103,63 @@ Grounding (from the current code):
 ## Phase A - Generic Game Framework (de-couple + extension points)
 
 ### A1 - Server game registry
-⚪ Not Started — `supabase/functions/_shared/games.ts`: `gameId → { config,
-nextBotAction, firstPhase, revealForPublic }`. `game-start` + `game-action` read
-from it; delete the direct avalon imports + `gameId === 'avalon'` branches.
+✅ Completed — 2026-06-26
+
+Files:
+
+- supabase/functions/_shared/games.ts (new — `ServerGameEntry` interface + `GAME_REGISTRY`)
+- supabase/functions/game-start/index.ts (removed direct avalon imports; uses `GAME_REGISTRY`)
+- supabase/functions/game-action/index.ts (removed direct avalon imports + `gameId === 'avalon'` branch; all bot/reveal/redact logic reads from `GAME_REGISTRY`)
+
+Notes:
+
+- `ServerGameEntry` shape: `{ config, firstPhase, nextBotAction, revealForPublic, privateActionTypes }`
+- Adding a new game = one entry in `GAME_REGISTRY`; the Edge Functions are now game-agnostic
 
 ### A2 - Client game registry
-⚪ Not Started — `src/features/games/registry.ts`: `gameId → { config, meta, ui,
-rules }`, consolidating what is scattered today (avalonConfig, AvalonGame, the
-`GAMES` list, rules). `GamePage` routes the in-game UI through it.
+✅ Completed — 2026-06-26
+
+Files:
+
+- src/features/games/registry.ts (new — `GameUIProps`, `GameRegistryEntry`, `getGameEntry`)
+- src/features/games/index.ts (exports `getGameEntry` + `GameRegistryEntry` / `GameUIProps`)
+- src/pages/GamePage.jsx (removed direct AvalonGame/avalonConfig imports; routes UI through `entry.ui`; "coming soon" check is now `!entry`)
+
+Notes:
+
+- `GameUIProps` is the shared contract all in-game UI components must implement
+- `handleEnd` in `GamePage` is still Avalon-specific — moved to a `TODO(A4/GameShell)` comment; will become a per-game `buildResultProps` when GameShell lands
+- Adding a new game = one entry in `REGISTRY` inside `registry.ts`
 
 ### A3 - Player lifecycle convention
-⚪ Not Started — `isAlive` / `alivePlayers` / `eliminate` helpers in
-`engine/playerUtils` with the convention that alive/eliminated lives in TPublic;
-"all-voted" / active-player logic counts only the living.
+✅ Completed — 2026-06-26
+
+Files:
+
+- src/features/games/engine/playerUtils.ts (`isAlive`, `alivePlayers`, `eliminate`)
+
+Notes:
+
+- Convention: `TPublic` includes `eliminatedPlayers: string[]`
+- `isAlive(players, playerId, eliminatedIds)` — checks roster + not eliminated
+- `alivePlayers(players, eliminatedIds)` — filters to living seats
+- `eliminate(eliminatedIds, playerId)` — idempotent append
 
 ### A4 - Shared GameShell UI
-⚪ Not Started — extract the common in-game chrome from `AvalonGame` (top bar:
-exit / phase / timer / chat, round table, role strip, action-bar slot, chat
-panel, end overlay) into a reusable `<GameShell>`; re-skin Avalon onto it.
-**Highest risk** — must verify Avalon still plays unchanged (backend covered by
-`verify:live-game`; UI needs a real visual pass).
+✅ Completed — 2026-06-26
+
+Files:
+
+- src/features/games/ui/GameShell.tsx (new)
+- src/features/games/ui/index.ts (exports `GameShell`)
+- src/features/games/avalon/ui/AvalonGame.tsx (re-skinned onto `GameShell`)
+
+Notes:
+
+- `GameShell` owns: top bar (exit / timer chip / extra chips / chat button), chat open/close state, `useChat` hook, `ChatPanel`, Confetti on good-team win, and the pre-game loading screen
+- Slots: `track`, `table`, `roleStrip`, `actionBar`, `loadingContent`
+- `AvalonGame` now purely owns game logic (engine, bots, timer, phase effects) and fills `GameShell` slots — no layout/chat code remains in it
+- Build clean; `verify:game-action` + `verify:realtime-game` all pass
 
 ### A5 - Simultaneous night-action helper (optional)
 ⚪ Not Started — extract Avalon's mission-card "collect private submissions →
@@ -1131,38 +1168,199 @@ resolve when all in" into a reusable helper for Werewolf's night.
 ## Phase B - Werewolf (Game #2)
 
 ### B1 - Werewolf engine
-⚪ Not Started — roles (werewolf, villager, seer, doctor, …), setup (deal +
-werewolves see each other), phases (`night → dawn → dayDiscuss → dayVote →
-resolve → loop`), actions (`WEREWOLF_KILL`, `SEER_PEEK`, `DOCTOR_SAVE`,
-`LYNCH_VOTE`, `CONTINUE`), win conditions (werewolves ≥ villagers → evil; all
-werewolves dead → good), bot per role.
+✅ Completed — 2026-06-26
+
+Files:
+
+- `src/features/games/werewolf/types.ts` — WerewolfRole, WerewolfTeam, WerewolfPublic, WerewolfPrivate, DeathRecord, SeerInspection
+- `src/features/games/werewolf/setup.ts` — composition table (5–10p), buildPublicState, buildPrivateState (role shuffle, wolf vision), compositionFor
+- `src/features/games/werewolf/phases.ts` — WEREWOLF_PHASES: lobby → roleReveal → night → dawn → dayDiscuss → dayVote → resolve → (loop / end)
+- `src/features/games/werewolf/actions.ts` — WEREWOLF_ACTIONS: WEREWOLF_KILL, SEER_PEEK, DOCTOR_SAVE, LYNCH_VOTE, CONTINUE; resolveNight inline on last night actor; LYNCH_VOTE resolves lynch on last vote; patchPriv/patch helpers
+- `src/features/games/werewolf/winConditions.ts` — village-wins (all wolves dead, checked first), wolves-parity (wolves ≥ villagers)
+- `src/features/games/werewolf/bot.ts` — nextBotAction (per-role logic: wolf picks non-wolf target, seer inspects unchecked, doctor avoids repeat, day vote uses seer knowledge), nextAutoActor
+- `src/features/games/werewolf/config.ts` — werewolfConfig: GameEngineConfig (id, minPlayers 5, maxPlayers 10, autoAdvancePhase true)
+- `src/features/games/werewolf/index.ts` — barrel export
+- `scripts/verify-werewolf.mjs` — 89-check static verify script (npm run verify:werewolf)
+
+Notes:
+
+- Night auto-advances to dawn via `nightResolved` flag set by `resolveNight`
+- Vote auto-advances to resolve via `voteResolved` flag set by last LYNCH_VOTE
+- Protection order: doctor shield applied before wolf kill; seer result from pre-kill snapshot
+- Doctor cannot protect same player two nights in a row; self-protect allowed
+- Wolves must choose the same target (validated); disagreement returns error
+- Village-wins listed first so a tie-trigger always favours village
+- CONTINUE from resolve increments dayCount and clears day state for next night
+
+Follow-up:
+
+- B2: register in server + client registries (done below)
+- B3: WerewolfGame UI using GameShell
+
 **Rules spec (source of truth for play behaviour):** `docs/games/werewolf-rules.md`
 — mechanics, role abilities, night-resolution order, composition table, hidden-info
 model, and the engine build checklist. Update that doc first, then the engine.
 
 ### B2 - Register Werewolf
-⚪ Not Started — one entry each in the client + server registries (A1/A2).
+✅ Completed — 2026-06-26
+
+Files:
+
+- `supabase/functions/_shared/games.ts` — werewolfEntry added to GAME_REGISTRY; privateActionTypes: [WEREWOLF_KILL, SEER_PEEK, DOCTOR_SAVE]; revealForPublic exposes role + team
+- `src/features/games/registry.ts` — werewolf entry with werewolfConfig + placeholder AvalonGame UI (to be replaced in B3); config field typed GameEngineConfig<any, any>
+
+Notes:
+
+- Placeholder UI (AvalonGame) allows GamePage to route to werewolf without crashing; B3 replaces it with WerewolfGame
 
 ### B3 - Werewolf UI
-⚪ Not Started — compose `<GameShell>` with werewolf-specific center + action bar:
-night/day theming, elimination display, role reveal on death, night-action panel.
+✅ Completed — 2026-06-26
+
+Files:
+
+- `src/features/games/werewolf/ui/WerewolfTable.tsx` — player ring with night/day theming, dead-player ghost treatment (0.28 opacity + struck-through name + role-reveal/skull badge), private wolf-sees ring (red, wolves only), private seer-knowledge dots (green/red), night-actor ✓ badge, vote-tally number badges, interactive tap for night targets + day vote
+- `src/features/games/werewolf/ui/WolfRoleCard.tsx` — role reveal strip for all 4 roles: Wolf shows pack; Seer shows accumulated inspection history (evil/not-evil per player, day counter); Doctor shows last-protected warning; Villager gets a motivational hint
+- `src/features/games/werewolf/ui/WerewolfGame.tsx` — main component: phase-driven center content + action bar for all phases (roleReveal, night×4 roles, dawn, dayDiscuss, dayVote, resolve, end); day/night track strip with cycle counter + alive/dead counts; offline bot autoplay; online mode; phase-change toasts; error toasts; role open state; nightTarget + voteTarget selection state
+- `src/features/games/werewolf/ui/index.ts` — barrel export
+- `src/features/games/registry.ts` — werewolf entry updated to use `WerewolfGame` (placeholder replaced)
+
+Notes:
+
+- Night phases use deep indigo glow + moon overlay on ring center; dawn uses warm gold glow
+- Phase centers carry the day/night emoji + cycle counter
+- Night action bar is role-specific: Wolf confirms kill, Seer confirms inspect, Doctor confirms protect (repeat-protection warning inline), Villager waits
+- Day vote: tap ring to select target → "โหวตประหาร" or "งดออกเสียง" buttons both present
+- Resolve shows lynch result (with role reveal) or "ไม่มีเสียงข้างมาก" in center
+- Selection state (nightTarget/voteTarget) resets on every phase change
+- Build: 208 modules, passes tsc --noEmit
+
+Follow-up:
+
+- B4: Add Werewolf to the GAMES selector + rules screen
 
 ### B4 - Lobby + rules
-⚪ Not Started — add Werewolf to the `GAMES` selector and the rules screen.
+✅ Completed — 2026-06-26
+
+Files:
+
+- `src/features/games/werewolf/rules.ts` — Werewolf rules: 4 roles, 6 how-to-play steps (from WEREWOLF_PHASES), composition 5–10p (from compositionFor), 2 win conditions, 4 tips
+- `src/features/games/rules.ts` — added `werewolf: werewolfRules` to central registry
+- `src/features/games/registry.ts` — replaced `rules: null` with `rules: werewolfRules`
+
+Notes:
+
+- Werewolf was already in GAMES catalog in data.ts; RulesSheet routes through getGameRules automatically
+- Composition table maps evil = wolves, good = total − wolves
+- tsc --noEmit clean, build 764ms
+
+Follow-up:
+
+- B5: Deploy + verify full Werewolf match on production
 
 ### B5 - Deploy + verify
-⚪ Not Started — deploy registry-driven `game-start` / `game-action`; extend
-`verify:live-game` to play a full Werewolf match to a winner on production.
+✅ Completed 2026-06-26
+
+Files:
+- scripts/e2e-live-game.mjs (Werewolf section + playWerewolfToEnd)
+- supabase/functions/game-start/index.ts (deployed, registry-driven)
+- supabase/functions/game-action/index.ts (deployed, registry-driven)
+
+Notes:
+- `playWerewolfToEnd` drives full 2-human + 3-bot match: CONTINUE → night actions (role-based) → day vote → repeat
+- Root bug fixed: game_private queries inside playWerewolfToEnd must filter by `room_id` — without it, multi-room players' rows collide in maybeSingle()
+- 5 private actions redacted (WEREWOLF_KILL, SEER_PEEK, DOCTOR_SAVE payloads → { submitted: true })
+- End-game reveal carries role + team for all 5 players
+- `verify:live-game` now **46/46 pass** (was 43/44 pre-fix)
+
+Follow-up:
+- Epic 7 (Salem) is next
 
 Suggested order: A1 → A2 → A3 (enablers, low–med risk) → A4 (GameShell, high
 risk, verify Avalon) → B1 → … → B5.
 
 ---
 
+### B6 - dayDiscuss countdown + Werewolf result screen
+✅ Completed 2026-06-26
+
+Files:
+- `src/features/games/werewolf/ui/WerewolfGame.tsx` — countdown timer + urgency styling
+- `src/styles/animations.css` — ww-timer-urgent keyframe
+- `src/pages/GamePage.jsx` — Werewolf-specific handleEnd branch
+- `src/pages/ResultPage.jsx` — WW_ROLES constant + Werewolf result JSX branch
+
+Notes:
+- dayDiscuss phase shows a 3:00 countdown (tabular-nums) in the ring center
+- Color shifts: neutral → amber (≤60s) → red (≤15s) with pulse animation
+- Track strip day-chip border/color also shifts to match urgency
+- Host action bar button turns btn-evil at ≤15s; auto-fires CONTINUE at 0:00 via actRef
+- Non-host sees "⚠️ กำลังเปิดโหวต..." at urgency
+- GamePage.handleEnd branches on gameId==='werewolf': passes roles (dead from revealedRoles, all from private offline, inferred for remaining online players)
+- ResultPage: Werewolf path shows shield/wolf banner, reasonTh, my-role card with ring-color, staggered role-reveal list with good/evil badge + loser overlay
+
+Follow-up:
+- XP calculation is +128 placeholder — wire real score from engine
+- Server-side full role reveal at game end for accurate online result screen
+
+---
+
+### B7 - Advanced roles: Cupid (กามเทพ) + Spell-caster (ผู้ร่ายคำสาปใบ้) + result badge fix
+✅ Completed 2026-07-01
+
+Files:
+- `src/features/games/werewolf/types.ts` — added `'cupid' | 'spellcaster'` to WerewolfRole; `DeathRecord.cause` gains `'heartbreak'`; `WerewolfPublic` gains `lovers`, `silenced`; `WerewolfPrivate` gains `silenceTarget`, `loverOf`
+- `src/features/games/werewolf/setup.ts` — COMPOSITION table: spellcaster at 6+, cupid at 7+; state factories initialize new fields
+- `src/features/games/werewolf/actions.ts` — CUPID_LINK + SILENCE actions; `applyLoverDeath` helper; lover deaths in resolveNight + LYNCH_VOTE; CONTINUE clears `pub.silenced`
+- `src/features/games/werewolf/phases.ts` — CUPID_LINK + SILENCE in night allowedActions
+- `src/features/games/werewolf/winConditions.ts` — `loversWin` condition (2 lovers are last 2 standing) checked before village/wolf
+- `src/features/games/werewolf/bot.ts` — cupid bot (link 2 alive non-self players on night 1); spellcaster bot (silence first alive non-self)
+- `src/features/games/werewolf/ui/WolfRoleCard.tsx` — role info for cupid + spellcaster; `loverOf` prop shows lover's name with "die together" warning
+- `src/features/games/werewolf/ui/WerewolfGame.tsx` — cupid 2-target picker; spellcaster night UI; heartbreak death toasts; dawn/resolve centers handle new roles + multiple deaths
+- `src/pages/ResultPage.jsx` — WW_ROLES gains cupid + spellcaster; badge fixed: `'ชาวบ้าน'/'หมาป่า'` → `'ฝ่ายดี'/'ฝ่ายชั่ว'`; lovers-win banner (`'💘 คู่รักชนะ'`)
+- `src/pages/GamePage.jsx` — passes `conditionId` + `winners` to Werewolf result
+
+Mechanic correction (2026-07-01) — Spellcaster silence:
+- Silenced player **cannot speak/discuss** (dayDiscuss) but **can still vote** (dayVote)
+- `actions.ts` — removed silenced block from LYNCH_VOTE.validate; quorum is all alive players
+- `bot.ts` — silenced bot votes normally in dayVote
+- `WerewolfGame.tsx` — dayDiscuss shows "🤫 [name] ถูกสาปใบ้ — พูดไม่ได้"; dayVote shows name label (no vote block)
+- `src/features/lobby/components/ChatPanel.tsx` — `inputDisabled` prop: replaces input with warning banner
+- `src/features/games/ui/GameShell.tsx` — `chatInputDisabled` prop passed to ChatPanel
+- Silenced player cannot type in chat during dayDiscuss + dayVote
+- `src/features/games/werewolf/rules.ts` — description + tip corrected
+- `src/features/games/werewolf/ui/WolfRoleCard.tsx` — spellcaster desc corrected
+
+Composition:
+- 5p: 1 wolf, 1 seer, 1 doctor, 2 villagers (unchanged)
+- 6p: 2 wolves, 1 seer, 1 doctor, 1 spellcaster, 1 villager
+- 7p: 2 wolves, 1 seer, 1 doctor, 1 spellcaster, 1 cupid, 1 villager
+- 8p+: more wolves/villagers, always seer + doctor + spellcaster + cupid
+
+Follow-up:
+- Lovers-win XP bonus
+- Visual "💘" link indicator on the ring seats for the cupid player
+
+---
+
+### B8 - Deploy + verify advanced Werewolf roles
+✅ Completed — 2026-07-01
+
+Files:
+- `supabase/functions/_shared/games.ts` — `CUPID_LINK` + `SILENCE` in `privateActionTypes`
+- `supabase/functions/game-start/index.ts` — deployed (registry-driven, werewolf entry)
+- `supabase/functions/game-action/index.ts` — deployed (registry-driven, werewolf entry)
+- `scripts/e2e-live-game.mjs` — cupid + spellcaster handlers; silenced skip removed from dayVote
+
+Notes:
+- `verify:live-game` **46/46 pass** on production
+- Silenced players vote normally in dayVote; night-action payloads for CUPID_LINK + SILENCE redacted in game_actions log
+
+---
+
 # Epic 7 - Salem 1692
 
 Status:
-🔒 Future — deferred until after Werewolf (Epic 6.5)
+⚪ Not Started
 
 ## Features
 

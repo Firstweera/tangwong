@@ -7,9 +7,8 @@
 // Postgres realtime and can read only their own game_private row via RLS.
 import { corsHeaders, json } from '../_shared/cors.ts';
 import { adminClient, callerId } from '../_shared/supabase.ts';
+import { GAME_REGISTRY, type ServerGameEntry } from '../_shared/games.ts';
 import { GameEngine } from '../../../src/features/games/engine/engine.ts';
-import { avalonConfig } from '../../../src/features/games/avalon/config.ts';
-import { nextBotAction } from '../../../src/features/games/avalon/bot.ts';
 import type {
   GameAction,
   GameEngineConfig,
@@ -17,7 +16,6 @@ import type {
   GameState,
   RoomState,
 } from '../../../src/features/games/engine/types.ts';
-import type { AvalonPrivate, AvalonPublic } from '../../../src/features/games/avalon/types.ts';
 
 type AnyState = GameState<Record<string, unknown>, unknown>;
 
@@ -59,10 +57,6 @@ interface PrivateRow {
   player_id: string;
   private_data: unknown;
 }
-
-const ENGINES: Record<string, GameEngineConfig<unknown, unknown>> = {
-  avalon: avalonConfig as GameEngineConfig<unknown, unknown>,
-};
 
 const PHASE_TIMEOUT_SECONDS: Record<string, number> = {
   teamProposal: 45,
@@ -137,51 +131,36 @@ function buildGameState(room: RoomState, row: GameStateRow, privateRows: Private
   };
 }
 
-function revealForPublic(state: GameState<AvalonPublic, AvalonPrivate>) {
-  return Object.fromEntries(
-    Object.values(state.private).map((p) => [
-      p.playerId,
-      { role: p.data.role, side: p.data.side },
-    ])
-  );
-}
-
-function publicDataForDb(state: AnyState): Record<string, unknown> {
-  if (state.winner && state.room.gameId === 'avalon') {
-    const avalonState = state as unknown as GameState<AvalonPublic, AvalonPrivate>;
+function publicDataForDb(state: AnyState, entry: ServerGameEntry): Record<string, unknown> {
+  if (state.winner) {
     return {
-      ...(avalonState.public.data as unknown as Record<string, unknown>),
-      reveal: revealForPublic(avalonState),
+      ...(state.public.data as Record<string, unknown>),
+      reveal: entry.revealForPublic(state),
     };
   }
-  return state.public.data;
+  return state.public.data as Record<string, unknown>;
 }
 
-function publicPayload(action: GameAction): Record<string, unknown> {
-  if (action.type === 'PLAY_MISSION_CARD') return { submitted: true };
+function publicPayload(action: GameAction, entry: ServerGameEntry): Record<string, unknown> {
+  if (entry.privateActionTypes.includes(action.type)) return { submitted: true };
   return (action.payload && typeof action.payload === 'object')
     ? action.payload as Record<string, unknown>
     : {};
 }
 
-function nextServerBotActor(state: AnyState): string | null {
+function nextServerBotActor(state: AnyState, entry: ServerGameEntry): string | null {
   if (state.winner) return null;
   for (const player of state.room.players) {
     if (!player.id.startsWith('bot_')) continue;
-    const action = nextBotAction(
-      state as unknown as GameState<AvalonPublic, AvalonPrivate>,
-      player.id
-    );
-    if (action) return player.id;
+    if (entry.nextBotAction(state, player.id)) return player.id;
   }
   return null;
 }
 
-function nextTimedOutAction(state: AnyState): GameAction | null {
+function nextTimedOutAction(state: AnyState, entry: ServerGameEntry): GameAction | null {
   if (state.winner) return null;
-  const avalonState = state as unknown as GameState<AvalonPublic, AvalonPrivate>;
   for (const player of state.room.players) {
-    const action = nextBotAction(avalonState, player.id);
+    const action = entry.nextBotAction(state, player.id);
     if (action) return action;
   }
   return null;
@@ -190,16 +169,14 @@ function nextTimedOutAction(state: AnyState): GameAction | null {
 function resolveBots(
   engine: GameEngine<unknown, unknown>,
   state: AnyState,
-  actionLog: GameAction[]
+  entry: ServerGameEntry,
+  actionLog: GameAction[],
 ): AnyState {
   let next = state;
   for (let i = 0; i < 50; i += 1) {
-    const botId = nextServerBotActor(next);
+    const botId = nextServerBotActor(next, entry);
     if (!botId) return next;
-    const botAction = nextBotAction(
-      next as unknown as GameState<AvalonPublic, AvalonPrivate>,
-      botId
-    );
+    const botAction = entry.nextBotAction(next, botId);
     if (!botAction) return next;
     const result = engine.dispatch(next, botAction);
     if (!result.valid) return next;
@@ -245,10 +222,10 @@ Deno.serve(async (req) => {
       .from('game_private').select('*').eq('room_id', room.id);
     if (privErr) return json({ error: privErr.message }, 500);
 
-    const config = ENGINES[gameRow.game_id];
-    if (!config) return json({ error: `game not supported: ${gameRow.game_id}` }, 400);
+    const entry = GAME_REGISTRY[gameRow.game_id];
+    if (!entry) return json({ error: `game not supported: ${gameRow.game_id}` }, 400);
 
-    const engine = new GameEngine(config);
+    const engine = new GameEngine(entry.config as GameEngineConfig<unknown, unknown>);
     const roomState = buildRoomState(room as RoomRow, (members ?? []) as MemberRow[]);
     const row = gameRow as GameStateRow;
     const state = buildGameState(roomState, row, (privateRows ?? []) as PrivateRow[]);
@@ -265,7 +242,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const timedOutAction = nextTimedOutAction(state);
+      const timedOutAction = nextTimedOutAction(state, entry);
       if (!timedOutAction) return json({ error: 'nothing to timeout' }, 409);
       actionLog.push({
         type: 'TIMEOUT',
@@ -283,7 +260,7 @@ Deno.serve(async (req) => {
     if (!result.valid) return json({ error: result.error ?? 'invalid action' }, 400);
 
     actionLog.push(action);
-    const nextState = resolveBots(engine, result.state as AnyState, actionLog);
+    const nextState = resolveBots(engine, result.state as AnyState, entry, actionLog);
     const nextVersion = row.version + 1;
     const status = nextState.winner ? 'ended' : 'in-game';
 
@@ -294,7 +271,7 @@ Deno.serve(async (req) => {
         turn: nextState.public.turn,
         round: nextState.public.round,
         active_player_id: nextState.public.activePlayerId,
-        public_data: publicDataForDb(nextState),
+        public_data: publicDataForDb(nextState, entry),
         winner: nextState.winner,
         status,
         version: nextVersion,
@@ -320,7 +297,7 @@ Deno.serve(async (req) => {
       room_id: room.id,
       player_id: a.playerId,
       type: a.type,
-      payload: publicPayload(a),
+      payload: publicPayload(a, entry),
     }));
     const { error: logErr } = await db.from('game_actions').insert(actionRows);
     if (logErr) return json({ error: logErr.message }, 500);

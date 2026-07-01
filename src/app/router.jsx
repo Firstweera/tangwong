@@ -24,7 +24,7 @@ export function renderScreen(screen, ctx) {
     case 'home':    return <HomePage go={go} showToast={showToast} player={player} lastRoom={lastRoom}
                               openCreateRoom={openCreateRoom} joinRoom={joinRoom} rejoinRoom={rejoinRoom}
                               clearLastRoom={clearLastRoom} openEditProfile={openEditProfile} />;
-    case 'games':   return <GamesPage go={go} showToast={showToast} />;
+    case 'games':   return <GamesPage go={go} showToast={showToast} openCreateRoom={openCreateRoom} />;
     case 'friends': return <FriendsPage go={go} showToast={showToast} />;
     case 'profile': return <ProfilePage go={go} showToast={showToast} guest={guest} player={player}
                               openEditProfile={openEditProfile} />;

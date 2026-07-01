@@ -5,7 +5,7 @@ import { RulesSheet } from '../features/games/ui';
 import { getGameRules } from '../features/games';
 import { GAMES } from '../data';
 
-export function GamesPage({ go }) {
+export function GamesPage({ go, openCreateRoom }) {
   const cats = [['ทั้งหมด', true], ['จับโกหก', false], ['บลัฟ', false], ['เล่าเรื่อง', false]];
   const [rulesGame, setRulesGame] = useState(null);
 
@@ -32,7 +32,7 @@ export function GamesPage({ go }) {
             game={g}
             height={164}
             disabled={!g.available}
-            onClick={() => go('lobby')}
+            onClick={() => g.available && openCreateRoom?.(g.id)}
             onRules={getGameRules(g.id) ? () => setRulesGame(g) : undefined}
           />
         ))}
@@ -42,7 +42,7 @@ export function GamesPage({ go }) {
         <RulesSheet
           game={rulesGame}
           onClose={() => setRulesGame(null)}
-          onPlay={() => { setRulesGame(null); go('lobby'); }}
+          onPlay={() => { setRulesGame(null); openCreateRoom?.(rulesGame?.id); }}
         />
       )}
     </div>

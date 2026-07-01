@@ -1,4 +1,8 @@
-// Bridges the UI Player type → engine GamePlayer.
+// Bridges the UI Player type → engine GamePlayer, plus player lifecycle helpers
+// for games that eliminate players (Werewolf, Salem, etc.).
+//
+// Convention for elimination: TPublic must include `eliminatedPlayers: string[]`.
+// Use `alivePlayers` / `isAlive` in engine logic; `eliminate` to build the next list.
 import type { Player } from '../../../types/index.ts';
 import type { GamePlayer, RoomState } from './types.ts';
 import type { Room } from '../../../types/index.ts';
@@ -52,4 +56,22 @@ export function gamePlayerToPlayer(gp: GamePlayer): Player {
     mascot: gp.mascot,
     online: gp.isConnected,
   };
+}
+
+// ─── Player Lifecycle (elimination games) ────────────────────────────────────
+
+/** True if the player is in the roster and NOT in the eliminated list. */
+export function isAlive(players: GamePlayer[], playerId: string, eliminatedIds: string[]): boolean {
+  return players.some(p => p.id === playerId) && !eliminatedIds.includes(playerId);
+}
+
+/** All players not in the eliminated list, preserving seat order. */
+export function alivePlayers(players: GamePlayer[], eliminatedIds: string[]): GamePlayer[] {
+  return players.filter(p => !eliminatedIds.includes(p.id));
+}
+
+/** Return a new eliminated list with playerId added (idempotent). */
+export function eliminate(eliminatedIds: string[], playerId: string): string[] {
+  if (eliminatedIds.includes(playerId)) return eliminatedIds;
+  return [...eliminatedIds, playerId];
 }

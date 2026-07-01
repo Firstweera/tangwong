@@ -67,8 +67,8 @@ export const GAMES: Game[] = [
   },
   {
     id: 'werewolf', name: 'Werewolf', th: 'มนุษย์หมาป่า', tag: 'Social Deduction', th_tag: 'เกมจับโกหก',
-    emoji: '🐺', players: '6–16', minPlayers: 6, maxPlayers: 16, mins: '15–40', heat: '',
-    g: ['#FF5C6C', '#7A1F35'], accent: '#FF8A96', available: false,
+    emoji: '🐺', players: '5–10', minPlayers: 5, maxPlayers: 10, mins: '15–40', heat: 'NEW',
+    g: ['#FF5C6C', '#7A1F35'], accent: '#FF8A96', available: true,
     desc: 'กลางคืนหมาป่าออกล่า กลางวันชาวบ้านโหวตจับ',
   },
   {

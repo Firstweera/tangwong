@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { Icon, Confetti } from '@/components/ui';
-import { IconButton } from '@/components/layout';
+import { Icon } from '@/components/ui';
 import { QuestTrack } from '@/components/ui';
-import { ChatPanel } from '@/features/lobby';
-import { useChat } from '@/features/chat';
 import { useGameEngine } from '../../engine';
 import type { GameState, RoomState } from '../../engine';
 import type { Player } from '@/types';
 import { avalonConfig } from '../config';
 import type { AvalonPublic, AvalonPrivate, QuestOutcome } from '../types';
 import { nextBotAction, nextAutoActor } from '../bot';
+import { GameShell } from '../../ui/GameShell';
 import { AvalonTable } from './AvalonTable';
 import { RoleRevealCard } from './RoleRevealCard';
 
@@ -43,7 +41,7 @@ export interface AvalonGameProps {
   onTimeout?: () => void | Promise<void>;
   onlineMode?: boolean;
   loading?: boolean;
-  /** An online action is in flight (server round-trip) — disables controls to prevent double-submit. */
+  /** An online action is in flight — disables controls to prevent double-submit. */
   busy?: boolean;
   /** Latest online action/sync error; surfaced to the player as a toast. */
   error?: string | null;
@@ -71,7 +69,6 @@ export function AvalonGame({
   const controlled = onlineMode || externalState !== null;
 
   const [roleOpen, setRoleOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
   const [autoAll, setAutoAll] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<string[]>([]);
   const [assassinTarget, setAssassinTarget] = useState<string | null>(null);
@@ -79,7 +76,6 @@ export function AvalonGame({
   const timeoutSentRef = useRef<string | null>(null);
 
   const byId = (id: string) => players.find(p => p.id === id);
-  const chat = useChat(roomState.roomId, meId);
 
   // ─── Start + kick off role reveal ───────────────────────────────────────────
   useEffect(() => {
@@ -130,7 +126,7 @@ export function AvalonGame({
       }
       return;
     }
-    const action = nextBotAction(state, meId); // play my default if I idled out
+    const action = nextBotAction(state, meId);
     if (action) local.dispatch(action);
   }, [timeLeft, onlineMode, isHost, timerKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -145,9 +141,6 @@ export function AvalonGame({
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Surface online action / sync errors ─────────────────────────────────────
-  // The realtime hook clears its error to null before each action and sets it on
-  // failure, so `error` transitions falsy→message on every fresh failure. Toast
-  // once per occurrence (dedupe identical back-to-back messages).
   const lastErrorRef = useRef<string | null>(null);
   useEffect(() => {
     if (!error) { lastErrorRef.current = null; return; }
@@ -167,34 +160,18 @@ export function AvalonGame({
     }
   }, [state?.winner]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!state || !pub) {
-    return (
-      <div className="screen col center" style={{ gap: 12 }}>
-        <span style={{ fontSize: 40 }}>{loading ? '⌛' : '🎴'}</span>
-        <span className="th h2">{loading ? 'กำลังโหลดเกม...' : 'รอเริ่มเกม'}</span>
-        {onlineMode && onStartGame && (
-          <button className="btn btn-primary btn-lg" onClick={() => void onStartGame()}>
-            <span className="sheen" />
-            <Icon name="check" size={19} stroke={3} />
-            <span className="th">เริ่มเกมออนไลน์</span>
-          </button>
-        )}
-        <button className="btn btn-glass btn-lg" onClick={onExit}>กลับห้อง</button>
-      </div>
-    );
-  }
-
-  const myPriv = state.private[meId]?.data;
-  const leaderId = pub.playerOrder[leaderIndex];
+  // ─── Derived values (need state) ─────────────────────────────────────────────
+  const myPriv = state?.private[meId]?.data;
+  const leaderId = pub?.playerOrder[leaderIndex] ?? '';
   const iLead = leaderId === meId;
-  const quest = pub.quests[currentQuest];
+  const quest = pub?.quests[currentQuest];
   const iAmAssassin = myPriv?.role === 'assassin';
-  const meOnTeam = pub.proposedTeam.includes(meId);
-  const iVoted = meId in pub.votes;
-  const iPlayed = meId in pub.missionCards;
-  const successCount = pub.results.filter(r => r === 'success').length;
-  const failCount = pub.results.filter(r => r === 'fail').length;
-  const goodWin = state.winner?.winnerTeam === 'good';
+  const meOnTeam = pub?.proposedTeam.includes(meId) ?? false;
+  const iVoted = meId in (pub?.votes ?? {});
+  const iPlayed = meId in (pub?.missionCards ?? {});
+  const successCount = pub?.results.filter(r => r === 'success').length ?? 0;
+  const failCount = pub?.results.filter(r => r === 'fail').length ?? 0;
+  const goodWin = state?.winner?.winnerTeam === 'good';
 
   const act = (type: string, payload: unknown) => {
     if (controlled) {
@@ -206,18 +183,17 @@ export function AvalonGame({
 
   const seatTap = (id: string) => {
     if (phase === 'teamProposal' && iLead) {
-      setSelectedTeam(t => t.includes(id) ? t.filter(x => x !== id) : t.length < quest.size ? [...t, id] : t);
+      setSelectedTeam(t => t.includes(id) ? t.filter(x => x !== id) : t.length < (quest?.size ?? 0) ? [...t, id] : t);
     } else if (phase === 'assassinate' && iAmAssassin) {
       setAssassinTarget(id);
     }
   };
 
-  // ─── Vote reveal (Avalon votes are public once everyone has voted) ───────────
-  const voteYes = Object.values(pub.votes).filter(Boolean).length;
-  const voteNo = Object.keys(pub.votes).length - voteYes;
-  const allVoted = pub.playerOrder.length > 0 && Object.keys(pub.votes).length === pub.playerOrder.length;
-  // Reveal each seat's approve/reject the moment the vote resolves, and keep it
-  // visible through the mission so the loyal side can read the table.
+  // ─── Vote reveal ─────────────────────────────────────────────────────────────
+  const votes = pub?.votes ?? {};
+  const voteYes = Object.values(votes).filter(Boolean).length;
+  const voteNo = Object.keys(votes).length - voteYes;
+  const allVoted = (pub?.playerOrder.length ?? 0) > 0 && Object.keys(votes).length === (pub?.playerOrder.length ?? 0);
   const votesRevealed = allVoted && (phase === 'teamVote' || phase === 'mission');
 
   // ─── Per-seat badge ──────────────────────────────────────────────────────────
@@ -225,40 +201,41 @@ export function AvalonGame({
     if (phase === 'assassinate' && assassinTarget === id) {
       return <span className="seat-token" style={{ background: 'var(--evil)', fontSize: 11 }}>🗡️</span>;
     }
-    if (votesRevealed && id in pub.votes) {
-      const yes = pub.votes[id];
+    if (votesRevealed && id in votes) {
+      const yes = votes[id];
       return (
         <span className="seat-token" style={{ background: yes ? 'var(--good)' : 'var(--evil)', color: '#fff' }}>
           <Icon name={yes ? 'check' : 'x'} size={11} stroke={3.5} />
         </span>
       );
     }
-    if (pub.proposedTeam.includes(id) && (phase === 'teamProposal' || phase === 'teamVote')) {
+    if (pub?.proposedTeam.includes(id) && (phase === 'teamProposal' || phase === 'teamVote')) {
       return <span className="seat-token" style={{ background: 'var(--accent)', color: '#3a2406' }}><Icon name="check" size={11} stroke={3.5} /></span>;
     }
-    if (phase === 'teamVote' && id in pub.votes) {
+    if (phase === 'teamVote' && id in votes) {
       return <span className="seat-token" style={{ background: 'var(--surface-3)', fontSize: 10 }}>✓</span>;
     }
     return null;
   };
 
-  const teamSel = phase === 'teamProposal' && iLead ? selectedTeam : pub.proposedTeam;
-  const dimIds = phase === 'mission' ? pub.playerOrder.filter(id => !pub.proposedTeam.includes(id)) : [];
+  const teamSel = phase === 'teamProposal' && iLead ? selectedTeam : (pub?.proposedTeam ?? []);
+  const dimIds = phase === 'mission' ? (pub?.playerOrder ?? []).filter(id => !pub?.proposedTeam.includes(id)) : [];
 
   // ─── Centre content ──────────────────────────────────────────────────────────
   const center = (() => {
+    if (!pub) return null;
     if (phase === 'roleReveal') return (
       <div className="col center"><span style={{ fontSize: 34 }}>🎴</span><span className="th tiny" style={{ fontWeight: 700, marginTop: 6, textAlign: 'center' }}>เปิดบทบาทของคุณ</span></div>
     );
     if (phase === 'teamProposal') return (
       <div className="col center">
         <span className="eyebrow" style={{ color: 'var(--accent)' }}>ภารกิจที่ {currentQuest + 1}</span>
-        <span className="th" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, margin: '4px 0' }}>{teamSel.length}<span style={{ color: 'var(--muted)', fontSize: 22 }}>/{quest.size}</span></span>
+        <span className="th" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, margin: '4px 0' }}>{teamSel.length}<span style={{ color: 'var(--muted)', fontSize: 22 }}>/{quest?.size}</span></span>
         <span className="tiny" style={{ fontWeight: 700, textAlign: 'center' }}>{iLead ? 'เลือกทีมของคุณ' : `${byId(leaderId)?.name} กำลังจัดทีม`}</span>
       </div>
     );
     if (phase === 'teamVote') return (
-      <div className="col center"><span className="th" style={{ fontSize: 17, fontWeight: 800 }}>โหวตทีมนี้?</span><span className="tiny" style={{ fontWeight: 700, marginTop: 6 }}>{Object.keys(pub.votes).length}/{pub.playerOrder.length} โหวตแล้ว</span></div>
+      <div className="col center"><span className="th" style={{ fontSize: 17, fontWeight: 800 }}>โหวตทีมนี้?</span><span className="tiny" style={{ fontWeight: 700, marginTop: 6 }}>{Object.keys(votes).length}/{pub.playerOrder.length} โหวตแล้ว</span></div>
     );
     if (phase === 'mission') return (
       <div className="col center"><div className="spin-slow" style={{ fontSize: 34 }}>⚔️</div><span className="th tiny" style={{ fontWeight: 700, marginTop: 6 }}>{Object.keys(pub.missionCards).length}/{pub.proposedTeam.length} ส่งการ์ดแล้ว</span>
@@ -280,84 +257,91 @@ export function AvalonGame({
     return null;
   })();
 
-  return (
-    <div className="screen screen-anim" style={{ overflow: 'hidden' }}>
-      {state.winner && goodWin && <Confetti />}
-
-      {/* top bar */}
-      <div className="row between pad-x pad-top" style={{ paddingBottom: 6 }}>
-        <IconButton onClick={onExit} aria-label="ออกจากเกม" style={{ width: 40, height: 40, borderRadius: 12 }}><Icon name="exit" size={18} /></IconButton>
-        <div className="row gap8">
-          {PHASE_TIMER[phase] > 0 && (
-            <div className="chip" style={{ background: 'var(--surface)', borderColor: 'var(--border-2)' }}>
-              <Icon name="clock" size={14} style={{ color: timeLeft <= 10 ? 'var(--evil)' : 'var(--accent)' }} />
-              <span className="mono" style={{ fontWeight: 700, color: timeLeft <= 10 ? 'var(--evil)' : 'var(--text)' }}>0:{String(timeLeft).padStart(2, '0')}</span>
+  // ─── Action bar ──────────────────────────────────────────────────────────────
+  const actionBar = (() => {
+    if (!pub || !quest) return null;
+    if (phase === 'roleReveal') return (
+      isHost
+        ? <button className="btn btn-primary btn-lg btn-block" disabled={busy} onClick={() => act('CONTINUE', null)}><span className="sheen" /><Icon name="check" size={19} stroke={3} /> <span className="th">{busy ? 'กำลังเริ่ม...' : 'ฉันพร้อมแล้ว — เริ่มเกม'}</span></button>
+        : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">รอหัวห้องเริ่มเกม...</span></button>
+    );
+    if (phase === 'teamProposal') return (
+      iLead
+        ? <button className="btn btn-accent btn-lg btn-block" disabled={busy || selectedTeam.length !== quest.size} onClick={() => act('NOMINATE_TEAM', { team: selectedTeam })}><span className="sheen" /><Icon name="flag" size={20} /> <span className="th">เสนอทีม ({selectedTeam.length}/{quest.size})</span></button>
+        : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">{byId(leaderId)?.name} กำลังเลือกทีม...</span></button>
+    );
+    if (phase === 'teamVote') return (
+      !iVoted
+        ? <div className="row gap10"><button className="btn btn-evil btn-lg" style={{ flex: 1 }} disabled={busy} onClick={() => act('VOTE_TEAM', { approve: false })}><Icon name="x" size={20} stroke={3} /> <span className="th">ปฏิเสธ</span></button><button className="btn btn-good btn-lg" style={{ flex: 1 }} disabled={busy} onClick={() => act('VOTE_TEAM', { approve: true })}><Icon name="check" size={20} stroke={3} /> <span className="th">เห็นชอบ</span></button></div>
+        : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">รอผู้เล่นคนอื่นโหวต...</span></button>
+    );
+    if (phase === 'mission') return (
+      meOnTeam && !iPlayed
+        ? <div className="col gap8">
+            <span className="tiny center row" style={{ justifyContent: 'center', fontWeight: 700 }}>คุณอยู่ในภารกิจ — เลือกการ์ด</span>
+            <div className="row gap10">
+              <button className="btn btn-evil btn-lg" style={{ flex: 1, opacity: myPriv?.side === 'good' ? 0.45 : 1 }} disabled={busy || myPriv?.side === 'good'} onClick={() => act('PLAY_MISSION_CARD', { card: 'fail' as QuestOutcome })}><Icon name="x" size={18} stroke={3} /> <span className="th">ทรยศ</span></button>
+              <button className="btn btn-good btn-lg" style={{ flex: 1.3 }} disabled={busy} onClick={() => act('PLAY_MISSION_CARD', { card: 'success' as QuestOutcome })}><Icon name="shield" size={19} /> <span className="th">ทำสำเร็จ</span></button>
             </div>
-          )}
-          {onlineMode
-            ? <span className="chip" style={{ background: 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>ออนไลน์</span>
-            : <button className="chip" onClick={() => setAutoAll(a => !a)} style={{ background: autoAll ? 'var(--grad-soft)' : 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>🤖 {autoAll ? 'ออโต้' : 'แมนนวล'}</button>}
+            {myPriv?.side === 'good' && <span className="tiny center row" style={{ justifyContent: 'center', opacity: 0.65 }}>ฝ่ายดีต้องทำภารกิจให้สำเร็จเสมอ</span>}
+          </div>
+        : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">รอผลภารกิจ...</span></button>
+    );
+    if (phase === 'questReveal') return (
+      isHost
+        ? <button className="btn btn-primary btn-lg btn-block" disabled={busy} onClick={() => act('CONTINUE', null)}><span className="sheen" /><span className="th">{successCount >= 3 ? 'สู่การลอบสังหาร' : 'ภารกิจต่อไป'}</span> <Icon name="arrowR" size={20} stroke={2.6} /></button>
+        : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">รอหัวห้อง...</span></button>
+    );
+    if (phase === 'assassinate') return (
+      iAmAssassin
+        ? <button className="btn btn-evil btn-lg btn-block" disabled={busy || !assassinTarget} onClick={() => act('ASSASSINATE', { targetId: assassinTarget })}><span className="sheen" /><Icon name="sword" size={20} /> <span className="th">ลอบสังหาร{assassinTarget ? ` ${byId(assassinTarget)?.name}` : ''}</span></button>
+        : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">ฝ่ายชั่วกำลังเลือกเป้าหมาย...</span></button>
+    );
+    return null;
+  })();
+
+  const modeChip = onlineMode
+    ? <span className="chip" style={{ background: 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>ออนไลน์</span>
+    : <button className="chip" onClick={() => setAutoAll(a => !a)} style={{ background: autoAll ? 'var(--grad-soft)' : 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>🤖 {autoAll ? 'ออโต้' : 'แมนนวล'}</button>;
+
+  const loadingContent = onlineMode && onStartGame
+    ? (
+      <button className="btn btn-primary btn-lg" onClick={() => void onStartGame()}>
+        <span className="sheen" />
+        <Icon name="check" size={19} stroke={3} />
+        <span className="th">เริ่มเกมออนไลน์</span>
+      </button>
+    )
+    : null;
+
+  return (
+    <GameShell
+      roomId={roomState.roomId}
+      meId={meId}
+      players={players}
+      hasState={Boolean(state && pub)}
+      loading={loading}
+      onlineMode={onlineMode}
+      winner={state?.winner}
+      timeLeft={PHASE_TIMER[phase] ? timeLeft : undefined}
+      busy={busy}
+      onExit={onExit}
+      extraChips={modeChip}
+      track={pub && (
+        <div className="row center" style={{ gap: 8, padding: '10px 0 14px' }}>
+          <span className="th tiny" style={{ fontWeight: 800, color: 'var(--good)' }}>{successCount}</span>
+          <QuestTrack results={pub.results} current={currentQuest} />
+          <span className="th tiny" style={{ fontWeight: 800, color: 'var(--evil)' }}>{failCount}</span>
         </div>
-        <IconButton onClick={() => setChatOpen(true)} aria-label="เปิดแชต" style={{ width: 40, height: 40, borderRadius: 12 }}><Icon name="chat" size={18} /></IconButton>
-      </div>
-
-      {/* quest track */}
-      <div className="row center" style={{ gap: 8, padding: '10px 0 14px' }}>
-        <span className="th tiny" style={{ fontWeight: 800, color: 'var(--good)' }}>{successCount}</span>
-        <QuestTrack results={pub.results} current={currentQuest} />
-        <span className="th tiny" style={{ fontWeight: 800, color: 'var(--evil)' }}>{failCount}</span>
-      </div>
-
-      {/* table */}
-      <AvalonTable players={players} leaderId={leaderId} meId={meId} selectedIds={teamSel} dimIds={dimIds} badge={badge} onSeatTap={seatTap} center={center} />
-
-      {/* role strip */}
-      {myPriv && <RoleRevealCard me={myPriv} players={players} open={roleOpen} onToggle={() => setRoleOpen(o => !o)} />}
-
-      {/* action bar */}
-      <div className="pad-x" style={{ paddingBottom: 24 }}>
-        {phase === 'roleReveal' && (
-          isHost
-            ? <button className="btn btn-primary btn-lg btn-block" disabled={busy} onClick={() => act('CONTINUE', null)}><span className="sheen" /><Icon name="check" size={19} stroke={3} /> <span className="th">{busy ? 'กำลังเริ่ม...' : 'ฉันพร้อมแล้ว — เริ่มเกม'}</span></button>
-            : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">รอหัวห้องเริ่มเกม...</span></button>
-        )}
-        {phase === 'teamProposal' && (
-          iLead
-            ? <button className="btn btn-accent btn-lg btn-block" disabled={busy || selectedTeam.length !== quest.size} onClick={() => act('NOMINATE_TEAM', { team: selectedTeam })}><span className="sheen" /><Icon name="flag" size={20} /> <span className="th">เสนอทีม ({selectedTeam.length}/{quest.size})</span></button>
-            : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">{byId(leaderId)?.name} กำลังเลือกทีม...</span></button>
-        )}
-        {phase === 'teamVote' && (
-          !iVoted
-            ? <div className="row gap10"><button className="btn btn-evil btn-lg" style={{ flex: 1 }} disabled={busy} onClick={() => act('VOTE_TEAM', { approve: false })}><Icon name="x" size={20} stroke={3} /> <span className="th">ปฏิเสธ</span></button><button className="btn btn-good btn-lg" style={{ flex: 1 }} disabled={busy} onClick={() => act('VOTE_TEAM', { approve: true })}><Icon name="check" size={20} stroke={3} /> <span className="th">เห็นชอบ</span></button></div>
-            : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">รอผู้เล่นคนอื่นโหวต...</span></button>
-        )}
-        {phase === 'mission' && (
-          meOnTeam && !iPlayed
-            ? <div className="col gap8">
-                <span className="tiny center row" style={{ justifyContent: 'center', fontWeight: 700 }}>คุณอยู่ในภารกิจ — เลือกการ์ด</span>
-                <div className="row gap10">
-                  <button className="btn btn-evil btn-lg" style={{ flex: 1, opacity: myPriv?.side === 'good' ? 0.45 : 1 }} disabled={busy || myPriv?.side === 'good'} onClick={() => act('PLAY_MISSION_CARD', { card: 'fail' as QuestOutcome })}><Icon name="x" size={18} stroke={3} /> <span className="th">ทรยศ</span></button>
-                  <button className="btn btn-good btn-lg" style={{ flex: 1.3 }} disabled={busy} onClick={() => act('PLAY_MISSION_CARD', { card: 'success' as QuestOutcome })}><Icon name="shield" size={19} /> <span className="th">ทำสำเร็จ</span></button>
-                </div>
-                {myPriv?.side === 'good' && <span className="tiny center row" style={{ justifyContent: 'center', opacity: 0.65 }}>ฝ่ายดีต้องทำภารกิจให้สำเร็จเสมอ</span>}
-              </div>
-            : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">รอผลภารกิจ...</span></button>
-        )}
-        {phase === 'questReveal' && (
-          isHost
-            ? <button className="btn btn-primary btn-lg btn-block" disabled={busy} onClick={() => act('CONTINUE', null)}><span className="sheen" /><span className="th">{successCount >= 3 ? 'สู่การลอบสังหาร' : 'ภารกิจต่อไป'}</span> <Icon name="arrowR" size={20} stroke={2.6} /></button>
-            : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">รอหัวห้อง...</span></button>
-        )}
-        {phase === 'assassinate' && (
-          iAmAssassin
-            ? <button className="btn btn-evil btn-lg btn-block" disabled={busy || !assassinTarget} onClick={() => act('ASSASSINATE', { targetId: assassinTarget })}><span className="sheen" /><Icon name="sword" size={20} /> <span className="th">ลอบสังหาร{assassinTarget ? ` ${byId(assassinTarget)?.name}` : ''}</span></button>
-            : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">ฝ่ายชั่วกำลังเลือกเป้าหมาย...</span></button>
-        )}
-      </div>
-
-      {chatOpen && (
-        <ChatPanel messages={chat.messages} players={players} meId={meId} onSend={chat.sendMessage} onReact={chat.toggleReaction} onClose={() => setChatOpen(false)} />
       )}
-    </div>
+      table={pub && (
+        <AvalonTable players={players} leaderId={leaderId} meId={meId} selectedIds={teamSel} dimIds={dimIds} badge={badge} onSeatTap={seatTap} center={center} />
+      )}
+      roleStrip={myPriv && (
+        <RoleRevealCard me={myPriv} players={players} open={roleOpen} onToggle={() => setRoleOpen(o => !o)} />
+      )}
+      actionBar={actionBar}
+      loadingContent={loadingContent}
+    />
   );
 }

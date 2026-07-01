@@ -5,6 +5,15 @@ import { BottomBar } from '../components/layout';
 import { PLAYERS, ROLES, ROLE_OF } from '../data';
 import { useSupabaseTransport, gameService } from '../services/supabase';
 
+const WW_ROLES = {
+  werewolf:    { th: 'หมาป่า',         em: '🐺',  team: 'evil' },
+  seer:        { th: 'ผู้พยากรณ์',    em: '👁️', team: 'good' },
+  doctor:      { th: 'หมอ',            em: '💊',  team: 'good' },
+  villager:    { th: 'ชาวบ้าน',        em: '🏡',  team: 'good' },
+  cupid:       { th: 'กามเทพ',         em: '💘',  team: 'good' },
+  spellcaster: { th: 'ผู้ร่ายคำสาปใบ้', em: '🤫', team: 'good' },
+};
+
 export default function ResultPage({ go, payload, showToast, player }) {
   const {
     winner = 'good', reason = 'quests',
@@ -51,6 +60,147 @@ export default function ResultPage({ go, payload, showToast, player }) {
     return () => clearInterval(id);
   }, [players.length]);
 
+  // ── Werewolf result ───────────────────────────────────────────────────────────
+  if (payload?.gameId === 'werewolf') {
+    const wwRoles = payload?.roles ?? {};
+    const myWwRole = WW_ROLES[wwRoles[youId]?.role ?? wwRoles[youId]] ?? WW_ROLES.villager;
+    const isLoversWin = payload?.conditionId === 'lovers-survive';
+    const wwAccent = isLoversWin ? 'var(--primary)' : good ? 'var(--good)' : 'var(--evil)';
+    const bannerEm = isLoversWin ? '💘' : good ? '🛡️' : '🐺';
+    const heading = isLoversWin ? 'คู่รักชนะ' : good ? 'ชาวบ้านชนะ' : 'หมาป่าชนะ';
+    return (
+      <div className="screen screen-anim" style={{ position: 'relative' }}>
+        {(good || isLoversWin) && <Confetti count={64} />}
+        <div style={{
+          position: 'absolute', top: -40, left: '50%', transform: 'translateX(-50%)',
+          width: 400, height: 320, pointerEvents: 'none',
+          background: `radial-gradient(circle, ${isLoversWin ? 'rgba(100,120,255,0.35)' : good ? 'rgba(76,141,255,0.35)' : 'rgba(255,92,108,0.32)'}, transparent 65%)`,
+          filter: 'blur(12px)',
+        }} />
+        <div className="scroll" style={{ paddingBottom: 120 }}>
+          {/* banner */}
+          <div className="col center pad-x" style={{ paddingTop: 78, textAlign: 'center' }}>
+            <div className="pop" style={{ fontSize: 74, lineHeight: 1, filter: 'drop-shadow(0 10px 24px rgba(0,0,0,0.4))' }}>
+              {bannerEm}
+            </div>
+            <span className="chip rise" style={{ color: wwAccent, marginTop: 14, borderColor: 'color-mix(in srgb, currentColor, transparent 65%)' }}>
+              game over
+            </span>
+            <h1 className="th page-title rise" style={{ fontSize: 39, marginTop: 10, color: wwAccent }}>
+              {heading}
+            </h1>
+            <p className="th page-subtitle rise" style={{ marginTop: 8, maxWidth: 320 }}>
+              {payload?.reasonTh ?? (good ? 'หมาป่าทุกตัวถูกกำจัด' : 'หมาป่าเท่ากับชาวบ้าน')}
+            </p>
+          </div>
+
+          {/* my role card */}
+          <div className="pad-x" style={{ marginTop: 26 }}>
+            <div className="command-card" style={{ padding: 16 }}>
+              <div className="row gap14" style={{ alignItems: 'center' }}>
+                <div style={{ position: 'relative' }}>
+                  <Avatar who={player} size={62} ring={good ? 'var(--good)' : 'var(--evil)'} />
+                  <span style={{
+                    position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)',
+                    fontSize: 13, fontWeight: 800, background: good ? 'var(--good)' : 'var(--evil)',
+                    color: '#fff', padding: '1px 8px', borderRadius: 8,
+                  }}>
+                    {myWwRole.em}
+                  </span>
+                </div>
+                <div className="col" style={{ gap: 3, flex: 1 }}>
+                  <span className="th h2" style={{ fontSize: 19 }}>คุณ · {myWwRole.th}</span>
+                  <span className="th tiny" style={{ fontWeight: 600 }}>
+                    {myWwRole.team === 'evil' ? '🐺 ทีมหมาป่า' : '🛡️ ทีมชาวบ้าน'}
+                  </span>
+                </div>
+                <div className="col center" style={{ gap: 0 }}>
+                  <span className="th" style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent)' }}>+128</span>
+                  <span className="tiny" style={{ fontWeight: 700 }}>XP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* role reveal */}
+          <div className="pad-x" style={{ marginTop: 24 }}>
+            <div className="section-head">
+              <h2 className="th section-title">เปิดบทบาททั้งหมด</h2>
+              <span className="section-note">{players.length} seats</span>
+            </div>
+            <div className="col gap8">
+              {players.map((p, i) => {
+                const rd = WW_ROLES[wwRoles[p.id]?.role ?? wwRoles[p.id]] ?? WW_ROLES.villager;
+                const isGood = rd.team === 'good';
+                const winnerSet = new Set(payload?.winners ?? []);
+                const isWinner = winnerSet.size > 0
+                  ? winnerSet.has(p.id)
+                  : (good && isGood) || (!good && !isGood);
+                const shown = i < revealAt;
+                return (
+                  <div key={p.id} className="status-card row between" style={{
+                    opacity: shown ? 1 : 0, transform: shown ? 'none' : 'translateX(-8px)', transition: 'all 0.3s',
+                    boxShadow: `inset 0 0 0 1px ${isGood ? 'rgba(76,141,255,0.15)' : 'rgba(255,92,108,0.15)'}`,
+                  }}>
+                    <div className="row gap12">
+                      <div style={{ position: 'relative' }}>
+                        <Avatar who={p} size={42} />
+                        {!isWinner && (
+                          <span style={{
+                            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', fontSize: 18, background: 'rgba(0,0,0,0.48)',
+                            borderRadius: '50%',
+                          }}>💀</span>
+                        )}
+                      </div>
+                      <div className="col" style={{ gap: 1 }}>
+                        <span className="th h3" style={{ fontSize: 14.5 }}>
+                          {p.name}
+                          {p.id === youId && <span style={{ color: 'var(--primary)', fontSize: 11, fontWeight: 800 }}> · คุณ</span>}
+                        </span>
+                        <span className="th tiny" style={{ fontWeight: 600 }}>{rd.th}</span>
+                      </div>
+                    </div>
+                    <div className="row gap8" style={{ alignItems: 'center' }}>
+                      <span style={{ fontSize: 20 }}>{rd.em}</span>
+                      <span className="th" style={{
+                        fontSize: 10.5, fontWeight: 800, padding: '3px 9px', borderRadius: 8,
+                        background: isGood ? 'rgba(76,141,255,0.16)' : 'rgba(255,92,108,0.16)',
+                        color: isGood ? 'var(--good)' : 'var(--evil)',
+                      }}>
+                        {isGood ? 'ฝ่ายดี' : 'ฝ่ายชั่ว'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <BottomBar paddingBottom={26}>
+          <div className="row gap10">
+            <button className="btn btn-glass btn-lg" aria-label="กลับหน้าหลัก" style={{ flex: '0 0 auto', width: 64 }} onClick={() => go('home')}>
+              <Icon name="home" size={22} />
+            </button>
+            {online && !isHost ? (
+              <button className="btn btn-glass btn-lg" style={{ flex: 1 }} disabled>
+                <span className="th" style={{ fontWeight: 800 }}>รอหัวห้องเริ่มใหม่...</span>
+              </button>
+            ) : (
+              <button className="btn btn-primary btn-lg" style={{ flex: 1 }} disabled={rematching} onClick={handleRematch}>
+                <span className="sheen" />
+                <Icon name="dice" size={20} />
+                <span className="th" style={{ fontWeight: 800 }}>{rematching ? 'กำลังเริ่ม...' : '🐺 เล่นอีกครั้ง'}</span>
+              </button>
+            )}
+          </div>
+        </BottomBar>
+      </div>
+    );
+  }
+
+  // ── Avalon result ─────────────────────────────────────────────────────────────
   const reasonText = {
     quests: good ? 'ฝ่ายดีทำภารกิจสำเร็จ 3 ครั้ง' : 'ฝ่ายชั่วทำลายภารกิจ 3 ครั้ง',
     reject: 'ทีมถูกปฏิเสธ 5 ครั้งติด — ฝ่ายชั่วชนะ',

@@ -222,10 +222,10 @@ export default function HomePage({ go, showToast, player, openCreateRoom, joinRo
           </button>
         </div>
         <div className="pad-x">
-          <GameCard game={avalon} big height={190} disabled={!avalon.available} onClick={() => openCreateRoom?.()} {...rulesProps(avalon)} />
+          <GameCard game={avalon} big height={190} disabled={!avalon.available} onClick={() => openCreateRoom?.(avalon.id)} {...rulesProps(avalon)} />
         </div>
         <div className="pad-x" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
-          {GAMES.slice(1).map(g => <GameCard key={g.id} game={g} height={150} disabled={!g.available} onClick={() => openCreateRoom?.()} {...rulesProps(g)} />)}
+          {GAMES.slice(1).map(g => <GameCard key={g.id} game={g} height={150} disabled={!g.available} onClick={() => openCreateRoom?.(g.id)} {...rulesProps(g)} />)}
         </div>
       </div>
 
@@ -246,7 +246,7 @@ export default function HomePage({ go, showToast, player, openCreateRoom, joinRo
         <RulesSheet
           game={rulesGame}
           onClose={() => setRulesGame(null)}
-          onPlay={() => { setRulesGame(null); openCreateRoom?.(); }}
+          onPlay={() => { setRulesGame(null); openCreateRoom?.(rulesGame?.id); }}
         />
       )}
     </div>

@@ -9,15 +9,9 @@
 // not even the host's browser — ever sees another player's role.
 import { corsHeaders, json } from '../_shared/cors.ts';
 import { adminClient, callerId } from '../_shared/supabase.ts';
+import { GAME_REGISTRY } from '../_shared/games.ts';
 import { GameEngine } from '../../../src/features/games/engine/engine.ts';
-import { avalonConfig } from '../../../src/features/games/avalon/config.ts';
 import type { GamePlayer, RoomState } from '../../../src/features/games/engine/types.ts';
-
-// Registry of server-runnable game configs (engine reuse — same as the client).
-const ENGINES: Record<string, typeof avalonConfig> = { avalon: avalonConfig };
-// First playable phase to advance into after createInitialState (which sits at
-// 'lobby'). Mirrors the client (AvalonGame transitions lobby → roleReveal).
-const FIRST_PHASE: Record<string, string> = { avalon: 'roleReveal' };
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -37,8 +31,8 @@ Deno.serve(async (req) => {
     if (!room) return json({ error: 'room not found' }, 404);
     if (room.host_id !== uid) return json({ error: 'host only' }, 403);
 
-    const config = ENGINES[room.game_id];
-    if (!config) return json({ error: `game not supported: ${room.game_id}` }, 400);
+    const entry = GAME_REGISTRY[room.game_id];
+    if (!entry) return json({ error: `game not supported: ${room.game_id}` }, 400);
 
     // Idempotent: never re-deal roles for an already-started room — UNLESS the
     // host explicitly requests a rematch (restart), which clears the finished
@@ -64,8 +58,8 @@ Deno.serve(async (req) => {
       isConnected: true,
       isReady: m.is_ready,
     }));
-    if (players.length < config.minPlayers) {
-      return json({ error: `need at least ${config.minPlayers} players` }, 400);
+    if (players.length < entry.config.minPlayers) {
+      return json({ error: `need at least ${entry.config.minPlayers} players` }, 400);
     }
 
     const roomState: RoomState = {
@@ -81,11 +75,10 @@ Deno.serve(async (req) => {
     };
 
     // Run the engine: initial state (roles assigned) → first playable phase.
-    const engine = new GameEngine(config);
+    const engine = new GameEngine(entry.config);
     let state = engine.createInitialState(roomState);
-    const first = FIRST_PHASE[room.game_id];
-    if (first) {
-      const r = engine.transitionTo(state, first);
+    if (entry.firstPhase) {
+      const r = engine.transitionTo(state, entry.firstPhase);
       if (r.valid) state = r.state;
     }
 

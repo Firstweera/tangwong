@@ -15,6 +15,8 @@ export interface ChatPanelProps {
   onReact?: (messageId: string, emoji: string) => void;
   onClose?: () => void;
   placeholder?: string;
+  /** When set, the input is disabled and this reason is shown instead. */
+  inputDisabled?: string;
 }
 
 /**
@@ -23,7 +25,7 @@ export interface ChatPanelProps {
  * bubble to open the reaction picker. Presentation only; no transport (the
  * useChat store / Socket.io wire the data). Reusable across lobby and games.
  */
-export function ChatPanel({ messages, players, meId = 'me', onSend, onReact, onClose, placeholder = 'พิมพ์ข้อความ...' }: ChatPanelProps) {
+export function ChatPanel({ messages, players, meId = 'me', onSend, onReact, onClose, placeholder = 'พิมพ์ข้อความ...', inputDisabled }: ChatPanelProps) {
   const [text, setText] = useState('');
   // Which message currently has its reaction picker open.
   const [reactingId, setReactingId] = useState<string | null>(null);
@@ -79,19 +81,27 @@ export function ChatPanel({ messages, players, meId = 'me', onSend, onReact, onC
             <EmojiReactionBar onReact={(emoji) => react(reactingId, emoji)} />
           </div>
         )}
-        <div className="row gap8 pad-x" style={{ paddingTop: 8, flexShrink: 0 }}>
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && send()}
-            placeholder={placeholder}
-            className="th"
-            style={{ flex: 1, height: 46, borderRadius: 14, padding: '0 16px', background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none', fontSize: 14 }}
-          />
-          <button aria-label="send" className="row center" style={{ width: 46, height: 46, borderRadius: 14, background: 'var(--grad)', color: '#fff' }} onClick={send}>
-            <Icon name="send" size={19} />
-          </button>
-        </div>
+        {inputDisabled ? (
+          <div className="pad-x" style={{ paddingTop: 8, flexShrink: 0 }}>
+            <div className="th" style={{ height: 46, borderRadius: 14, padding: '0 16px', background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--accent)', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center' }}>
+              {inputDisabled}
+            </div>
+          </div>
+        ) : (
+          <div className="row gap8 pad-x" style={{ paddingTop: 8, flexShrink: 0 }}>
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && send()}
+              placeholder={placeholder}
+              className="th"
+              style={{ flex: 1, height: 46, borderRadius: 14, padding: '0 16px', background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none', fontSize: 14 }}
+            />
+            <button aria-label="send" className="row center" style={{ width: 46, height: 46, borderRadius: 14, background: 'var(--grad)', color: '#fff' }} onClick={send}>
+              <Icon name="send" size={19} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

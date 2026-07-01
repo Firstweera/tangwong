@@ -1,9 +1,9 @@
-// GamePage.jsx — routes a room to its game UI. Builds the engine RoomState from
-// the room roster, padding with bots so a solo player can run a full match
-// (Phase A). Currently only Avalon is implemented.
+// GamePage.jsx — routes a room to its game UI via the client game registry.
+// Builds the engine RoomState from the room roster, padding with bots so a solo
+// player can run a full match (Phase A). Adding a new game = register it in
+// src/features/games/registry.ts; no changes here.
 import { useEffect, useMemo, useRef } from 'react';
-import { AvalonGame } from '../features/games/avalon/ui';
-import { avalonConfig } from '../features/games/avalon';
+import { getGameEntry } from '../features/games/registry';
 import { playerToGamePlayer, gamePlayerToPlayer, useRealtimeGame } from '../features/games/engine';
 import { useSupabaseTransport } from '../services/supabase';
 import { ME } from '../data';
@@ -17,13 +17,13 @@ const BOT_DEFS = [
   { name: 'บอทมาย', mascot: 'tiger' },
 ];
 
-function buildRoomState(room, human) {
+function buildRoomState(room, human, minPlayers) {
   const hostId = room?.hostId ?? human.id;
   const baseUI = room?.players?.length ? room.players : [human];
   const gamePlayers = baseUI.map(p => playerToGamePlayer(p, hostId, { isConnected: true, isReady: true }));
 
   // Pad to a playable count when testing solo (lobby start-gate enforces this in real play).
-  const target = gamePlayers.length >= avalonConfig.minPlayers ? gamePlayers.length : 7;
+  const target = gamePlayers.length >= minPlayers ? gamePlayers.length : Math.max(minPlayers, 5);
   for (let i = 0; gamePlayers.length < target && i < BOT_DEFS.length; i++) {
     const b = BOT_DEFS[i];
     gamePlayers.push({ id: `bot_${i + 1}`, nickname: b.name, mascot: b.mascot, isHost: false, isConnected: true, isReady: true });
@@ -49,25 +49,62 @@ export default function GamePage({ go, showToast, currentRoom, player }) {
   const meId = onlineMode ? (realtime.meId ?? human.id) : human.id;
   const startRequested = useRef(false);
 
+  const gameId = currentRoom?.gameId ?? 'avalon';
+  const entry = getGameEntry(gameId);
+  const minPlayers = entry?.config.minPlayers ?? 5;
+
   useEffect(() => { startRequested.current = false; }, [currentRoom?.code]);
 
   useEffect(() => {
     if (!onlineMode || startRequested.current) return;
     if (realtime.loading || realtime.busy || realtime.state || !realtime.room || !realtime.meId) return;
-    if (realtime.room.gameId !== 'avalon' || realtime.room.hostId !== realtime.meId) return;
+    if (realtime.room.hostId !== realtime.meId) return;
 
     startRequested.current = true;
     void realtime.start();
   }, [onlineMode, realtime.loading, realtime.busy, realtime.state, realtime.room, realtime.meId, realtime.start]);
 
   const roomState = useMemo(
-    () => (onlineMode && realtime.state?.room ? realtime.state.room : buildRoomState(currentRoom, human)),
-    [onlineMode, realtime.state?.room, currentRoom, human],
+    () => (onlineMode && realtime.state?.room ? realtime.state.room : buildRoomState(currentRoom, human, minPlayers)),
+    [onlineMode, realtime.state?.room, currentRoom, human, minPlayers],
   );
   const players = useMemo(() => roomState.players.map(gamePlayerToPlayer), [roomState]);
 
+  // TODO(A4/GameShell): move into a per-game buildResultProps on the registry entry.
   const handleEnd = (state) => {
     const w = state.winner;
+    const shared = {
+      players,
+      you: meId,
+      code: onlineMode ? currentRoom?.code : null,
+      roomId: onlineMode ? roomState.roomId : null,
+      isHost: roomState.hostId === meId,
+    };
+
+    if (gameId === 'werewolf') {
+      // Dead players: publicly known roles via revealedRoles.
+      // Private state covers all players offline; self-only online.
+      // Remaining gaps: infer wolf vs villager from winner list.
+      const revealedRoles = state.public.data.revealedRoles ?? {};
+      const winnerIds = new Set(w.winners ?? []);
+      const roles = {};
+      for (const [pid, role] of Object.entries(revealedRoles)) {
+        roles[pid] = { role, team: role === 'werewolf' ? 'evil' : 'good' };
+      }
+      Object.values(state.private).forEach(pp => {
+        if (pp.data?.role) roles[pp.playerId] = { role: pp.data.role, team: pp.data.team };
+      });
+      players.forEach(p => {
+        if (!roles[p.id]) {
+          const isWolf = w.winnerTeam === 'evil' && winnerIds.has(p.id);
+          roles[p.id] = { role: isWolf ? 'werewolf' : 'villager', team: isWolf ? 'evil' : 'good' };
+        }
+      });
+      go('result', { gameId: 'werewolf', winner: w.winnerTeam, conditionId: w.conditionId, winners: w.winners ?? [], reasonTh: w.reasonTh ?? w.reason, roles, ...shared });
+      return;
+    }
+
+    // Avalon result
     const reason = w.conditionId === 'assassin' ? 'assassin' : w.conditionId === 'evil-hammer' ? 'reject' : 'quests';
     // reveal is { playerId: { role, side } } from the server (all players);
     // extract the role key for ResultPage. Offline/local play has no reveal blob,
@@ -76,21 +113,10 @@ export default function GamePage({ go, showToast, currentRoom, player }) {
     const roles = {};
     for (const [pid, r] of Object.entries(reveal)) roles[pid] = r?.role ?? r;
     Object.values(state.private).forEach(pp => { roles[pp.playerId] = pp.data.role; });
-    go('result', {
-      winner: w.winnerTeam,
-      reason,
-      results: state.public.data.results,
-      players,
-      roles,
-      you: meId,
-      // Online rematch context (absent for offline/local play).
-      code: onlineMode ? currentRoom?.code : null,
-      roomId: onlineMode ? roomState.roomId : null,
-      isHost: roomState.hostId === meId,
-    });
+    go('result', { winner: w.winnerTeam, reason, results: state.public.data.results, roles, ...shared });
   };
 
-  if (roomState.gameId !== 'avalon') {
+  if (!entry) {
     return (
       <div className="screen col center" style={{ gap: 10 }}>
         <span style={{ fontSize: 40 }}>✨</span>
@@ -124,8 +150,9 @@ export default function GamePage({ go, showToast, currentRoom, player }) {
     );
   }
 
+  const GameUI = entry.ui;
   return (
-    <AvalonGame
+    <GameUI
       roomState={roomState}
       players={players}
       meId={meId}
