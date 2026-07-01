@@ -66,13 +66,12 @@ export function WerewolfTable({
     const dead = eliminatedPlayers.includes(id);
 
     if (dead) {
-      const revealed = revealedRoles[id];
       return (
         <span className="seat-token" style={{
-          background: revealed ? (revealed === 'werewolf' ? 'var(--evil)' : 'var(--surface-3)') : 'var(--surface-3)',
+          background: 'var(--surface-3)',
           fontSize: 12, border: '2px solid var(--surface-solid)',
         }}>
-          {revealed ? ROLE_EM[revealed] : '💀'}
+          💀
         </span>
       );
     }
