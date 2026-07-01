@@ -47,6 +47,8 @@ export interface WerewolfPublic {
   lovers: readonly [string, string] | null;
   /** Player silenced for the current day (cleared at start of next night). */
   silenced: string | null;
+  /** Wolf pack coordination: wolfId → chosen targetId (cleared after night resolves). */
+  wolfVotes: Record<string, string>;
 }
 
 /** Per-player private state (owner-only RLS on the server). */

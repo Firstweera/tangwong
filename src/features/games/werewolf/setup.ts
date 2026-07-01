@@ -41,6 +41,7 @@ export function buildPublicState(players: GamePlayer[]): WerewolfPublic {
     revealedRoles: {},
     lovers: null,
     silenced: null,
+    wolfVotes: {},
   };
 }
 

@@ -403,9 +403,6 @@ export function WerewolfGame({
               <span className="th" style={{ fontWeight: 800, marginTop: 6, fontSize: 14, color: 'var(--evil)', textAlign: 'center' }}>
                 {byId(lynched.playerId)?.name ?? '???'} ถูกประหาร
               </span>
-              <span className="tiny" style={{ fontWeight: 700, marginTop: 2, color: 'var(--muted)' }}>
-                {lynched.role === 'werewolf' ? '🐺 เป็นหมาป่า!' : `ไม่ใช่หมาป่า 😬`}
-              </span>
               {heartbreak && (
                 <span className="tiny" style={{ fontWeight: 700, marginTop: 2, color: 'var(--primary)' }}>
                   💘 {byId(heartbreak.playerId)?.name ?? '???'} สิ้นใจตาม
@@ -469,8 +466,20 @@ export function WerewolfGame({
       }
 
       if (role === 'werewolf') {
+        const packVotes = (myPriv?.sees ?? [])
+          .map(wolfId => ({ wolfId, target: pub.wolfVotes?.[wolfId] ?? null }))
+          .filter(v => v.target !== null);
         return (
           <div className="col gap8">
+            {packVotes.length > 0 && (
+              <div className="col" style={{ gap: 3 }}>
+                {packVotes.map(v => (
+                  <span key={v.wolfId} className="th" style={{ fontSize: 11, fontWeight: 700, textAlign: 'center', color: 'var(--evil)', opacity: 0.85 }}>
+                    🐺 {byId(v.wolfId)?.name ?? '???'} เลือก {byId(v.target!)?.name ?? '???'}
+                  </span>
+                ))}
+              </div>
+            )}
             <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', color: 'var(--evil)' }}>
               🐺 แตะผู้เล่นเพื่อเลือกเหยื่อ
             </span>

@@ -152,6 +152,7 @@ function resolveNight(s: State): State {
     nightActors: [],
     nightResolved: true,
     silenced: effectiveSilence,
+    wolfVotes: {},
   });
 }
 
@@ -182,7 +183,10 @@ const werewolfKill: ActionDef<WerewolfPublic, WerewolfPrivate> = {
   handle(s, a) {
     const targetId = (a.payload as { targetId: string }).targetId;
     let next = patchPriv(s, a.playerId, { wolfTarget: targetId });
-    next = patch(next, { nightActors: [...P(next).nightActors, a.playerId] });
+    next = patch(next, {
+      nightActors: [...P(next).nightActors, a.playerId],
+      wolfVotes: { ...P(next).wolfVotes, [a.playerId]: targetId },
+    });
     if (allNightActed(next)) next = resolveNight(next);
     return next;
   },
@@ -343,8 +347,7 @@ const lynchVote: ActionDef<WerewolfPublic, WerewolfPrivate> = {
       const role = getPriv(s, lynched)?.role ?? 'villager';
       lastDeaths = [...lastDeaths, { playerId: lynched, role, cause: 'lynched' }];
       eliminated = eliminate(eliminated, lynched);
-      revealedRoles = { ...revealedRoles, [lynched]: role };
-      // Lover dies of heartbreak
+      // Lynch does NOT reveal role publicly — roles stay secret until end of game
       const ld = applyLoverDeath(s, lynched, eliminated, lastDeaths, revealedRoles);
       eliminated = ld.eliminated;
       lastDeaths = ld.lastDeaths;
