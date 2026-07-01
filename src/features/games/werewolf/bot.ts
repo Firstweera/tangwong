@@ -9,6 +9,16 @@ type S = GameState<WerewolfPublic, WerewolfPrivate>;
 const P = (s: S) => s.public.data;
 const getPriv = (s: S, id: string) => s.private[id]?.data as WerewolfPrivate | undefined;
 
+// Deterministic hash: mixes all chars of id + day so bot_1/bot_2/bot_3 get
+// very different indices even though their IDs differ by only one digit.
+function pick<T>(items: T[], id: string, day: number): T {
+  let h = (day * 2654435761) >>> 0;
+  for (let i = 0; i < id.length; i++) {
+    h = (Math.imul(h ^ id.charCodeAt(i), 2654435761)) >>> 0;
+  }
+  return items[h % items.length];
+}
+
 // ─── nextBotAction ────────────────────────────────────────────────────────────
 // Returns the action the bot should take for `playerId`, or null if no bot
 // action is applicable right now.
@@ -35,12 +45,11 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
       if (packTarget) {
         return { type: 'WEREWOLF_KILL', playerId, payload: { targetId: packTarget } };
       }
-      // No consensus yet — pick a non-wolf target, varied by night to avoid patterns.
+      // No consensus yet — pick a non-wolf target, scrambled by ID + night.
       const targets = alivePlayers(s.room.players, pub.eliminatedPlayers)
         .filter(p => getPriv(s, p.id)?.team !== 'evil');
       if (targets.length === 0) return null;
-      const idx = pub.dayCount % targets.length;
-      return { type: 'WEREWOLF_KILL', playerId, payload: { targetId: targets[idx].id } };
+      return { type: 'WEREWOLF_KILL', playerId, payload: { targetId: pick(targets, playerId, pub.dayCount).id } };
     }
 
     if (pd.role === 'seer') {
@@ -52,18 +61,16 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
         ? unchecked
         : alivePlayers(s.room.players, pub.eliminatedPlayers).filter(p => p.id !== playerId);
       if (targets.length === 0) return null;
-      // Vary by day so seer doesn't always inspect in the same fixed order.
-      const idx = pub.dayCount % targets.length;
-      return { type: 'SEER_PEEK', playerId, payload: { targetId: targets[idx].id } };
+      return { type: 'SEER_PEEK', playerId, payload: { targetId: pick(targets, playerId, pub.dayCount).id } };
     }
 
     if (pd.role === 'doctor') {
       const alive = alivePlayers(s.room.players, pub.eliminatedPlayers);
       const canProtect = alive.filter(p => p.id !== pd.doctorLastProtected);
       if (canProtect.length === 0) return null;
-      // Prefer protecting self; otherwise protect with day-varied index.
+      // Prefer protecting self; otherwise pick with scrambled hash.
       const target = canProtect.find(p => p.id === playerId)
-        ?? canProtect[pub.dayCount % canProtect.length];
+        ?? pick(canProtect, playerId, pub.dayCount);
       return { type: 'DOCTOR_SAVE', playerId, payload: { targetId: target.id } };
     }
 
@@ -81,9 +88,7 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
       const targets = alivePlayers(s.room.players, pub.eliminatedPlayers)
         .filter(p => p.id !== playerId);
       if (targets.length === 0) return null;
-      // Rotate target each night to avoid a fixed pattern.
-      const idx = pub.dayCount % targets.length;
-      return { type: 'SILENCE', playerId, payload: { targetId: targets[idx].id } };
+      return { type: 'SILENCE', playerId, payload: { targetId: pick(targets, playerId, pub.dayCount).id } };
     }
   }
 
@@ -100,9 +105,6 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
     if (playerId in pub.votes) return null;
 
     const alive = alivePlayers(s.room.players, pub.eliminatedPlayers);
-    // Seed: last char code of playerId + dayCount so each bot picks differently each day.
-    const seed = playerId.charCodeAt(playerId.length - 1) + pub.dayCount;
-
     // Seer: vote for a known-evil target if alive.
     if (pd.role === 'seer') {
       const knownEvil = pd.seerHistory
@@ -112,20 +114,18 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
       if (knownEvil) return { type: 'LYNCH_VOTE', playerId, payload: { targetId: knownEvil } };
     }
 
-    // Wolf: vote for a living non-wolf to blend in (varied per day so pack doesn't all pick same).
+    // Wolf: blend in by voting a villager — scrambled so wolves pick different people.
     if (pd.team === 'evil') {
       const targets = alive.filter(p => getPriv(s, p.id)?.team !== 'evil');
       if (targets.length > 0) {
-        const idx = seed % targets.length;
-        return { type: 'LYNCH_VOTE', playerId, payload: { targetId: targets[idx].id } };
+        return { type: 'LYNCH_VOTE', playerId, payload: { targetId: pick(targets, playerId, pub.dayCount).id } };
       }
     }
 
-    // Default: vote for a player who is not self (varied by seat seed so bots scatter votes).
+    // Default: scatter votes using per-player-per-day hash so bots don't all vote clockwise.
     const others = alive.filter(p => p.id !== playerId);
     if (others.length === 0) return null;
-    const idx = seed % others.length;
-    return { type: 'LYNCH_VOTE', playerId, payload: { targetId: others[idx].id } };
+    return { type: 'LYNCH_VOTE', playerId, payload: { targetId: pick(others, playerId, pub.dayCount).id } };
   }
 
   // ── Host-gated phases ──────────────────────────────────────────────────────

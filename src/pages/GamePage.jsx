@@ -42,7 +42,7 @@ function buildRoomState(room, human, minPlayers) {
   };
 }
 
-export default function GamePage({ go, showToast, currentRoom, player }) {
+export default function GamePage({ go, showToast, currentRoom, player, leaveRoom }) {
   const human = player ?? ME;
   const onlineMode = Boolean(useSupabaseTransport && currentRoom?.code && currentRoom?.id !== 'solo');
   const realtime = useRealtimeGame(currentRoom?.code, human.id);
@@ -158,7 +158,7 @@ export default function GamePage({ go, showToast, currentRoom, player }) {
       roomState={roomState}
       players={players}
       meId={meId}
-      onExit={() => go(currentRoom ? 'lobby' : 'home')}
+      onExit={() => leaveRoom ? leaveRoom() : go('home')}
       onEnd={handleEnd}
       externalState={onlineMode ? realtime.state : null}
       onSubmitAction={onlineMode ? realtime.submitAction : undefined}
