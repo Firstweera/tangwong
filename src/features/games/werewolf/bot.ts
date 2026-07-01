@@ -30,12 +30,17 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
     if (pub.nightActors.includes(playerId)) return null;
 
     if (pd.role === 'werewolf') {
-      // Pick any living non-wolf target.
+      // Always agree with whatever target the pack has already committed to.
+      const packTarget = Object.values(pub.wolfVotes ?? {}).find(Boolean) ?? null;
+      if (packTarget) {
+        return { type: 'WEREWOLF_KILL', playerId, payload: { targetId: packTarget } };
+      }
+      // No consensus yet — pick a non-wolf target, varied by night to avoid patterns.
       const targets = alivePlayers(s.room.players, pub.eliminatedPlayers)
         .filter(p => getPriv(s, p.id)?.team !== 'evil');
       if (targets.length === 0) return null;
-      // Deterministic: pick the first target in player order.
-      return { type: 'WEREWOLF_KILL', playerId, payload: { targetId: targets[0].id } };
+      const idx = pub.dayCount % targets.length;
+      return { type: 'WEREWOLF_KILL', playerId, payload: { targetId: targets[idx].id } };
     }
 
     if (pd.role === 'seer') {
@@ -47,15 +52,18 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
         ? unchecked
         : alivePlayers(s.room.players, pub.eliminatedPlayers).filter(p => p.id !== playerId);
       if (targets.length === 0) return null;
-      return { type: 'SEER_PEEK', playerId, payload: { targetId: targets[0].id } };
+      // Vary by day so seer doesn't always inspect in the same fixed order.
+      const idx = pub.dayCount % targets.length;
+      return { type: 'SEER_PEEK', playerId, payload: { targetId: targets[idx].id } };
     }
 
     if (pd.role === 'doctor') {
       const alive = alivePlayers(s.room.players, pub.eliminatedPlayers);
       const canProtect = alive.filter(p => p.id !== pd.doctorLastProtected);
       if (canProtect.length === 0) return null;
-      // Prefer protecting self; otherwise protect first available.
-      const target = canProtect.find(p => p.id === playerId) ?? canProtect[0];
+      // Prefer protecting self; otherwise protect with day-varied index.
+      const target = canProtect.find(p => p.id === playerId)
+        ?? canProtect[pub.dayCount % canProtect.length];
       return { type: 'DOCTOR_SAVE', playerId, payload: { targetId: target.id } };
     }
 
@@ -64,6 +72,7 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
       const candidates = alivePlayers(s.room.players, pub.eliminatedPlayers)
         .filter(p => p.id !== playerId);
       if (candidates.length < 2) return null;
+      // Link two players that aren't both wolves when possible.
       return { type: 'CUPID_LINK', playerId, payload: { targetIds: [candidates[0].id, candidates[1].id] } };
     }
 
@@ -72,7 +81,9 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
       const targets = alivePlayers(s.room.players, pub.eliminatedPlayers)
         .filter(p => p.id !== playerId);
       if (targets.length === 0) return null;
-      return { type: 'SILENCE', playerId, payload: { targetId: targets[0].id } };
+      // Rotate target each night to avoid a fixed pattern.
+      const idx = pub.dayCount % targets.length;
+      return { type: 'SILENCE', playerId, payload: { targetId: targets[idx].id } };
     }
   }
 
@@ -89,6 +100,8 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
     if (playerId in pub.votes) return null;
 
     const alive = alivePlayers(s.room.players, pub.eliminatedPlayers);
+    // Seed: last char code of playerId + dayCount so each bot picks differently each day.
+    const seed = playerId.charCodeAt(playerId.length - 1) + pub.dayCount;
 
     // Seer: vote for a known-evil target if alive.
     if (pd.role === 'seer') {
@@ -99,18 +112,20 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
       if (knownEvil) return { type: 'LYNCH_VOTE', playerId, payload: { targetId: knownEvil } };
     }
 
-    // Wolf: vote for a living non-wolf to blend in.
+    // Wolf: vote for a living non-wolf to blend in (varied per day so pack doesn't all pick same).
     if (pd.team === 'evil') {
       const targets = alive.filter(p => getPriv(s, p.id)?.team !== 'evil');
       if (targets.length > 0) {
-        return { type: 'LYNCH_VOTE', playerId, payload: { targetId: targets[0].id } };
+        const idx = seed % targets.length;
+        return { type: 'LYNCH_VOTE', playerId, payload: { targetId: targets[idx].id } };
       }
     }
 
-    // Default: vote for the first player who is not self.
+    // Default: vote for a player who is not self (varied by seat seed so bots scatter votes).
     const others = alive.filter(p => p.id !== playerId);
     if (others.length === 0) return null;
-    return { type: 'LYNCH_VOTE', playerId, payload: { targetId: others[0].id } };
+    const idx = seed % others.length;
+    return { type: 'LYNCH_VOTE', playerId, payload: { targetId: others[idx].id } };
   }
 
   // ── Host-gated phases ──────────────────────────────────────────────────────
