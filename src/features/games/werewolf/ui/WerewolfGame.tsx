@@ -304,9 +304,6 @@ export function WerewolfGame({
 
     if (phase === 'dawn') {
       const deaths = pub.lastDeaths;
-      const roleLabel = (r: string) =>
-        r === 'werewolf' ? '🐺 หมาป่า' : r === 'seer' ? '👁️ ผู้พยากรณ์' : r === 'doctor' ? '💊 หมอ' :
-        r === 'cupid' ? '💘 กามเทพ' : r === 'spellcaster' ? '🤫 ผู้ร่ายคำสาป' : '🏡 ชาวบ้าน';
       return (
         <div className="col center pop">
           <span style={{ fontSize: 40, filter: 'drop-shadow(0 0 10px rgba(255,160,0,0.5))' }}>🌅</span>
@@ -315,14 +312,9 @@ export function WerewolfGame({
               ไม่มีใครตายคืนนี้ 😮
             </span>
           ) : deaths.length === 1 ? (
-            <>
-              <span className="th" style={{ fontWeight: 800, marginTop: 6, fontSize: 14, color: 'var(--evil)', textAlign: 'center' }}>
-                {byId(deaths[0].playerId)?.name ?? '???'} เสียชีวิต!
-              </span>
-              <span className="tiny" style={{ fontWeight: 700, marginTop: 2, color: 'var(--muted)' }}>
-                {roleLabel(deaths[0].role)}
-              </span>
-            </>
+            <span className="th" style={{ fontWeight: 800, marginTop: 6, fontSize: 14, color: 'var(--evil)', textAlign: 'center' }}>
+              {byId(deaths[0].playerId)?.name ?? '???'} เสียชีวิต!{deaths[0].cause === 'heartbreak' ? ' 💘' : ''}
+            </span>
           ) : (
             <>
               <span className="th" style={{ fontWeight: 800, marginTop: 6, fontSize: 13, color: 'var(--evil)', textAlign: 'center' }}>
@@ -330,7 +322,7 @@ export function WerewolfGame({
               </span>
               {deaths.slice(0, 2).map((d, idx) => (
                 <span key={idx} className="tiny" style={{ fontWeight: 700, marginTop: 1, color: 'var(--muted)', textAlign: 'center' }}>
-                  {byId(d.playerId)?.name ?? '???'} · {roleLabel(d.role)}{d.cause === 'heartbreak' ? ' 💘' : ''}
+                  {byId(d.playerId)?.name ?? '???'}{d.cause === 'heartbreak' ? ' 💘' : ''}
                 </span>
               ))}
             </>

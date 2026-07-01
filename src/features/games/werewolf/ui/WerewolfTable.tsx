@@ -77,8 +77,8 @@ export function WerewolfTable({
       );
     }
 
-    // Night: submitted ✓
-    if (phase === 'night' && nightActors.includes(id)) {
+    // Night: show ✓ only on own seat (hiding who else has acted prevents role deduction)
+    if (phase === 'night' && id === meId && nightActors.includes(id)) {
       return (
         <span className="seat-token" style={{ background: 'var(--success)', color: '#fff', fontSize: 13 }}>✓</span>
       );

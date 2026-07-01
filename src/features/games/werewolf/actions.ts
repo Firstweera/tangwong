@@ -40,7 +40,7 @@ function applyLoverDeath(
   return {
     eliminated: eliminate(eliminated, otherId),
     lastDeaths: [...lastDeaths, { playerId: otherId, role: otherRole, cause: 'heartbreak' }],
-    revealedRoles: { ...revealedRoles, [otherId]: otherRole },
+    revealedRoles, // heartbreak at night — role not publicly revealed
   };
 }
 
@@ -118,7 +118,7 @@ function resolveNight(s: State): State {
     const killedRole = getPriv(s, killed)?.role ?? 'villager';
     lastDeaths.push({ playerId: killed, role: killedRole, cause: 'killed' });
     eliminated = eliminate(eliminated, killed);
-    revealedRoles[killed] = killedRole;
+    // Night kills do NOT reveal role publicly
     // Lover dies of heartbreak
     const ld = applyLoverDeath(s, killed, eliminated, lastDeaths, revealedRoles);
     eliminated = ld.eliminated;

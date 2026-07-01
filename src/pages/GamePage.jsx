@@ -49,7 +49,9 @@ export default function GamePage({ go, showToast, currentRoom, player }) {
   const meId = onlineMode ? (realtime.meId ?? human.id) : human.id;
   const startRequested = useRef(false);
 
-  const gameId = currentRoom?.gameId ?? 'avalon';
+  // Prefer the authoritative server room once loaded (non-host joins via code,
+  // so currentRoom.gameId may be stale until the realtime room syncs).
+  const gameId = (onlineMode && realtime.room?.gameId) || currentRoom?.gameId || 'avalon';
   const entry = getGameEntry(gameId);
   const minPlayers = entry?.config.minPlayers ?? 5;
 
