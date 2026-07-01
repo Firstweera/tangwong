@@ -84,18 +84,19 @@ export default function GamePage({ go, showToast, currentRoom, player, leaveRoom
     };
 
     if (gameId === 'werewolf') {
-      // Dead players: publicly known roles via revealedRoles.
-      // Private state covers all players offline; self-only online.
-      // Remaining gaps: infer wolf vs villager from winner list.
-      const revealedRoles = state.public.data.revealedRoles ?? {};
+      // Server writes reveal:{playerId:{role,team}} into public_data on game end.
+      // In online mode this covers ALL players; offline it's empty (use private instead).
+      const reveal = state.public.data.reveal ?? {};
       const winnerIds = new Set(w.winners ?? []);
       const roles = {};
-      for (const [pid, role] of Object.entries(revealedRoles)) {
-        roles[pid] = { role, team: role === 'werewolf' ? 'evil' : 'good' };
+      for (const [pid, r] of Object.entries(reveal)) {
+        roles[pid] = { role: r.role, team: r.team };
       }
+      // Own private state always available (and authoritative for self)
       Object.values(state.private).forEach(pp => {
         if (pp.data?.role) roles[pp.playerId] = { role: pp.data.role, team: pp.data.team };
       });
+      // Fallback inference for offline / any remaining gap
       players.forEach(p => {
         if (!roles[p.id]) {
           const isWolf = w.winnerTeam === 'evil' && winnerIds.has(p.id);

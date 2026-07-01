@@ -480,19 +480,27 @@ export function WerewolfGame({
                 ))}
               </div>
             )}
-            <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', color: 'var(--evil)' }}>
-              🐺 แตะผู้เล่นเพื่อเลือกเหยื่อ
+            <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', color: 'var(--muted)' }}>
+              {nightTarget ? `เลือก ${byId(nightTarget)?.name ?? '???'} — ยืนยันหรือเปลี่ยนใจ` : '🐺 แตะผู้เล่นเพื่อเลือกเหยื่อ'}
             </span>
-            {nightTarget
-              ? (
-                <button className="btn btn-evil btn-lg btn-block" disabled={busy} onClick={() => { act('WEREWOLF_KILL', { targetId: nightTarget }); setNightTarget(null); }}>
+            <div className="row gap10">
+              {nightTarget && (
+                <button className="btn btn-evil btn-lg" style={{ flex: 1.4 }} disabled={busy}
+                  onClick={() => { act('WEREWOLF_KILL', { targetId: nightTarget }); setNightTarget(null); }}>
                   <span className="sheen" />
-                  <Icon name="sword" size={19} stroke={2.5} />
-                  <span className="th">ฆ่า {byId(nightTarget)?.name ?? '???'}</span>
+                  <Icon name="sword" size={18} stroke={2.5} />
+                  <span className="th">โหวตฆ่า</span>
                 </button>
-              )
-              : <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">เลือกเหยื่อจากตาราง</span></button>
-            }
+              )}
+              <button
+                className={`btn ${nightTarget ? 'btn-glass' : 'btn-ghost'} btn-lg`}
+                style={{ flex: nightTarget ? 1 : undefined, width: nightTarget ? undefined : '100%' }}
+                onClick={() => setNightTarget(null)}
+                disabled={!nightTarget}
+              >
+                <span className="th">{nightTarget ? 'เปลี่ยนใจ' : 'เลือกเหยื่อจากตาราง'}</span>
+              </button>
+            </div>
           </div>
         );
       }
