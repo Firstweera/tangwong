@@ -15,7 +15,7 @@ import type { ReactNode } from 'react';
 import { Icon, Confetti } from '@/components/ui';
 import { IconButton } from '@/components/layout';
 import { ChatPanel } from '@/features/lobby';
-import { useChat } from '@/features/chat';
+import { useChat, useUnreadChat } from '@/features/chat';
 import { useState } from 'react';
 import type { WinResult } from '../engine/types';
 import type { Player } from '@/types';
@@ -78,6 +78,7 @@ export function GameShell({
 }: GameShellProps) {
   const [chatOpen, setChatOpen] = useState(false);
   const chat = useChat(roomId, meId);
+  const unreadChatCount = useUnreadChat(chat.messages, meId, chatOpen);
   const goodWin = winner?.winnerTeam === 'good';
 
   if (!hasState) {
@@ -111,16 +112,27 @@ export function GameShell({
           )}
           {extraChips}
         </div>
-        <IconButton onClick={() => setChatOpen(true)} aria-label="เปิดแชต" style={{ width: 40, height: 40, borderRadius: 12 }}>
-          <Icon name="chat" size={18} />
-        </IconButton>
+        <div className="chat-icon-wrap">
+          <IconButton
+            onClick={() => setChatOpen(true)}
+            aria-label={unreadChatCount > 0 ? `เปิดแชต มี ${unreadChatCount} ข้อความใหม่` : 'เปิดแชต'}
+            style={{ width: 40, height: 40, borderRadius: 12 }}
+          >
+            <Icon name="chat" size={18} />
+          </IconButton>
+          {unreadChatCount > 0 && (
+            <span className="chat-unread-badge" aria-hidden="true">
+              {unreadChatCount > 99 ? '99+' : unreadChatCount}
+            </span>
+          )}
+        </div>
       </div>
 
       {track}
 
       <div className="game-shell-content">
         <div className="game-shell-table">{table}</div>
-        {roleStrip}
+        <div className="game-shell-role">{roleStrip}</div>
       </div>
 
       <div className="pad-x game-shell-action">

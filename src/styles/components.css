@@ -130,13 +130,22 @@ button.werewolf-seat-button:focus-visible {
 /* In-game shell: the board and private details may scroll, but the phase action
    remains thumb-reachable and never gets pushed below the viewport. */
 .game-shell { overflow: hidden; }
-.game-shell-topbar { flex: 0 0 auto; padding-bottom: 6px; }
+.game-shell-topbar {
+  flex: 0 0 auto;
+  padding-top: max(14px, env(safe-area-inset-top));
+  padding-bottom: 6px;
+}
 .game-shell-content {
-  flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex: 1 1 auto; flex-direction: column;
+  min-height: 0; overflow-y: auto; overflow-x: hidden;
   overscroll-behavior: contain; scrollbar-width: none;
 }
 .game-shell-content::-webkit-scrollbar { display: none; }
-.game-shell-table { display: flex; flex: 1 0 350px; min-height: 320px; }
+.game-shell-table {
+  display: flex; flex: 1 0 350px; min-height: 320px;
+  padding-bottom: 8px;
+}
+.game-shell-role { flex: 0 0 auto; }
 .game-shell-action {
   flex: 0 0 auto; padding-top: 8px;
   padding-bottom: max(18px, env(safe-area-inset-bottom));
@@ -156,6 +165,71 @@ button.werewolf-seat-button:focus-visible {
   .game-shell-action { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 }
 
+/* Checkpoint — compact mobile command surface. */
+.checkpoint-track { flex: 0 0 auto; padding-top: 4px; padding-bottom: 8px; }
+.checkpoint-progress-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+.checkpoint-progress-row > :last-child { text-align: right; }
+.checkpoint-kicker { color: var(--muted); font-size: 11px; font-weight: 800; }
+.checkpoint-phase { color: var(--text); font-size: 13px; font-weight: 900; }
+.checkpoint-progress { height: 3px; margin-top: 8px; overflow: hidden; border-radius: 2px; background: var(--border); }
+.checkpoint-progress > span { display: block; height: 100%; background: var(--accent); transition: width .35s ease; }
+.checkpoint-board { display: flex; width: 100%; min-width: 0; flex-direction: column; gap: 12px; padding-top: 4px; padding-bottom: 8px; }
+.game-shell-table:has(.checkpoint-board) { flex: 0 0 auto; min-height: 0; }
+.checkpoint-gatekeeper { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; min-width: 0; padding: 10px 12px; border: 1px solid var(--border-2); border-radius: 8px; background: var(--surface); }
+.checkpoint-gatekeeper > div:nth-child(2) { display: flex; min-width: 0; flex-direction: column; gap: 1px; }
+.checkpoint-gatekeeper strong { overflow: hidden; font-size: 16px; text-overflow: ellipsis; white-space: nowrap; }
+.checkpoint-seals { min-width: 48px; padding: 6px 8px; border-radius: 7px; background: var(--surface-2); color: var(--text); font-weight: 900; text-align: center; }
+.checkpoint-hand-section { display: flex; flex-direction: column; gap: 8px; }
+.checkpoint-section-title { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 12px; }
+.checkpoint-section-title strong { color: var(--text); font-size: 14px; }
+.checkpoint-hand { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.checkpoint-good-card { display: flex; min-width: 0; min-height: 94px; padding: 8px 5px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; transition: border-color .15s, background .15s, transform .15s; }
+.checkpoint-good-card > span { font-size: 24px; line-height: 1; }
+.checkpoint-good-card strong { width: 100%; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.checkpoint-good-card small { color: var(--muted); font-size: 9px; font-weight: 700; line-height: 1.25; }
+.checkpoint-good-card[data-illegal="true"] small { color: var(--evil); }
+.checkpoint-good-card[data-selected="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, var(--surface)); transform: translateY(-2px); }
+.checkpoint-declare-label { margin-top: 2px; color: var(--muted); font-size: 11px; font-weight: 800; }
+.checkpoint-select { width: 100%; min-height: 42px; padding: 0 12px; border: 1px solid var(--border-2); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 14px; font-weight: 800; }
+.checkpoint-merchant-list { display: flex; flex-direction: column; gap: 7px; }
+.checkpoint-merchant { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; min-width: 0; min-height: 62px; padding: 8px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.checkpoint-merchant[data-resolved="true"] { opacity: .75; }
+.checkpoint-merchant-copy { display: flex; min-width: 0; flex-direction: column; gap: 1px; }
+.checkpoint-merchant-copy strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.checkpoint-merchant-copy > span { overflow: hidden; color: var(--muted); font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.checkpoint-merchant-meta { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 900; }
+.checkpoint-good { color: var(--good) !important; }
+.checkpoint-bad { color: var(--evil) !important; }
+.checkpoint-decisions { display: flex; grid-column: 1 / -1; gap: 7px; padding-top: 5px; border-top: 1px solid var(--border); }
+.checkpoint-icon-action { display: grid; min-height: 38px; border: 1px solid var(--border); border-radius: 8px; flex: 1; place-items: center; font-size: 17px; font-weight: 900; }
+.checkpoint-icon-action.pass { background: color-mix(in srgb, var(--good) 12%, var(--surface)); color: var(--good); }
+.checkpoint-icon-action.inspect { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--accent); }
+.checkpoint-icon-action:disabled { opacity: .35; }
+.checkpoint-rumor-button { width: 30px; height: 30px; padding: 0; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-2); }
+.checkpoint-wallet { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; padding-top: 9px; padding-bottom: 5px; border-top: 1px solid var(--border); }
+.checkpoint-wallet > span { display: flex; flex-direction: column; align-items: center; }
+.checkpoint-wallet small { color: var(--muted); font-size: 10px; font-weight: 700; }
+.checkpoint-wallet strong { color: var(--text); font-size: 15px; }
+.checkpoint-primary { width: 100%; }
+.checkpoint-offer-bar { display: grid; grid-template-columns: 42px 1fr 42px minmax(108px, 1.2fr); gap: 6px; align-items: stretch; }
+.checkpoint-offer-bar > button:not(.btn) { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 22px; }
+.checkpoint-offer-bar > div { display: flex; min-width: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); flex-direction: column; align-items: center; justify-content: center; }
+.checkpoint-offer-bar small { color: var(--muted); font-size: 9px; font-weight: 700; }
+.checkpoint-offer-bar strong { font-size: 14px; white-space: nowrap; }
+.checkpoint-offer-bar .btn { min-width: 0; padding-inline: 8px; border-radius: 8px; font-size: 12px; }
+.checkpoint-auto { border: 1px solid var(--border); background: var(--surface); color: var(--muted); }
+.checkpoint-scoreboard { display: flex; flex-direction: column; gap: 5px; }
+.checkpoint-scoreboard > div { display: grid; grid-template-columns: 20px auto 1fr auto; align-items: center; gap: 8px; min-height: 44px; padding: 5px 9px; border-bottom: 1px solid var(--border); }
+.checkpoint-scoreboard span { color: var(--muted); font-size: 12px; font-weight: 900; }
+.checkpoint-scoreboard strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.checkpoint-scoreboard b { color: var(--accent); font-size: 15px; }
+
+@media (max-height: 720px) {
+  .checkpoint-good-card { min-height: 80px; }
+  .checkpoint-good-card > span { font-size: 21px; }
+  .checkpoint-gatekeeper { padding-block: 7px; }
+}
+
 /* quest pips */
 .quest-track { display: flex; align-items: center; gap: 8px; }
 .qpip {
@@ -170,10 +244,70 @@ button.werewolf-seat-button:focus-visible {
 .qpip.current { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 3px rgba(255,159,67,0.16); animation: pulseRing 1.8s ease-in-out infinite; }
 
 /* chat */
-.bubble { max-width: 78%; padding: 8px 15px 9px; border-radius: 15px; font-size: 13px; line-height: 1.4; }
+.bubble {
+  max-width: 78%; padding: 8px 15px 9px; border-radius: 15px;
+  font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; white-space: pre-wrap;
+}
 .bubble-them { background: var(--surface-3); border-top-left-radius: 5px; }
 .bubble-me { background: var(--grad); color: #fff; border-top-right-radius: 5px; align-self: flex-end; }
 .bubble-sys { align-self: center; background: var(--surface-2); color: var(--muted); font-size: 11.5px; padding: 4px 12px; border-radius: 10px; }
+.chat-overlay {
+  position: absolute; inset: 0; z-index: 70;
+  display: flex; flex-direction: column; justify-content: flex-end;
+}
+.chat-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
+.chat-panel {
+  position: relative; display: flex; flex-direction: column;
+  height: 72%; min-height: 380px; max-height: 620px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  border-radius: 26px 26px 0 0;
+}
+.chat-panel-header { flex: 0 0 auto; padding: 12px 18px 6px; }
+.chat-stream {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 8px 16px; overscroll-behavior: contain;
+}
+.chat-composer { flex: 0 0 auto; padding-top: 8px; }
+.chat-message-incoming { width: 100%; align-items: flex-start; }
+.chat-message-avatar { flex: 0 0 28px; padding-top: 20px; }
+.chat-message-body { align-items: flex-start; max-width: min(78%, 340px); }
+.chat-message-meta { min-height: 14px; max-width: 100%; }
+.chat-message-name {
+  min-width: 0; max-width: 210px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; font-weight: 800; color: var(--text);
+}
+.chat-message-time { flex: 0 0 auto; color: var(--muted); }
+.chat-message-bubble { width: fit-content; max-width: 100%; text-align: left; }
+.chat-icon-wrap { position: relative; flex: 0 0 auto; overflow: visible; }
+.chat-unread-badge {
+  position: absolute; top: -6px; right: -6px; z-index: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+  border: 2px solid var(--surface-solid); background: var(--evil); color: #fff;
+  font-size: 10px; line-height: 1; font-weight: 900;
+  box-shadow: 0 5px 12px rgba(255,92,108,0.42);
+  animation: chatBadgeIn 180ms var(--ease-out);
+}
+
+@keyframes chatBadgeIn {
+  from { opacity: 0; transform: scale(0.65); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-unread-badge { animation: none; }
+}
+
+@media (max-width: 600px) {
+  .chat-panel {
+    width: 100%; height: 100%; min-height: 0; max-height: none;
+    border-radius: 0;
+  }
+  .chat-backdrop { display: none; }
+  .chat-panel-header { padding-top: max(10px, env(safe-area-inset-top)); }
+  .chat-stream { padding-inline: 18px; }
+  .chat-message-body { max-width: calc(100% - 36px); }
+}
 
 /* role card */
 .role-card { position: relative; border-radius: 22px; overflow: hidden; padding: 18px; border: 1px solid var(--border-2); }
