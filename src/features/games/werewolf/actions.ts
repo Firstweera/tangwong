@@ -67,13 +67,20 @@ function allNightActed(s: State): boolean {
 function resolveNight(s: State): State {
   const pub = P(s);
 
-  // Collect wolf target
-  let wolfTarget: string | null = null;
-  for (const p of s.room.players) {
-    if (pub.eliminatedPlayers.includes(p.id)) continue;
-    const pd = getPriv(s, p.id);
-    if (pd?.role === 'werewolf' && pd.wolfTarget) { wolfTarget = pd.wolfTarget; break; }
+  // Collect wolf kill target via plurality of wolfVotes (each wolf votes independently)
+  const wolfVotesCast = pub.wolfVotes ?? {};
+  const wolfTally: Record<string, number> = {};
+  for (const tid of Object.values(wolfVotesCast)) {
+    wolfTally[tid] = (wolfTally[tid] ?? 0) + 1;
   }
+  let wolfTarget: string | null = null;
+  let wolfTop = 0;
+  let wolfTied = false;
+  for (const [tid, cnt] of Object.entries(wolfTally)) {
+    if (cnt > wolfTop) { wolfTop = cnt; wolfTarget = tid; wolfTied = false; }
+    else if (cnt === wolfTop) { wolfTied = true; }
+  }
+  if (wolfTied) wolfTarget = null; // tie → no kill this night
 
   // Doctor
   let doctorTarget: string | null = null;
@@ -168,15 +175,6 @@ const werewolfKill: ActionDef<WerewolfPublic, WerewolfPrivate> = {
     if (!targetId) return { valid: false, error: 'No target specified' };
     if (pub.eliminatedPlayers.includes(targetId) || !s.room.players.some(p => p.id === targetId)) {
       return { valid: false, error: 'Invalid target' };
-    }
-    for (const p of s.room.players) {
-      if (p.id === a.playerId || pub.eliminatedPlayers.includes(p.id)) continue;
-      const pd = getPriv(s, p.id);
-      if (pd?.role === 'werewolf' && pub.nightActors.includes(p.id)) {
-        if (pd.wolfTarget !== null && pd.wolfTarget !== targetId) {
-          return { valid: false, error: 'Wolves must agree — another wolf chose a different target' };
-        }
-      }
     }
     return { valid: true };
   },
@@ -332,12 +330,15 @@ const lynchVote: ActionDef<WerewolfPublic, WerewolfPrivate> = {
     for (const v of Object.values(newVotes)) {
       if (v) tally[v] = (tally[v] ?? 0) + 1;
     }
-    const voterCount = Object.keys(newVotes).length;
-    const majority = Math.floor(voterCount / 2) + 1;
+    // Plurality: most votes wins; tie → no lynch
     let lynched: string | null = null;
+    let topVotes = 0;
+    let lynchTied = false;
     for (const [id, count] of Object.entries(tally)) {
-      if (count >= majority) { lynched = id; break; }
+      if (count > topVotes) { topVotes = count; lynched = id; lynchTied = false; }
+      else if (count === topVotes) { lynchTied = true; }
     }
+    if (lynchTied) lynched = null;
 
     let eliminated = P(s).eliminatedPlayers;
     let lastDeaths: DeathRecord[] = [];

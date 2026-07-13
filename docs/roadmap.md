@@ -1357,6 +1357,38 @@ Notes:
 
 ---
 
+### B9 - Werewolf mobile UX/UI optimization pass
+✅ Completed — 2026-07-13
+
+Files:
+- `src/components/layout/BottomBar.jsx`
+- `src/features/games/ui/GameShell.tsx`
+- `src/features/games/werewolf/ui/WerewolfGame.tsx`
+- `src/features/games/werewolf/ui/WerewolfTable.tsx`
+- `src/styles/components.css`
+
+Notes:
+- split the shared game shell into fixed top/status/action regions with a
+  scrollable board + private-role area, keeping the current phase CTA visible
+  when role details expand or action copy grows on short mobile screens
+- player seats are now interactive only when the current player can legally
+  select a target; actionable seats expose button semantics, focus treatment,
+  and `aria-pressed` selection state
+- target selection now has a clear ring + check marker; Cupid displays numbered
+  first/second selections and highlights both linked targets
+- standardized Werewolf phase hints and status-strip sizing for faster scanning
+- fixed lobby player presence/bot badges painting through the ready/start footer
+  by giving the shared bottom action bar its own layer below chat and overlays
+- verified the role-reveal and night-target flow in the mobile browser with no
+  console errors; `npm run build` and `tsc --noEmit` pass
+
+Follow-up:
+- `npm run verify:werewolf` currently passes 88/89; reconcile the existing
+  `actions.ts` wolf-target agreement behavior with its static assertion
+- repeat a device pass for Cupid's two-target interaction and day-vote phase
+
+---
+
 # Epic 7 - Salem 1692
 
 Status:

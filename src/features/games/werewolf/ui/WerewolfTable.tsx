@@ -37,7 +37,10 @@ export interface WerewolfTableProps {
   phase: string;
   // Local selection state (for the acting player's current pick)
   nightTarget: string | null;
+  cupidSecond?: string | null;
   voteTarget: string | null;
+  /** Seats that can perform the current phase action. Others remain readable but inert. */
+  selectablePlayerIds?: string[];
 
   onSeatTap?: (playerId: string) => void;
   center?: ReactNode;
@@ -47,6 +50,7 @@ export function WerewolfTable({
   players, meId, eliminatedPlayers, revealedRoles, nightActors, votes,
   seerHistory, wolfSees, myRole, doctorLastProtected,
   phase, nightTarget, voteTarget, onSeatTap, center,
+  cupidSecond = null, selectablePlayerIds = [],
 }: WerewolfTableProps) {
   const n = players.length;
   const isNight = phase === 'night' || phase === 'roleReveal';
@@ -167,7 +171,7 @@ export function WerewolfTable({
         if (!dead) {
           if (voteTarget === p.id && isDayVote) {
             ring = 'var(--evil)';
-          } else if (nightTarget === p.id && phase === 'night') {
+          } else if ((nightTarget === p.id || cupidSecond === p.id) && phase === 'night') {
             ring = 'var(--primary)';
           } else if (wolfSees.includes(p.id) && myRole === 'werewolf') {
             // Private: fellow wolf — subtle evil ring
@@ -178,8 +182,29 @@ export function WerewolfTable({
           }
         }
 
-        const isSelected = voteTarget === p.id || nightTarget === p.id;
-        const tappable = !dead && !!onSeatTap;
+        const selectionOrder = nightTarget === p.id ? 1 : cupidSecond === p.id ? 2 : null;
+        const isSelected = voteTarget === p.id || selectionOrder !== null;
+        const tappable = !dead && !!onSeatTap && selectablePlayerIds.includes(p.id);
+        const seatContent = (
+          <>
+            <Avatar
+              who={p}
+              size={me ? 58 : 52}
+              ring={ring}
+              style={{
+                cursor: tappable ? 'pointer' : 'default',
+                transition: 'transform 0.18s var(--ease-out)',
+                transform: isSelected ? 'scale(1.07)' : 'none',
+              }}
+            />
+            {badge(p)}
+            {isSelected && (
+              <span className="seat-selection-token" aria-hidden="true">
+                {myRole === 'cupid' && phase === 'night' ? selectionOrder : '✓'}
+              </span>
+            )}
+          </>
+        );
 
         return (
           <div
@@ -193,22 +218,19 @@ export function WerewolfTable({
               pointerEvents: dead ? 'none' : undefined,
             }}
           >
-            <div
-              style={{ position: 'relative' }}
-              onClick={() => tappable && onSeatTap!(p.id)}
-            >
-              <Avatar
-                who={p}
-                size={me ? 58 : 52}
-                ring={ring}
-                style={{
-                  cursor: tappable ? 'pointer' : 'default',
-                  transition: 'transform 0.18s var(--ease-out)',
-                  transform: isSelected ? 'scale(1.07)' : 'none',
-                }}
-              />
-              {badge(p)}
-            </div>
+            {tappable ? (
+              <button
+                type="button"
+                className="werewolf-seat-button"
+                aria-label={`${isSelected ? 'ยกเลิกการเลือก' : 'เลือก'} ${me ? 'ตัวคุณ' : p.name}`}
+                aria-pressed={isSelected}
+                onClick={() => onSeatTap?.(p.id)}
+              >
+                {seatContent}
+              </button>
+            ) : (
+              <div className="werewolf-seat-button" aria-hidden="true">{seatContent}</div>
+            )}
             <span
               className="ring-name th"
               style={{

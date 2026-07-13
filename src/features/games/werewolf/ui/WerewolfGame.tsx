@@ -221,14 +221,24 @@ export function WerewolfGame({
     }
   };
 
+  const selectablePlayerIds = pub
+    ? players
+      .filter(p => {
+        if (pub.eliminatedPlayers.includes(p.id)) return false;
+        if (phase === 'dayVote') return !iEliminated && !iVoted;
+        if (phase !== 'night' || iEliminated || iActedNight) return false;
+        if (myPriv?.role === 'werewolf' || myPriv?.role === 'seer') return p.id !== meId;
+        if (myPriv?.role === 'doctor' || myPriv?.role === 'spellcaster') return true;
+        return myPriv?.role === 'cupid' && pub.dayCount === 1;
+      })
+      .map(p => p.id)
+    : [];
+
   // ─── Track strip ─────────────────────────────────────────────────────────────
   const track = pub ? (
-    <div
-      className="row between pad-x"
-      style={{ paddingBottom: 8, alignItems: 'center', gap: 8 }}
-    >
+    <div className="row between pad-x werewolf-track">
       <span
-        className="chip"
+        className="chip werewolf-status-chip"
         style={{
           background: isNight ? 'rgba(60,20,140,0.35)' : isDawn ? 'rgba(255,140,0,0.18)' : 'var(--surface)',
           borderColor: timerUrgent ? 'var(--evil)' : timerWarning ? 'var(--accent)' : isNight ? 'rgba(100,60,200,0.5)' : 'var(--border-2)',
@@ -241,8 +251,8 @@ export function WerewolfGame({
         {' '}
         {isNight ? 'คืนที่' : 'วันที่'} {pub.dayCount}
       </span>
-      <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-      <span className="chip" style={{ background: 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>
+      <div className="werewolf-track-divider" />
+      <span className="chip werewolf-status-chip" style={{ background: 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>
         👥 {aliveCount} รอด · 💀 {pub.eliminatedPlayers.length}
       </span>
     </div>
@@ -480,7 +490,7 @@ export function WerewolfGame({
                 ))}
               </div>
             )}
-            <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', color: 'var(--muted)' }}>
+            <span className="game-action-hint">
               {nightTarget ? `เลือก ${byId(nightTarget)?.name ?? '???'} — ยืนยันหรือเปลี่ยนใจ` : '🐺 แตะผู้เล่นเพื่อเลือกเหยื่อ'}
             </span>
             <div className="row gap10">
@@ -508,7 +518,7 @@ export function WerewolfGame({
       if (role === 'seer') {
         return (
           <div className="col gap8">
-            <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', color: 'var(--primary)' }}>
+            <span className="game-action-hint" style={{ color: 'var(--primary)' }}>
               👁️ แตะผู้เล่นเพื่อตรวจสอบ
             </span>
             {nightTarget
@@ -529,7 +539,7 @@ export function WerewolfGame({
         const isRepeat = nightTarget === myPriv?.doctorLastProtected;
         return (
           <div className="col gap8">
-            <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', color: 'var(--success)' }}>
+            <span className="game-action-hint" style={{ color: 'var(--success)' }}>
               💊 แตะผู้เล่นเพื่อปกป้อง (รวมตัวเอง)
             </span>
             {nightTarget
@@ -553,7 +563,7 @@ export function WerewolfGame({
         const both = nightTarget && cupidSecond;
         return (
           <div className="col gap8">
-            <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', color: 'var(--primary)' }}>
+            <span className="game-action-hint" style={{ color: 'var(--primary)' }}>
               💘 แตะผู้เล่น 2 คนให้ตกหลุมรัก
             </span>
             {both ? (
@@ -585,7 +595,7 @@ export function WerewolfGame({
       if (role === 'spellcaster') {
         return (
           <div className="col gap8">
-            <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', color: 'var(--primary)' }}>
+            <span className="game-action-hint" style={{ color: 'var(--primary)' }}>
               🤫 แตะผู้เล่นเพื่อสาปใบ้
             </span>
             {nightTarget ? (
@@ -656,7 +666,7 @@ export function WerewolfGame({
       if (iVoted) return <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">โหวตแล้ว — รอคนอื่น...</span></button>;
       return (
         <div className="col gap8">
-          <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', color: 'var(--muted)' }}>
+          <span className="game-action-hint">
             {voteTarget ? `เลือก ${byId(voteTarget)?.name ?? '???'} — ยืนยันหรือเปลี่ยนใจ` : 'แตะผู้เล่นเพื่อเลือกโหวต'}
           </span>
           <div className="row gap10">
@@ -754,7 +764,9 @@ export function WerewolfGame({
           doctorLastProtected={myPriv?.doctorLastProtected ?? null}
           phase={phase}
           nightTarget={nightTarget}
+          cupidSecond={cupidSecond}
           voteTarget={voteTarget}
+          selectablePlayerIds={selectablePlayerIds}
           onSeatTap={seatTap}
           center={center}
         />

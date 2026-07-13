@@ -7,6 +7,7 @@ export function BottomBar({ children, paddingBottom = 26 }) {
       className="pad-x"
       style={{
         position: 'absolute', left: 0, right: 0, bottom: 0,
+        zIndex: 20,
         paddingTop: 12, paddingBottom,
         background: 'linear-gradient(transparent, var(--bg) 32%)',
       }}

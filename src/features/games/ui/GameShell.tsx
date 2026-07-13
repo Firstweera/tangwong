@@ -92,11 +92,11 @@ export function GameShell({
   }
 
   return (
-    <div className="screen screen-anim" style={{ overflow: 'hidden' }}>
+    <div className="screen screen-anim game-shell">
       {winner && goodWin && <Confetti />}
 
       {/* top bar */}
-      <div className="row between pad-x pad-top" style={{ paddingBottom: 6 }}>
+      <div className="row between pad-x pad-top game-shell-topbar">
         <IconButton onClick={onExit} aria-label="ออกจากเกม" style={{ width: 40, height: 40, borderRadius: 12 }}>
           <Icon name="exit" size={18} />
         </IconButton>
@@ -117,10 +117,13 @@ export function GameShell({
       </div>
 
       {track}
-      {table}
-      {roleStrip}
 
-      <div className="pad-x" style={{ paddingBottom: 24 }}>
+      <div className="game-shell-content">
+        <div className="game-shell-table">{table}</div>
+        {roleStrip}
+      </div>
+
+      <div className="pad-x game-shell-action">
         {actionBar}
       </div>
 
