@@ -31,6 +31,7 @@ export interface WerewolfTableProps {
   // Private state (only set when this player's private data is available)
   seerHistory: WerewolfPrivate['seerHistory'];
   wolfSees: string[];
+  wolfVoteTally: Record<string, number>;
   myRole: WerewolfRole | null;
   doctorLastProtected: string | null;
 
@@ -48,7 +49,7 @@ export interface WerewolfTableProps {
 
 export function WerewolfTable({
   players, meId, eliminatedPlayers, revealedRoles, nightActors, votes,
-  seerHistory, wolfSees, myRole, doctorLastProtected,
+  seerHistory, wolfSees, wolfVoteTally, myRole, doctorLastProtected,
   phase, nightTarget, voteTarget, onSeatTap, center,
   cupidSecond = null, selectablePlayerIds = [],
 }: WerewolfTableProps) {
@@ -84,6 +85,19 @@ export function WerewolfTable({
     if (phase === 'night' && id === meId && nightActors.includes(id)) {
       return (
         <span className="seat-token" style={{ background: 'var(--success)', color: '#fff', fontSize: 13 }}>✓</span>
+      );
+    }
+
+    // Private pack tally — visible only because the wolf UI receives its own
+    // owner-protected private slice.
+    if (phase === 'night' && myRole === 'werewolf' && (wolfVoteTally[id] ?? 0) > 0) {
+      return (
+        <span className="seat-token" style={{
+          background: 'var(--evil)', color: '#fff',
+          fontWeight: 900, fontSize: 12, minWidth: 22,
+        }}>
+          {wolfVoteTally[id]}
+        </span>
       );
     }
 

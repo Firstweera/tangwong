@@ -9,14 +9,50 @@ type S = GameState<WerewolfPublic, WerewolfPrivate>;
 const P = (s: S) => s.public.data;
 const getPriv = (s: S, id: string) => s.private[id]?.data as WerewolfPrivate | undefined;
 
-// Deterministic hash: mixes all chars of id + day so bot_1/bot_2/bot_3 get
-// very different indices even though their IDs differ by only one digit.
-function pick<T>(items: T[], id: string, day: number): T {
+function hashFor(id: string, day: number): number {
   let h = (day * 2654435761) >>> 0;
   for (let i = 0; i < id.length; i++) {
     h = (Math.imul(h ^ id.charCodeAt(i), 2654435761)) >>> 0;
   }
-  return items[h % items.length];
+  return h;
+}
+
+function pick<T>(items: T[], id: string, day: number): T {
+  return items[hashFor(id, day) % items.length];
+}
+
+/** Shared daily ranking makes bots form voting blocs instead of scattering. */
+function rankBySuspicion<T extends { id: string }>(items: T[], cohort: string, day: number): T[] {
+  return [...items].sort((a, b) => hashFor(`${cohort}:${a.id}`, day) - hashFor(`${cohort}:${b.id}`, day));
+}
+
+function tallyTargets(targets: Array<string | null | undefined>): Record<string, number> {
+  const tally: Record<string, number> = {};
+  for (const id of targets) {
+    if (id) tally[id] = (tally[id] ?? 0) + 1;
+  }
+  return tally;
+}
+
+function leadingCandidate<T extends { id: string }>(
+  candidates: T[],
+  tally: Record<string, number>,
+  cohort: string,
+  day: number,
+): { target: T; count: number } | null {
+  const topCount = candidates.reduce((top, p) => Math.max(top, tally[p.id] ?? 0), 0);
+  if (topCount === 0) return null;
+  const leaders = candidates.filter(p => (tally[p.id] ?? 0) === topCount);
+  return { target: pick(leaders, cohort, day), count: topCount };
+}
+
+function currentWolfTally(s: S): Record<string, number> {
+  const alive = alivePlayers(s.room.players, P(s).eliminatedPlayers);
+  return tallyTargets(
+    alive
+      .filter(p => getPriv(s, p.id)?.role === 'werewolf')
+      .map(p => getPriv(s, p.id)?.wolfTarget),
+  );
 }
 
 // ─── nextBotAction ────────────────────────────────────────────────────────────
@@ -40,16 +76,13 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
     if (pub.nightActors.includes(playerId)) return null;
 
     if (pd.role === 'werewolf') {
-      // Always agree with whatever target the pack has already committed to.
-      const packTarget = Object.values(pub.wolfVotes ?? {}).find(Boolean) ?? null;
-      if (packTarget) {
-        return { type: 'WEREWOLF_KILL', playerId, payload: { targetId: packTarget } };
-      }
-      // No consensus yet — pick a non-wolf target, scrambled by ID + night.
       const targets = alivePlayers(s.room.players, pub.eliminatedPlayers)
         .filter(p => getPriv(s, p.id)?.team !== 'evil');
       if (targets.length === 0) return null;
-      return { type: 'WEREWOLF_KILL', playerId, payload: { targetId: pick(targets, playerId, pub.dayCount).id } };
+      // Join the current pack leader; ties are broken consistently by the pack.
+      const leader = leadingCandidate(targets, currentWolfTally(s), 'wolf-pack', pub.dayCount);
+      const target = leader?.target ?? rankBySuspicion(targets, 'wolf-pack', pub.dayCount)[0];
+      return { type: 'WEREWOLF_KILL', playerId, payload: { targetId: target.id } };
     }
 
     if (pd.role === 'seer') {
@@ -105,6 +138,7 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
     if (playerId in pub.votes) return null;
 
     const alive = alivePlayers(s.room.players, pub.eliminatedPlayers);
+    const dayTally = tallyTargets(Object.values(pub.votes));
     // Seer: vote for a known-evil target if alive.
     if (pd.role === 'seer') {
       const knownEvil = pd.seerHistory
@@ -114,18 +148,26 @@ export function nextBotAction(s: S, playerId: string): GameAction | null {
       if (knownEvil) return { type: 'LYNCH_VOTE', playerId, payload: { targetId: knownEvil } };
     }
 
-    // Wolf: blend in by voting a villager — scrambled so wolves pick different people.
+    // Wolves form a bloc on a living non-wolf and join a viable public leader.
     if (pd.team === 'evil') {
       const targets = alive.filter(p => getPriv(s, p.id)?.team !== 'evil');
       if (targets.length > 0) {
-        return { type: 'LYNCH_VOTE', playerId, payload: { targetId: pick(targets, playerId, pub.dayCount).id } };
+        const leader = leadingCandidate(targets, dayTally, 'wolf-day', pub.dayCount);
+        const target = leader?.target ?? rankBySuspicion(targets, 'wolf-day', pub.dayCount)[0];
+        return { type: 'LYNCH_VOTE', playerId, payload: { targetId: target.id } };
       }
     }
 
-    // Default: scatter votes using per-player-per-day hash so bots don't all vote clockwise.
-    const others = alive.filter(p => p.id !== playerId);
-    if (others.length === 0) return null;
-    return { type: 'LYNCH_VOTE', playerId, payload: { targetId: pick(others, playerId, pub.dayCount).id } };
+    // Good bots share a daily suspicion ranking, independent of the public
+    // leader so a wolf bloc cannot seed two votes and drag the village with it.
+    // Seers also avoid players they have already cleared.
+    const knownNotEvil = pd.role === 'seer'
+      ? new Set(pd.seerHistory.filter(h => h.result === 'not-evil').map(h => h.playerId))
+      : new Set<string>();
+    const suspects = alive.filter(p => p.id !== playerId && !knownNotEvil.has(p.id));
+    if (suspects.length === 0) return null;
+    const sharedSuspect = rankBySuspicion(suspects, 'village-suspicion', pub.dayCount)[0];
+    return { type: 'LYNCH_VOTE', playerId, payload: { targetId: sharedSuspect.id } };
   }
 
   // ── Host-gated phases ──────────────────────────────────────────────────────

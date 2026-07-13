@@ -41,6 +41,7 @@ check(
   ["nightResolved",                "WerewolfPublic has nightResolved flag"],
   ["voteResolved",                 "WerewolfPublic has voteResolved flag"],
   ["seerHistory",                  "WerewolfPrivate has seerHistory"],
+  ["wolfVoteTally",                "WerewolfPrivate has private pack tally"],
   ["doctorLastProtected",          "WerewolfPrivate has doctorLastProtected"],
   ["DeathRecord",                  "defines DeathRecord"],
   ["SeerInspection",               "defines SeerInspection"],
@@ -61,6 +62,7 @@ check(
   ["wolfIds",                      "assigns wolf vision"],
   ["sees:",                        "sets sees field"],
   ["seerHistory: []",              "initialises seerHistory"],
+  ["wolfVoteTally: {}",            "initialises private pack tally"],
   ["doctorLastProtected: null",    "initialises doctorLastProtected"],
 );
 
@@ -95,10 +97,11 @@ check(
   ["CONTINUE",                     "defines CONTINUE"],
   ["resolveNight",                 "has resolveNight function"],
   ["allNightActed",                "has allNightActed check"],
-  ["strict majority",              "lynch applies strict majority"],
+  ["Plurality",                    "lynch resolves by plurality"],
   ["doctorLastProtected",          "cannot repeat protection"],
   ["same player two nights",       "no-repeat protection error message"],
-  ["Wolves must agree",            "wolves must agree on same target"],
+  ["buildWolfVoteTally",           "builds wolf tally from private submissions"],
+  ["shareWolfVoteTally",           "shares tally only with living wolves"],
   ["nightResolved: true",          "resolveNight sets nightResolved=true"],
   ["voteResolved: true",           "LYNCH_VOTE sets voteResolved=true"],
   ["eliminate(",                   "uses eliminate helper"],
@@ -132,6 +135,21 @@ check(
   ["LYNCH_VOTE",                   "bot dispatches LYNCH_VOTE"],
   ["seerHistory",                  "seer bot uses inspection history"],
   ["doctorLastProtected",          "doctor bot avoids repeat protection"],
+  ["currentWolfTally",             "wolf bots follow the live pack tally"],
+  ["rankBySuspicion",              "day bots use a shared suspicion ranking"],
+  ["village-suspicion",            "good bots coordinate independently of the wolf bloc"],
+);
+
+// ── WerewolfTable.tsx ────────────────────────────────────────────────────────
+check(
+  'src/features/games/werewolf/ui/WerewolfTable.tsx',
+  'werewolf table',
+  ["wolfVoteTally",                "renders the private pack tally"],
+);
+check(
+  'src/features/games/werewolf/ui/WerewolfGame.tsx',
+  'werewolf game UI',
+  ["คะแนนโหวตของฝูงหมาป่า",       "provides an accessible pack-tally label"],
 );
 
 // ── config.ts ─────────────────────────────────────────────────────────────────

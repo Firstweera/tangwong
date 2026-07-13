@@ -27,7 +27,6 @@ function friendlyError(raw: string): string {
   if (m.includes('not authenticated') || m.includes('session')) return 'เซสชันหมดอายุ เข้าห้องใหม่';
   if (m.includes('network') || m.includes('fetch') || m.includes('failed')) return 'เชื่อมต่อไม่ได้ ลองอีกครั้ง';
   if (m.includes('same player two nights')) return 'ปกป้องคนเดิมสองคืนติดกันไม่ได้';
-  if (m.includes('wolves must agree')) return 'หมาป่าต้องเลือกเป้าหมายเดียวกัน';
   return 'ทำรายการไม่สำเร็จ ลองอีกครั้ง';
 }
 
@@ -79,6 +78,13 @@ export function WerewolfGame({
   const iEliminated = pub ? pub.eliminatedPlayers.includes(meId) : false;
   const iVoted      = pub ? (meId in pub.votes) : false;
   const iActedNight = pub ? pub.nightActors.includes(meId) : false;
+  const wolfVoteEntries = myPriv?.role === 'werewolf'
+    ? Object.entries(myPriv.wolfVoteTally ?? {}).sort((a, b) => b[1] - a[1])
+    : [];
+  const wolfVotesCast = wolfVoteEntries.reduce((sum, [, count]) => sum + count, 0);
+  const livingWolfCount = myPriv?.role === 'werewolf' && pub
+    ? [meId, ...myPriv.sees].filter(id => !pub.eliminatedPlayers.includes(id)).length
+    : 0;
 
   // ─── Start + first phase transition (offline) ────────────────────────────────
   useEffect(() => {
@@ -302,8 +308,14 @@ export function WerewolfGame({
       return (
         <div className="col center">
           <span style={{ fontSize: 36, filter: 'drop-shadow(0 0 12px rgba(120,60,200,0.7))' }}>🌙</span>
-          <span className="th" style={{ fontWeight: 800, marginTop: 6, fontSize: 15 }}>กลางคืน</span>
-          {submitted > 0 && (
+          <span className="th" style={{ fontWeight: 800, marginTop: 6, fontSize: 15 }}>
+            {role === 'werewolf' ? 'เสียงของฝูง' : 'กลางคืน'}
+          </span>
+          {role === 'werewolf' ? (
+            <span className="tiny" style={{ fontWeight: 800, marginTop: 4, color: 'var(--evil)' }}>
+              {wolfVotesCast}/{livingWolfCount} โหวตแล้ว
+            </span>
+          ) : submitted > 0 && (
             <span className="tiny" style={{ fontWeight: 700, marginTop: 4, color: 'var(--muted)' }}>
               {submitted} ยืนยันแล้ว
             </span>
@@ -467,7 +479,7 @@ export function WerewolfGame({
     // ── night ─────────────────────────────────────────────────────────────────
     if (phase === 'night') {
       if (iEliminated) return <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">💀 คุณถูกกำจัดแล้ว</span></button>;
-      if (iActedNight) return <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">ส่งแล้ว — รอผู้เล่นคนอื่น...</span></button>;
+      if (iActedNight && myPriv?.role !== 'werewolf') return <button className="btn btn-glass btn-lg btn-block" disabled><span className="th">ส่งแล้ว — รอผู้เล่นคนอื่น...</span></button>;
 
       const role = myPriv?.role;
 
@@ -476,41 +488,46 @@ export function WerewolfGame({
       }
 
       if (role === 'werewolf') {
-        const packVotes = (myPriv?.sees ?? [])
-          .map(wolfId => ({ wolfId, target: pub.wolfVotes?.[wolfId] ?? null }))
-          .filter(v => v.target !== null);
         return (
           <div className="col gap8">
-            {packVotes.length > 0 && (
-              <div className="col" style={{ gap: 3 }}>
-                {packVotes.map(v => (
-                  <span key={v.wolfId} className="th" style={{ fontSize: 11, fontWeight: 700, textAlign: 'center', color: 'var(--evil)', opacity: 0.85 }}>
-                    🐺 {byId(v.wolfId)?.name ?? '???'} เลือก {byId(v.target!)?.name ?? '???'}
+            {wolfVoteEntries.length > 0 && (
+              <div className="row center gap6 wrap" aria-label="คะแนนโหวตของฝูงหมาป่า">
+                {wolfVoteEntries.map(([targetId, count]) => (
+                  <span key={targetId} className="chip" style={{ color: 'var(--evil)', borderColor: 'rgba(255,92,108,0.32)', fontWeight: 800 }}>
+                    {byId(targetId)?.name ?? '???'} · {count} เสียง
                   </span>
                 ))}
               </div>
             )}
-            <span className="game-action-hint">
-              {nightTarget ? `เลือก ${byId(nightTarget)?.name ?? '???'} — ยืนยันหรือเปลี่ยนใจ` : '🐺 แตะผู้เล่นเพื่อเลือกเหยื่อ'}
-            </span>
-            <div className="row gap10">
-              {nightTarget && (
-                <button className="btn btn-evil btn-lg" style={{ flex: 1.4 }} disabled={busy}
-                  onClick={() => { act('WEREWOLF_KILL', { targetId: nightTarget }); setNightTarget(null); }}>
-                  <span className="sheen" />
-                  <Icon name="sword" size={18} stroke={2.5} />
-                  <span className="th">โหวตฆ่า</span>
-                </button>
-              )}
-              <button
-                className={`btn ${nightTarget ? 'btn-glass' : 'btn-ghost'} btn-lg`}
-                style={{ flex: nightTarget ? 1 : undefined, width: nightTarget ? undefined : '100%' }}
-                onClick={() => setNightTarget(null)}
-                disabled={!nightTarget}
-              >
-                <span className="th">{nightTarget ? 'เปลี่ยนใจ' : 'เลือกเหยื่อจากตาราง'}</span>
+            {iActedNight ? (
+              <button className="btn btn-glass btn-lg btn-block" disabled>
+                <span className="th">โหวตแล้ว · รอฝูง ({wolfVotesCast}/{livingWolfCount})</span>
               </button>
-            </div>
+            ) : (
+              <>
+                <span className="game-action-hint">
+                  {nightTarget ? `เลือก ${byId(nightTarget)?.name ?? '???'} — ยืนยันหรือเปลี่ยนใจ` : '🐺 แตะผู้เล่นเพื่อเลือกเหยื่อ'}
+                </span>
+                <div className="row gap10">
+                  {nightTarget && (
+                    <button className="btn btn-evil btn-lg" style={{ flex: 1.4 }} disabled={busy}
+                      onClick={() => { act('WEREWOLF_KILL', { targetId: nightTarget }); setNightTarget(null); }}>
+                      <span className="sheen" />
+                      <Icon name="sword" size={18} stroke={2.5} />
+                      <span className="th">โหวตฆ่า</span>
+                    </button>
+                  )}
+                  <button
+                    className={`btn ${nightTarget ? 'btn-glass' : 'btn-ghost'} btn-lg`}
+                    style={{ flex: nightTarget ? 1 : undefined, width: nightTarget ? undefined : '100%' }}
+                    onClick={() => setNightTarget(null)}
+                    disabled={!nightTarget}
+                  >
+                    <span className="th">{nightTarget ? 'เปลี่ยนใจ' : 'เลือกเหยื่อจากตาราง'}</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         );
       }
@@ -760,6 +777,7 @@ export function WerewolfGame({
           votes={pub.votes}
           seerHistory={myPriv?.seerHistory ?? []}
           wolfSees={myPriv?.sees ?? []}
+          wolfVoteTally={myPriv?.wolfVoteTally ?? {}}
           myRole={myPriv?.role ?? null}
           doctorLastProtected={myPriv?.doctorLastProtected ?? null}
           phase={phase}

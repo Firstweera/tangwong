@@ -23,6 +23,28 @@ function patchPriv(s: State, id: string, data: Partial<WerewolfPrivate>): State 
   };
 }
 
+/** Build the current pack tally from private wolf submissions. */
+function buildWolfVoteTally(s: State): Record<string, number> {
+  const tally: Record<string, number> = {};
+  for (const p of alivePlayers(s.room.players, P(s).eliminatedPlayers)) {
+    const pd = getPriv(s, p.id);
+    if (pd?.role !== 'werewolf' || !pd.wolfTarget) continue;
+    tally[pd.wolfTarget] = (tally[pd.wolfTarget] ?? 0) + 1;
+  }
+  return tally;
+}
+
+/** Copy a tally only into living wolves' owner-protected private rows. */
+function shareWolfVoteTally(s: State, tally: Record<string, number>): State {
+  let next = s;
+  for (const p of alivePlayers(s.room.players, P(s).eliminatedPlayers)) {
+    if (getPriv(s, p.id)?.role === 'werewolf') {
+      next = patchPriv(next, p.id, { wolfVoteTally: tally });
+    }
+  }
+  return next;
+}
+
 /** If `deadId` is a lover, eliminate their partner and append to deaths/revealedRoles. */
 function applyLoverDeath(
   s: State,
@@ -67,12 +89,8 @@ function allNightActed(s: State): boolean {
 function resolveNight(s: State): State {
   const pub = P(s);
 
-  // Collect wolf kill target via plurality of wolfVotes (each wolf votes independently)
-  const wolfVotesCast = pub.wolfVotes ?? {};
-  const wolfTally: Record<string, number> = {};
-  for (const tid of Object.values(wolfVotesCast)) {
-    wolfTally[tid] = (wolfTally[tid] ?? 0) + 1;
-  }
+  // Collect the pack's private submissions; plurality wins, tie means no attack.
+  const wolfTally = buildWolfVoteTally(s);
   let wolfTarget: string | null = null;
   let wolfTop = 0;
   let wolfTied = false;
@@ -139,7 +157,7 @@ function resolveNight(s: State): State {
     const pd = getPriv(next, p.id);
     if (!pd) continue;
     const updates: Partial<WerewolfPrivate> = {
-      wolfTarget: null, seerTarget: null, doctorTarget: null, silenceTarget: null,
+      wolfTarget: null, wolfVoteTally: {}, seerTarget: null, doctorTarget: null, silenceTarget: null,
     };
     if (p.id === doctorId) updates.doctorLastProtected = doctorTarget;
     if (p.id === seerId && seerTargetId && seerResult !== null) {
@@ -159,7 +177,6 @@ function resolveNight(s: State): State {
     nightActors: [],
     nightResolved: true,
     silenced: effectiveSilence,
-    wolfVotes: {},
   });
 }
 
@@ -173,6 +190,7 @@ const werewolfKill: ActionDef<WerewolfPublic, WerewolfPrivate> = {
     if (pub.nightActors.includes(a.playerId)) return { valid: false, error: 'You have already submitted your kill' };
     const targetId = (a.payload as { targetId?: string })?.targetId;
     if (!targetId) return { valid: false, error: 'No target specified' };
+    if (targetId === a.playerId) return { valid: false, error: 'Werewolves cannot target themselves' };
     if (pub.eliminatedPlayers.includes(targetId) || !s.room.players.some(p => p.id === targetId)) {
       return { valid: false, error: 'Invalid target' };
     }
@@ -181,10 +199,8 @@ const werewolfKill: ActionDef<WerewolfPublic, WerewolfPrivate> = {
   handle(s, a) {
     const targetId = (a.payload as { targetId: string }).targetId;
     let next = patchPriv(s, a.playerId, { wolfTarget: targetId });
-    next = patch(next, {
-      nightActors: [...P(next).nightActors, a.playerId],
-      wolfVotes: { ...P(next).wolfVotes, [a.playerId]: targetId },
-    });
+    next = shareWolfVoteTally(next, buildWolfVoteTally(next));
+    next = patch(next, { nightActors: [...P(next).nightActors, a.playerId] });
     if (allNightActed(next)) next = resolveNight(next);
     return next;
   },

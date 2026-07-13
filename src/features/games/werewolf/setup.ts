@@ -41,7 +41,6 @@ export function buildPublicState(players: GamePlayer[]): WerewolfPublic {
     revealedRoles: {},
     lovers: null,
     silenced: null,
-    wolfVotes: {},
   };
 }
 
@@ -71,6 +70,7 @@ export function buildPrivateState(players: GamePlayer[]): Record<string, Werewol
       team: teamOf(role),
       sees: role === 'werewolf' ? wolfIds.filter(id => id !== p.id) : [],
       wolfTarget: null,
+      wolfVoteTally: {},
       seerTarget: null,
       doctorTarget: null,
       silenceTarget: null,

@@ -47,8 +47,6 @@ export interface WerewolfPublic {
   lovers: readonly [string, string] | null;
   /** Player silenced for the current day (cleared at start of next night). */
   silenced: string | null;
-  /** Wolf pack coordination: wolfId → chosen targetId (cleared after night resolves). */
-  wolfVotes: Record<string, string>;
 }
 
 /** Per-player private state (owner-only RLS on the server). */
@@ -66,6 +64,8 @@ export interface WerewolfPrivate {
 
   // Current-night action targets (cleared after night resolves)
   wolfTarget: string | null;
+  /** Pack-only target tally, copied into every living wolf's private slice. */
+  wolfVoteTally: Record<string, number>;
   seerTarget: string | null;
   doctorTarget: string | null;
   /** Spellcaster's chosen silence target for current night (cleared after night resolves). */
