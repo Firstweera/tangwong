@@ -12,7 +12,7 @@ import { getGameRules } from '../features/games';
 import { RoomSettingsSheet } from '../features/room/components/RoomSettingsSheet.tsx';
 import { PlayerActionsMenu } from '../features/room/components/PlayerActionsMenu.tsx';
 import { useRealtimeRoom } from '../features/room/hooks/useRealtimeRoom.ts';
-import { useChat } from '../features/chat';
+import { useChat, useUnreadChat } from '../features/chat';
 import { PLAYERS, GAMES } from '../data';
 
 // Default room for dev jump-to shortcuts (TweaksPanel "Lobby" button)
@@ -87,6 +87,7 @@ export default function LobbyPage({ go, layout, showToast, room, player, onLeave
 
   // ─── Local chat (Epic 3), now synced across tabs via the shared room id ─────
   const { messages, sendMessage, sendSystem, toggleReaction } = useChat(liveRoom.id, meId, liveRoom.code);
+  const unreadChatCount = useUnreadChat(messages, meId, chatOpen);
 
   // The host seeds a welcome notice once, after the room has synced server-side
   // (a UUID id, not the optimistic `room_…` seed) and the chat loads empty.
@@ -201,12 +202,17 @@ export default function LobbyPage({ go, layout, showToast, room, player, onLeave
       {/* floating chat button — opens the lobby chat */}
       {!chatOpen && (
         <button
-          aria-label="open chat"
+          aria-label={unreadChatCount > 0 ? `เปิดแชต มี ${unreadChatCount} ข้อความใหม่` : 'เปิดแชต'}
           onClick={() => setChatOpen(true)}
-          className="row center"
+          className="row center chat-icon-wrap"
           style={{ position: 'absolute', right: 16, bottom: 132, zIndex: 40, width: 52, height: 52, borderRadius: 17, background: 'var(--grad)', color: '#fff', boxShadow: '0 8px 22px rgba(0,0,0,0.28)' }}
         >
           <Icon name="chat" size={22} />
+          {unreadChatCount > 0 && (
+            <span className="chat-unread-badge" aria-hidden="true">
+              {unreadChatCount > 99 ? '99+' : unreadChatCount}
+            </span>
+          )}
         </button>
       )}
 

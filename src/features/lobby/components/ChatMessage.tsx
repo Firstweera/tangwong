@@ -22,7 +22,7 @@ export interface ChatMessageProps {
  * bubble styles. Social foundation for room + in-game chat.
  */
 export function ChatMessage({ message, player, me, meId, onSelect, onToggleReaction }: ChatMessageProps) {
-  const time = <span className="tiny" style={{ color: 'var(--muted)' }}>{formatChatTime(message.ts)}</span>;
+  const time = <span className="tiny chat-message-time">{formatChatTime(message.ts)}</span>;
 
   const reactions = message.reactions.length > 0 && (
     <div className="row gap6" style={{ flexWrap: 'wrap', justifyContent: me ? 'flex-end' : 'flex-start' }}>
@@ -59,13 +59,17 @@ export function ChatMessage({ message, player, me, meId, onSelect, onToggleReact
   }
 
   return (
-    <div className="row gap8" style={{ alignItems: 'flex-end' }}>
-      {player && <Avatar who={player} size={28} />}
-      <div className="col gap6" style={{ alignItems: 'flex-start' }}>
-        {player && <span className="tiny" style={{ fontWeight: 700, marginLeft: 4 }}>{player.name}</span>}
-        <button className="bubble bubble-them" style={{ textAlign: 'left' }} onClick={onSelect}>{message.text}</button>
+    <div className="row gap8 chat-message-incoming">
+      <div className="chat-message-avatar">
+        {player && <Avatar who={player} size={28} />}
+      </div>
+      <div className="col gap6 chat-message-body">
+        <div className="row gap8 chat-message-meta">
+          {player && <span className="tiny chat-message-name">{player.name}</span>}
+          {time}
+        </div>
+        <button className="bubble bubble-them chat-message-bubble" style={{ textAlign: 'left' }} onClick={onSelect}>{message.text}</button>
         {reactions}
-        {time}
       </div>
     </div>
   );

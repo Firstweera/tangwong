@@ -49,17 +49,17 @@ export function ChatPanel({ messages, players, meId = 'me', onSend, onReact, onC
   };
 
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 70, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={onClose} />
-      <div className="card-solid rise" role="dialog" aria-label="chat" style={{ position: 'relative', borderRadius: '26px 26px 0 0', height: '72%', maxHeight: 620, minHeight: 380, display: 'flex', flexDirection: 'column', paddingBottom: 'calc(16px + env(safe-area-inset-bottom))' }}>
-        <div className="row between" style={{ padding: '12px 18px 6px', flexShrink: 0 }}>
+    <div className="chat-overlay">
+      <div className="chat-backdrop" onClick={onClose} />
+      <div className="card-solid rise chat-panel" role="dialog" aria-label="chat">
+        <div className="row between chat-panel-header">
           <div style={{ width: 32 }} />
           <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--border-2)' }} />
           <button aria-label="close chat" className="row center" style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--surface-2)' }} onClick={onClose}>
             <Icon name="x" size={16} />
           </button>
         </div>
-        <div ref={streamRef} className="col gap10" style={{ flex: 1, overflowY: 'auto', padding: '8px 16px' }}>
+        <div ref={streamRef} className="col gap10 chat-stream">
           {messages.map((m) =>
             m.kind === 'system' ? (
               <SystemMessage key={m.id} ts={m.ts}>{m.text}</SystemMessage>
@@ -88,7 +88,7 @@ export function ChatPanel({ messages, players, meId = 'me', onSend, onReact, onC
             </div>
           </div>
         ) : (
-          <div className="row gap8 pad-x" style={{ paddingTop: 8, flexShrink: 0 }}>
+          <div className="row gap8 pad-x chat-composer">
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
