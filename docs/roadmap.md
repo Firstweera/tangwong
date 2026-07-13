@@ -1383,16 +1383,228 @@ Notes:
   console errors; `npm run build` and `tsc --noEmit` pass
 
 Follow-up:
-- `npm run verify:werewolf` currently passes 88/89; reconcile the existing
-  `actions.ts` wolf-target agreement behavior with its static assertion
 - repeat a device pass for Cupid's two-target interaction and day-vote phase
 
 ---
 
-# Epic 7 - Salem 1692
+### B10 - Private wolf tally + coordinated voting bots
+✅ Completed — 2026-07-13 (local implementation)
+
+Files:
+- `docs/games/werewolf-rules.md`
+- `src/features/games/werewolf/types.ts`
+- `src/features/games/werewolf/setup.ts`
+- `src/features/games/werewolf/actions.ts`
+- `src/features/games/werewolf/bot.ts`
+- `src/features/games/werewolf/ui/WerewolfGame.tsx`
+- `src/features/games/werewolf/ui/WerewolfTable.tsx`
+- `scripts/verify-werewolf.mjs`
+
+Notes:
+- every living Werewolf now casts one independent night vote; plurality selects
+  the victim and a tie means no attack
+- live target counts are copied only into each living wolf's private state, so
+  the pack can coordinate without exposing voter identity or leaking night
+  targets through the public snapshot
+- wolf players see vote-count badges on target seats, a pack-only tally summary,
+  and submitted/required vote progress
+- night wolf bots follow the current pack leader and share a deterministic target
+  before votes exist
+- day bots now form voting blocs from a shared daily suspicion ranking without
+  blindly following a wolf-seeded public leader; Seer-known evil remains the
+  highest priority and wolf votes stay on non-wolves
+- `verify:werewolf` passes 99/99; build and TypeScript pass; behavioral smoke
+  test produced coordinated night votes and a 5–1 daytime bloc in a 6-bot table
+
+Follow-up:
+- redeploy `game-start` and `game-action` Edge Functions before production use
+- run a 9-player / 3-wolf two-device pass to verify private tally isolation and
+  tie = no-kill resolution on Supabase
+
+---
+
+### B11 - Werewolf full-height mobile table layout
+✅ Completed — 2026-07-13
+
+Files:
+- `src/features/games/ui/GameShell.tsx`
+- `src/styles/components.css`
+
+Notes:
+- the game content region now uses a real flex column, allowing the player table
+  to expand into available viewport space instead of leaving a blank area below
+  the private role strip
+- the role strip has its own non-shrinking row and the table keeps bottom
+  clearance, preventing lower player seats and labels from overlapping it
+- the game top bar now follows the device safe area instead of always reserving
+  60px, recovering useful height in iOS Safari while retaining PWA notch spacing
+
+Follow-up:
+- repeat the Werewolf day-vote pass on a physical iPhone with 8-10 players
+
+---
+
+### B12 - Full-screen mobile chat + incoming message spacing
+✅ Completed — 2026-07-13
+
+Files:
+- `src/features/lobby/components/ChatPanel.tsx`
+- `src/features/lobby/components/ChatMessage.tsx`
+- `src/styles/components.css`
+
+Notes:
+- room and in-game chat now fills the mobile viewport instead of stopping at a
+  72% bottom sheet with the game still visible behind it
+- desktop retains the existing capped bottom-sheet presentation
+- incoming messages group avatar, sender name, timestamp, bubble, and reactions
+  into one readable block with predictable wrapping for long text
+- the chat stream and composer respect device safe areas and remain independently
+  scrollable when the mobile keyboard reduces available height
+
+Follow-up:
+- verify composer positioning with the software keyboard open on iOS Safari
+
+---
+
+### B13 - Chat unread notification badge
+✅ Completed — 2026-07-13
+
+Files:
+- `src/features/chat/hooks/useUnreadChat.ts`
+- `src/features/chat/index.ts`
+- `src/features/games/ui/GameShell.tsx`
+- `src/pages/LobbyPage.jsx`
+- `src/styles/components.css`
+
+Notes:
+- lobby and in-game chat icons show a top-right unread count for new messages
+  from other players while chat is closed
+- system notices and the current player's own messages do not increase the count
+- opening chat marks the current stream as read; the badge caps at `99+` and
+  respects reduced-motion preferences
+
+Follow-up:
+- add an optional notification sound preference after profile settings are in scope
+
+---
+
+# Epic 7 - ผู้ตรวจการ (Original Bluffing & Negotiation)
 
 Status:
-⚪ Not Started
+🟡 In Progress
+
+## Features
+
+### Game Rules + Information Model
+✅ Completed — 2026-07-13
+
+Files:
+- `docs/games/checkpoint-rules.md`
+
+Notes:
+- original 3–6 player negotiation game with rotating Gatekeeper and merchants
+- limited inspection seals force prioritization instead of checking everyone
+- public Rumors keep every merchant engaged during another player's negotiation
+- sealed offers are private, final once submitted, and enforced by the game engine
+- rules v0.2, public/private/server state boundaries, actions, phases, and mobile
+  UI direction are documented for playtesting
+- Goods are now explicitly split into Legal and Illegal sets; Illegal goods have
+  higher value and higher inspection penalties, while declarations may name
+  only an exact Legal good
+
+Follow-up:
+- run a paper or facilitated playtest before balancing the goods deck
+- validate the approved `ผู้ตรวจการ` title and night-market theme with players
+
+### Interactive Mobile UI Concept
+✅ Completed — 2026-07-13
+
+Files:
+- `src/features/games/checkpoint/ui/CheckpointGame.tsx`
+- `src/features/games/checkpoint/ui/index.ts`
+- `src/styles/components.css`
+- `src/pages/ResultPage.jsx`
+
+Notes:
+- merchant and Gatekeeper perspectives are represented in a clickable concept
+- phase controls cover packing, negotiation, decision, reveal, and market close
+- Goods cards now label `ถูกกฎหมาย` or `ผิดกฎหมาย` directly and show baht value;
+  declarations list only exact Legal goods
+
+### Engine Types + Config
+✅ Completed — 2026-07-13
+
+Files:
+- `src/features/games/checkpoint/types.ts`
+- `src/features/games/checkpoint/goods.ts`
+- `src/features/games/checkpoint/setup.ts`
+- `src/features/games/checkpoint/phases.ts`
+- `src/features/games/checkpoint/actions.ts`
+- `src/features/games/checkpoint/config.ts`
+- `src/features/games/checkpoint/winConditions.ts`
+
+Notes:
+- fixed game length at two Gatekeeper rotations for every player count
+- client and Edge Functions share the same authoritative config
+
+### Pack + Declaration
+✅ Completed — 2026-07-13
+
+Notes:
+- merchants privately pack 1–3 cards and publicly declare one Legal good
+- declaration count is derived from the crate and therefore always truthful
+
+### Sealed Offers + Rumors
+✅ Completed — 2026-07-13
+
+Notes:
+- offers are visible only to the current Gatekeeper until settlement
+- each merchant may publish one Rumor per shift
+
+### Inspection + Settlement
+✅ Completed — 2026-07-13
+
+Notes:
+- Pass transfers the sealed offer and delivers the full crate
+- Inspect handles truthful compensation, confiscation, printed penalties, and
+  Rumor rewards in one authoritative action
+
+### Scoring + Contracts
+🟡 In Progress — 2026-07-13
+
+Notes:
+- playable scoring is complete: remaining cash plus delivered Goods value
+- live score ranking and dedicated result page are implemented
+
+Follow-up:
+- add Market demand bonuses and private Contracts after the first balance test
+
+### Bots + Online Verification
+🟡 In Progress — 2026-07-13
+
+Files:
+- `src/features/games/checkpoint/bot.ts`
+- `scripts/verify-checkpoint.mjs`
+- `supabase/functions/_shared/games.ts`
+- `supabase/functions/game-start/index.ts`
+
+Notes:
+- merchant bots pack, bluff, spread Rumors, and calculate sealed offers
+- Gatekeeper bots prioritize Rumors and low offers without reading crate contents
+- game-start resolves opening bot actions before persistence so a human
+  Gatekeeper cannot deadlock while waiting for bot merchants
+- runtime verifier completed a three-player game in 54 actions across 6 shifts
+
+Follow-up:
+- deploy updated `game-start` and `game-action`, then complete multi-device
+  private-state and reconnection verification
+
+---
+
+# Epic 8 - Salem-inspired Social Deduction
+
+Status:
+🔒 Future
 
 ## Features
 
@@ -1405,27 +1617,6 @@ Status:
 ### Evidence
 
 ### Witch Detection
-
----
-
-# Epic 8 - Sheriff
-
-Status:
-🔒 Future
-
-## Features
-
-### Goods
-
-### Bagging
-
-### Declaration
-
-### Inspection
-
-### Bribery
-
-### Scoring
 
 ---
 

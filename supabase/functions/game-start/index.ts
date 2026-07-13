@@ -11,7 +11,30 @@ import { corsHeaders, json } from '../_shared/cors.ts';
 import { adminClient, callerId } from '../_shared/supabase.ts';
 import { GAME_REGISTRY } from '../_shared/games.ts';
 import { GameEngine } from '../../../src/features/games/engine/engine.ts';
-import type { GamePlayer, RoomState } from '../../../src/features/games/engine/types.ts';
+import type { GamePlayer, GameState, RoomState } from '../../../src/features/games/engine/types.ts';
+
+type AnyState = GameState<unknown, unknown>;
+
+/** Resolve opening bot actions so a human Gatekeeper never waits on an action they cannot take. */
+function resolveOpeningBots(
+  engine: GameEngine<unknown, unknown>,
+  initial: AnyState,
+  entry: (typeof GAME_REGISTRY)[string],
+): AnyState {
+  let state = initial;
+  for (let index = 0; index < 50; index += 1) {
+    const bot = state.room.players.find(player =>
+      player.id.startsWith('bot_') && entry.nextBotAction(state, player.id) !== null
+    );
+    if (!bot) return state;
+    const action = entry.nextBotAction(state, bot.id);
+    if (!action) return state;
+    const result = engine.dispatch(state, action);
+    if (!result.valid) return state;
+    state = result.state;
+  }
+  return state;
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -81,6 +104,11 @@ Deno.serve(async (req) => {
       const r = engine.transitionTo(state, entry.firstPhase);
       if (r.valid) state = r.state;
     }
+    state = resolveOpeningBots(
+      engine as GameEngine<unknown, unknown>,
+      state as AnyState,
+      entry,
+    ) as typeof state;
 
     // Persist the public snapshot.
     const { error: pubErr } = await db.from('game_states').insert({

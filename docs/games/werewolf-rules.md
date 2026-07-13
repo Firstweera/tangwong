@@ -11,9 +11,9 @@ Status: reference for B1 (engine) / B3 (UI). Update this doc first if a rule
 changes, then the engine — the doc is the source of truth for play behaviour.
 
 Mechanics references (folk-game rules, **adapted** — names/text are our own):
-online-station.net/entertainment/690636 (Thai community ruleset) and the common
-Werewolf/Mafia rules. The Thai community rule we follow: **a lynch needs a strict
-majority** (เสียงเกินครึ่งจึงโดนเผา).
+online-station.net/entertainment/690636 (Thai community ruleset) and common
+Werewolf/Mafia rules. TangWong uses a **plurality with tie = no elimination**
+variant so public vote counts stay decisive without adding a runoff phase.
 
 ---
 
@@ -47,7 +47,7 @@ setup → roleReveal → night → dawn → dayDiscuss → dayVote → resolve
 | Phase | Who acts | What happens | Advance when |
 |-------|----------|--------------|--------------|
 | `roleReveal` | host | each player privately views their role + night abilities | host `CONTINUE` |
-| `night` | role-holders (private, simultaneous) | Werewolves pick a victim; Seer inspects; Doctor protects; … | all required night actions submitted (or timer) |
+| `night` | role-holders (private, simultaneous) | each Werewolf casts one private pack vote; Seer inspects; Doctor protects; … | all required night actions submitted (or timer) |
 | `dawn` | host / auto | resolve night: apply kill unless protected; announce death(s) + reveal the dead player's role; deliver Seer result privately | host `CONTINUE` (or auto after a short reveal) |
 | `dayDiscuss` | living players | open chat to deduce; no game action | timer expires → `dayVote` |
 | `dayVote` | living players | each living player casts one lynch vote (or abstain) | every living player voted (or timer) |
@@ -71,7 +71,7 @@ optional **night action**, and what it **sees** at setup.
 
 | Role | Team | Night action | Sees at setup |
 |------|------|--------------|---------------|
-| **Werewolf** | evil | choose the night victim (shared target) | the other Werewolves |
+| **Werewolf** | evil | cast one vote for the night victim; see the pack-only live tally | the other Werewolves |
 | **Villager** | good | — | nothing |
 | **Seer** | good | inspect one player → learn `evil` / `not-evil` | nothing (learns over time) |
 | **Doctor** (Guardian) | good | protect one player from the night kill | nothing |
@@ -93,11 +93,11 @@ follow-up choice) — design that hook when Hunter lands, not in the MVP.
 
 ### Role abilities — exact behaviour
 
-- **Werewolf victim**: the wolves collectively select **one** target per night.
-  MVP resolution: the engine takes the most-recently-submitted wolf target, or a
-  majority if multiple wolves submit (implementation may simplify to "any one wolf
-  locks the pack's target"). Wolves may target a Villager or, if desired, knife a
-  fellow wolf (allowed but irrational; bots never do).
+- **Werewolf victim**: every living Werewolf casts **one** vote per night. The
+  live tally (target + vote count, never voter identity) is visible only to living
+  Werewolves. The target with the most votes is attacked; a tie for the lead means
+  the pack fails to choose and nobody is attacked. Wolves may target any living
+  player except themselves; bots never target a known fellow Werewolf.
 - **Seer**: inspects exactly one **living** player per night; privately learns
   whether that player is on the evil team (`evil`) or not (`not-evil`). The Seer
   reads the **pre-kill** state of that night. Result is stored in the Seer's
@@ -121,10 +121,8 @@ follow-up choice) — design that hook when Hunter lands, not in the MVP.
 ## 4. Voting / lynch rules (dayVote → resolve)
 
 - Each **living** player casts at most one vote for a living target, or abstains.
-- A target is lynched only with a **strict majority** — more than half of the
-  **living** players vote for the same target (เสียงเกินครึ่งจึงโดนเผา).
-- **No majority** (votes split, or a tie for the top): **no one is lynched** that
-  day. (Alternatives for later: runoff revote among the top targets.)
+- The living target with the most votes is lynched (**plurality**).
+- A tie for the highest count means **no one is lynched** that day.
 - A lynched player's role is **revealed** publicly.
 - Abstaining is allowed; if everyone abstains, no lynch.
 - Votes are **public** as they are cast (Werewolf-style open voting) so the
@@ -158,9 +156,11 @@ table to balance, not final.)
 - **Werewolves see each other**: baked into each wolf's private `sees` at deal
   time (the Avalon vision pattern), so no extra channel is needed.
 - **Seer results** accumulate in the Seer's private data only.
-- **Night targets** (who the wolves picked, who the doctor protected) stay hidden
-  until resolved; only the **outcome** (who died, role revealed) becomes public at
-  dawn. Action logs must redact night targets like Avalon redacts mission cards.
+- **Night targets** (the pack tally, who each wolf picked, who the doctor
+  protected) stay hidden until resolved. The pack tally is duplicated only into
+  living Werewolves' private slices; it never enters public game state. Only the
+  **outcome** becomes public at dawn. Action logs must redact night targets like
+  Avalon redacts mission cards.
 - `redactStateFor` stays generic (drops other players' private slices); the
   game-specific redaction (hide live night targets in the public action log) lives
   in the Werewolf action handlers / the server's public-payload mapper.
@@ -184,9 +184,11 @@ table to balance, not final.)
   the loop and `all-voted`/timer for night + dayVote.
 - **Win conditions** (`WinCondition[]`): `all-werewolves-dead` (village),
   `werewolves-reach-parity` (evil) — checked after each elimination.
-- **Bots** (`nextBotAction`): wolves pick a non-wolf living target; Seer inspects
-  an un-checked living player; Doctor protects a likely target (not self twice);
-  day vote leans on Seer-revealed info / random among the living.
+- **Bots** (`nextBotAction`): wolves join the pack's leading night target (or use
+  a shared deterministic target before any vote); Seer inspects an unchecked
+  living player; Doctor protects a likely target (not self twice). During the day,
+  bots converge on a shared suspicion candidate instead of scattering every vote;
+  Seer knowledge overrides that heuristic and wolves coordinate on a non-wolf.
 - **Registry**: one entry each in the client + server game registries (A1/A2).
 
 ---
@@ -196,7 +198,6 @@ table to balance, not final.)
 - Reveal a lynched/killed player's role? **Yes** (classic, easier to follow).
 - Doctor self-save? **Allowed**, but not the same target two nights running.
 - First-night kill? **Yes** (no protected first night in MVP).
-- Lynch threshold? **Strict majority of the living**; no majority / tie → **no
-  elimination** (MVP).
-- Wolf target selection with multiple wolves? **Any wolf locks the pack target**
-  (simple, deterministic); revisit to require wolf consensus later.
+- Lynch threshold? **Plurality**; a tie for the lead → **no elimination**.
+- Wolf target selection with multiple wolves? **One vote per living Werewolf**;
+  pack-only live tally, plurality target is attacked, tie → no attack.

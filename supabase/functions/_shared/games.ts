@@ -12,6 +12,9 @@ import type { AvalonPrivate, AvalonPublic } from '../../../src/features/games/av
 import { werewolfConfig } from '../../../src/features/games/werewolf/config.ts';
 import { nextBotAction as werewolfNextBotAction } from '../../../src/features/games/werewolf/bot.ts';
 import type { WerewolfPrivate, WerewolfPublic } from '../../../src/features/games/werewolf/types.ts';
+import { checkpointConfig } from '../../../src/features/games/checkpoint/config.ts';
+import { nextBotAction as checkpointNextBotAction } from '../../../src/features/games/checkpoint/bot.ts';
+import type { CheckpointPrivate, CheckpointPublic } from '../../../src/features/games/checkpoint/types.ts';
 
 export interface ServerGameEntry {
   config: GameEngineConfig<unknown, unknown>;
@@ -69,7 +72,23 @@ const werewolfEntry: ServerGameEntry = {
   privateActionTypes: ['WEREWOLF_KILL', 'SEER_PEEK', 'DOCTOR_SAVE', 'CUPID_LINK', 'SILENCE'],
 };
 
+const checkpointEntry: ServerGameEntry = {
+  config: checkpointConfig as GameEngineConfig<unknown, unknown>,
+  firstPhase: 'pack',
+  nextBotAction(state, playerId) {
+    return checkpointNextBotAction(
+      state as GameState<CheckpointPublic, CheckpointPrivate>,
+      playerId,
+    );
+  },
+  revealForPublic() {
+    return {};
+  },
+  privateActionTypes: ['SUBMIT_CRATE', 'SUBMIT_OFFER'],
+};
+
 export const GAME_REGISTRY: Record<string, ServerGameEntry> = {
   avalon: avalonEntry,
   werewolf: werewolfEntry,
+  checkpoint: checkpointEntry,
 };
