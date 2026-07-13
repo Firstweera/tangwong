@@ -3,6 +3,7 @@
 // engine appear here; others have no rules yet.
 import { avalonRules } from './avalon/rules';
 import { werewolfRules } from './werewolf/rules';
+import { checkpointRules } from './checkpoint/rules';
 
 export interface RuleStep { emoji: string; title: string; desc: string; }
 export interface RuleRole { em: string; name: string; side: 'good' | 'evil'; desc: string; }
@@ -29,6 +30,7 @@ export interface GameRules {
 const REGISTRY: Record<string, GameRules> = {
   avalon: avalonRules,
   werewolf: werewolfRules,
+  checkpoint: checkpointRules,
 };
 
 export function getGameRules(gameId: string): GameRules | null {

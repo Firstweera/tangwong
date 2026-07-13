@@ -107,6 +107,19 @@ export default function GamePage({ go, showToast, currentRoom, player, leaveRoom
       return;
     }
 
+    if (gameId === 'checkpoint') {
+      go('result', {
+        gameId: 'checkpoint',
+        winners: w.winners ?? [],
+        scores: w.scores ?? state.public.data.wealth,
+        cash: state.public.data.cash,
+        delivered: state.public.data.delivered,
+        reasonTh: w.reasonTh ?? w.reason,
+        ...shared,
+      });
+      return;
+    }
+
     // Avalon result
     const reason = w.conditionId === 'assassin' ? 'assassin' : w.conditionId === 'evil-hammer' ? 'reject' : 'quests';
     // reveal is { playerId: { role, side } } from the server (all players);

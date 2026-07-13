@@ -10,6 +10,9 @@ import { AvalonGame } from './avalon/ui';
 import { werewolfConfig } from './werewolf/config';
 import { werewolfRules } from './werewolf/rules';
 import { WerewolfGame } from './werewolf/ui';
+import { checkpointConfig } from './checkpoint/config';
+import { checkpointRules } from './checkpoint/rules';
+import { CheckpointGame } from './checkpoint/ui';
 
 /** Props contract every in-game UI component must satisfy. */
 export interface GameUIProps {
@@ -49,6 +52,11 @@ const REGISTRY: Record<string, GameRegistryEntry> = {
     config: werewolfConfig,
     ui: WerewolfGame,
     rules: werewolfRules,
+  },
+  checkpoint: {
+    config: checkpointConfig,
+    ui: CheckpointGame,
+    rules: checkpointRules,
   },
 };
 

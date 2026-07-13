@@ -72,6 +72,12 @@ export const GAMES: Game[] = [
     desc: 'กลางคืนหมาป่าออกล่า กลางวันชาวบ้านโหวตจับ',
   },
   {
+    id: 'checkpoint', name: 'Inspector', th: 'ผู้ตรวจการ', tag: 'Bluffing & Negotiation', th_tag: 'เกมบลัฟและต่อรอง',
+    emoji: '🛂', players: '3–6', minPlayers: 3, maxPlayers: 6, mins: '25–40', heat: 'NEW',
+    g: ['#0F9D8A', '#22546E'], accent: '#F2C14E', available: true,
+    desc: 'ซ่อนสินค้าราคาแพง เจรจาขอผ่าน หรือเสี่ยงถูกผู้คุ้มด่านตรวจค้น',
+  },
+  {
     id: 'coup', name: 'Coup', th: 'รัฐประหาร', tag: 'Bluffing', th_tag: 'เกมบลัฟ',
     emoji: '🎭', players: '2–6', minPlayers: 2, maxPlayers: 6, mins: '10–15', heat: 'NEW',
     g: ['#FF9F43', '#9E4E12'], accent: '#FFC07A', available: false,

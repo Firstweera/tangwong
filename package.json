@@ -15,7 +15,8 @@
     "verify:game-timeout": "node scripts/verify-game-timeout.mjs",
     "verify:realtime-game": "node scripts/verify-realtime-game.mjs",
     "verify:live-game": "node scripts/e2e-live-game.mjs",
-    "verify:werewolf": "node scripts/verify-werewolf.mjs"
+    "verify:werewolf": "node scripts/verify-werewolf.mjs",
+    "verify:checkpoint": "node scripts/verify-checkpoint.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",

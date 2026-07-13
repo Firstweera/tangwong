@@ -60,6 +60,76 @@ export default function ResultPage({ go, payload, showToast, player }) {
     return () => clearInterval(id);
   }, [players.length]);
 
+  // ── Checkpoint result ────────────────────────────────────────────────────────
+  if (payload?.gameId === 'checkpoint') {
+    const scores = payload?.scores ?? {};
+    const cash = payload?.cash ?? {};
+    const winnerIds = new Set(payload?.winners ?? []);
+    const ranking = [...players].sort((a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0));
+    const iWon = winnerIds.has(youId);
+    return (
+      <div className="screen screen-anim" style={{ position: 'relative' }}>
+        {iWon && <Confetti count={64} />}
+        <div className="scroll" style={{ paddingBottom: 120 }}>
+          <div className="col center pad-x" style={{ paddingTop: 68, textAlign: 'center' }}>
+            <div className="pop" style={{ fontSize: 68, lineHeight: 1 }}>{iWon ? '🏆' : '🛂'}</div>
+            <span className="chip rise" style={{ color: 'var(--accent)', marginTop: 14 }}>ผู้ตรวจการ · จบเกม</span>
+            <h1 className="th page-title rise" style={{ fontSize: 34, marginTop: 10 }}>
+              {iWon ? 'คุณรวยที่สุดในตลาด' : `${ranking[0]?.name ?? 'ผู้เล่น'} ชนะ`}
+            </h1>
+            <p className="th page-subtitle rise" style={{ marginTop: 7, maxWidth: 320 }}>
+              ทุกคนเป็นผู้คุ้มด่านครบ 2 ครั้งแล้ว
+            </p>
+          </div>
+
+          <div className="pad-x" style={{ marginTop: 28 }}>
+            <div className="section-head">
+              <h2 className="th section-title">อันดับความมั่งคั่ง</h2>
+              <span className="section-note">เงินสด + สินค้า</span>
+            </div>
+            <div className="col gap8">
+              {ranking.map((p, index) => {
+                const shown = index < revealAt;
+                const goodsScore = (scores[p.id] ?? 0) - (cash[p.id] ?? 0);
+                return (
+                  <div key={p.id} className="status-card row between" style={{
+                    opacity: shown ? 1 : 0,
+                    transform: shown ? 'none' : 'translateY(6px)',
+                    transition: 'all 0.25s',
+                    borderColor: winnerIds.has(p.id) ? 'color-mix(in srgb, var(--accent) 52%, var(--border))' : undefined,
+                  }}>
+                    <div className="row gap12" style={{ minWidth: 0 }}>
+                      <strong style={{ width: 20, color: index === 0 ? 'var(--accent)' : 'var(--muted)', textAlign: 'center' }}>{index + 1}</strong>
+                      <Avatar who={p} size={42} ring={winnerIds.has(p.id) ? 'var(--accent)' : undefined} />
+                      <div className="col" style={{ gap: 1, minWidth: 0 }}>
+                        <span className="th h3" style={{ fontSize: 14.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {p.name}{p.id === youId && <span style={{ color: 'var(--primary)', fontSize: 11 }}> · คุณ</span>}
+                        </span>
+                        <span className="th tiny">เงิน {cash[p.id] ?? 0} · สินค้า {goodsScore}</span>
+                      </div>
+                    </div>
+                    <strong style={{ color: winnerIds.has(p.id) ? 'var(--accent)' : 'var(--text)', fontSize: 18 }}>{scores[p.id] ?? 0}฿</strong>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <BottomBar paddingBottom={26}>
+          <div className="row gap10">
+            <button className="btn btn-glass btn-lg" aria-label="กลับหน้าหลัก" style={{ width: 64 }} onClick={() => go('home')}><Icon name="home" size={22} /></button>
+            {online && !isHost ? (
+              <button className="btn btn-glass btn-lg" style={{ flex: 1 }} disabled><span className="th">รอหัวห้องเริ่มใหม่...</span></button>
+            ) : (
+              <button className="btn btn-primary btn-lg" style={{ flex: 1 }} disabled={rematching} onClick={handleRematch}><Icon name="dice" size={20} /><span className="th">{rematching ? 'กำลังเริ่ม...' : 'เล่นอีกครั้ง'}</span></button>
+            )}
+          </div>
+        </BottomBar>
+      </div>
+    );
+  }
+
   // ── Werewolf result ───────────────────────────────────────────────────────────
   if (payload?.gameId === 'werewolf') {
     const wwRoles = payload?.roles ?? {};
