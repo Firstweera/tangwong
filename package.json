@@ -16,7 +16,9 @@
     "verify:realtime-game": "node scripts/verify-realtime-game.mjs",
     "verify:live-game": "node scripts/e2e-live-game.mjs",
     "verify:werewolf": "node scripts/verify-werewolf.mjs",
-    "verify:checkpoint": "node scripts/verify-checkpoint.mjs"
+    "verify:checkpoint": "node scripts/verify-checkpoint.mjs",
+    "verify:game-client": "node scripts/verify-game-client.mjs",
+    "verify:supabase-transport": "node scripts/verify-supabase-transport.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",

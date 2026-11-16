@@ -217,11 +217,29 @@ export async function fetchGame(code: string): Promise<RealtimeGameSnapshot> {
   };
 }
 
+/**
+ * Turn a functions.invoke error into the Edge Function's own `{ error }` message
+ * (e.g. "host only", "version conflict") instead of the generic
+ * "Edge Function returned a non-2xx status code".
+ */
+async function invokeErrorMessage(error: { message: string; context?: unknown }): Promise<string> {
+  const ctx = error.context as { json?: () => Promise<unknown> } | undefined;
+  if (ctx && typeof ctx.json === 'function') {
+    try {
+      const body = await ctx.json() as { error?: unknown } | null;
+      if (body && typeof body.error === 'string') return body.error;
+    } catch {
+      // body already consumed or not JSON — fall back to the generic message
+    }
+  }
+  return error.message;
+}
+
 export async function startGame(code: string, restart = false): Promise<void> {
   if (!supabase) return;
   const body = restart ? { code, restart: true } : { code };
   const { error } = await supabase.functions.invoke('game-start', { body });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(await invokeErrorMessage(error));
 }
 
 /** Current game status for a room ('in-game' | 'ended'), or null if no game. */
@@ -234,7 +252,7 @@ export async function fetchGameStatus(roomId: string): Promise<string | null> {
 export async function submitAction(code: string, type: string, payload: unknown): Promise<void> {
   if (!supabase) return;
   const { error } = await supabase.functions.invoke('game-action', { body: { code, type, payload } });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(await invokeErrorMessage(error));
 }
 
 export async function timeoutGame(code: string): Promise<void> {
@@ -242,7 +260,7 @@ export async function timeoutGame(code: string): Promise<void> {
   const { error } = await supabase.functions.invoke('game-action', {
     body: { code, type: 'TIMEOUT', payload: null },
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(await invokeErrorMessage(error));
 }
 
 export function subscribeGame(roomId: string, onChange: () => void): () => void {

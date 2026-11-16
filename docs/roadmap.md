@@ -948,6 +948,190 @@ Files:
 
 ---
 
+# Epic 5.1 - Game Client Layer (boardgame.io-inspired)
+
+Goal:
+One transport-agnostic client API for every game — `client.moves.X(payload)`,
+`subscribe`, `getState` — adapted from the boardgame.io Client pattern without
+adding the dependency or its Node server. Supabase Edge Functions + RLS stay
+authoritative online; an in-memory master covers local multi-seat play.
+
+Status:
+🟡 In Progress — 2026-11-16 (all features built; browser + live Supabase checks
+and the Edge Function registry switch remain)
+
+## Features
+
+### createGameClient
+✅ Completed — 2026-11-16
+
+Files:
+- `src/features/games/engine/client/types.ts`
+- `src/features/games/engine/client/createGameClient.ts`
+- `src/features/games/engine/client/useGameClient.ts`
+- `src/features/games/engine/client/index.ts`
+
+Notes:
+- typed `client.moves.ACTION(payload)` via Proxy + `MoveMap` generic
+- `MoveResult` (`{ ok:false, error }`) replaces thrown errors, like `INVALID_MOVE`
+- snapshot exposes `status`, redacted `state`, `version`, `busy`, `error`;
+  stale (lower-version) snapshots are ignored
+- `useGameClient` binds to React via `useSyncExternalStore`
+- `GameTransport` interface is the seam for Local and Supabase transports
+
+### LocalTransport
+✅ Completed — 2026-11-16
+
+Files:
+- `src/features/games/engine/client/localTransport.ts`
+- `scripts/verify-game-client.mjs` (`npm run verify:game-client`)
+
+Notes:
+- `createLocalMaster()` holds the full state; every seat connects through one
+  transport and receives only `redactStateFor(state, seat)`
+- `firstPhase`, bot auto-play, host-only start/timeout and timeout resolution
+  mirror `supabase/functions/game-action` semantics
+- `getFullState()` / `getActionLog()` for devtools and tests only
+- verified: Avalon (3 humans + 2 bots) and Werewolf (4 humans + 3 bots) finish
+  with per-seat privacy assertions, invalid-move rejection, and timeouts
+
+Follow-up:
+- move `firstPhase` / `nextBotAction` / `privateActionTypes` into a shared
+  game runtime registry used by both LocalTransport and Edge Functions
+
+### SupabaseTransport
+✅ Completed — 2026-11-16
+
+Files:
+- `src/services/supabase/gameTransport.ts`
+- `src/services/supabase/game.ts` (Edge Function error extraction)
+- `src/services/supabase/index.ts`
+- `src/features/games/engine/client/types.ts` (`MatchInfo`, `TransportError`)
+- `src/features/games/engine/client/createGameClient.ts`
+- `src/features/games/engine/client/localTransport.ts`
+- `scripts/verify-supabase-transport.mjs` (`npm run verify:supabase-transport`)
+
+Notes:
+- wraps `services/supabase/game.ts` behind `GameTransport`; Edge Functions + RLS
+  remain the only authority, no server changes and no redeploy needed
+- Realtime change events trigger serialized, coalesced refetches (12 events →
+  2 fetches in the verifier); snapshot `version` is a per-transport sequence so
+  a restart (server row version → 0) is not dropped as stale
+- intents refetch on success so the actor sees its result without waiting on
+  Realtime
+- defensively redacts to the viewer's seat even if RLS returned extra rows
+- `match` (roomId, roomCode, gameId, hostId) is exposed before a game exists,
+  for host-only auto-start gating
+- fetch failures push a `TransportError`: last good state is kept, and the
+  next good sync clears it (move errors are not cleared by syncs)
+- `game.ts` intents now surface the Edge Function `{ error }` body ("host only",
+  "version conflict") instead of the generic non-2xx message — this also
+  improves errors in the existing `useRealtimeGame`
+- verified against an in-memory fake service; not yet exercised against the
+  live Supabase project
+
+Follow-up:
+- live check with two browsers once GamePage is migrated
+- retry automatically on `version conflict` (409 `retry: true`)
+
+### Migrate useRealtimeGame + GamePage to GameClient
+✅ Completed — 2026-11-16 (online path; UI live check pending)
+
+Files:
+- `src/features/games/useOnlineGameClient.ts` (new)
+- `src/features/games/engine/client/useGameClient.ts` (accepts `null`)
+- `src/pages/GamePage.jsx`
+- `src/features/games/engine/index.ts`
+- `src/features/games/engine/useRealtimeGame.ts` (removed)
+- `scripts/verify-realtime-game.mjs`, `scripts/verify-game-timeout.mjs`
+
+Notes:
+- `useOnlineGameClient(roomCode, enabled)` resolves the auth id via
+  `ensureSession`, then builds one GameClient per room over SupabaseTransport
+- GamePage maps the client snapshot onto the existing `GameUIProps`
+  (`externalState`, `onSubmitAction`, `onStartGame`, `onTimeout`, `busy`,
+  `error`) — no game UI changed
+- host auto-start now keys off `snapshot.match.hostId`, available before a
+  game exists
+- Avalon-only typing of the old hook is gone
+- offline/solo play is unchanged (still each UI's local `useGameEngine`)
+- contract + runtime verifiers and `vite build` pass; NOT yet clicked through
+  in two browsers against the live Supabase project
+
+Follow-up:
+- two-browser live run: host auto-start, guest sync, action, timeout, restart
+- pass `client` through `GameUIProps` and drop the separate online props
+- ~~route offline/solo play through LocalTransport~~ → done, see below
+
+### Offline Play via LocalTransport
+✅ Completed — 2026-11-16 (verified headless; not yet clicked through in a browser)
+
+Files:
+- `src/features/games/runtime.ts` (new — shared runtime registry)
+- `src/features/games/useLocalGameClient.ts` (new)
+- `src/features/games/engine/client/localTransport.ts`
+- `src/features/games/registry.ts` (`autoPlay`, `onToggleAutoPlay` on `GameUIProps`)
+- `src/pages/GamePage.jsx`
+- `src/features/games/avalon/ui/AvalonGame.tsx`
+- `src/features/games/werewolf/ui/WerewolfGame.tsx`
+- `src/features/games/checkpoint/ui/CheckpointGame.tsx`
+- `scripts/verify-game-client.mjs`, `scripts/verify-game-timeout.mjs`
+
+Notes:
+- game UIs now have ONE code path: state + actions always come from a
+  GameClient; each UI's local `useGameEngine`, start/first-phase effects and
+  bot `setTimeout` loops were removed
+- runtime registry (`firstPhase`, `nextBotAction`, `revealForPublic`,
+  `privateActionTypes`, `botDelayMs`) mirrors `supabase/functions/_shared/games.ts`
+- LocalMaster gained: paced bots (`botDelayMs`: Avalon/Werewolf 900 ms,
+  Checkpoint 520 ms — same as before), per-seat `setAutoPlay` (🤖 chip),
+  `hostOnly` switch, end-game `reveal` like the server, timeout prefers seats
+  a human controls; bot timer pauses when no seat is connected
+- offline the UI now only receives the local seat's private state (was the
+  full state); the result page still gets every role through `reveal`
+- offline phase-timer expiry plays the local seat's default move, as before
+- offline invalid moves now surface the same error toast as online
+- verifier plays Avalon (6), Werewolf (7), Checkpoint (4) offline with a
+  non-host local seat, paced bots, mid-game autoplay hand-off and reveal checks
+
+Follow-up:
+- click through all three games offline in a browser
+- point `supabase/functions/_shared/games.ts` at `src/features/games/runtime.ts`
+  (needs Edge Function redeploy)
+- delete now-unused `useGameEngine` and `nextAutoActor` (update
+  `verify-werewolf.mjs`)
+- Checkpoint `CONTINUE_SHIFT` still needs the host to tap — autoplay does not
+  cover it (unchanged behaviour)
+
+### Devtools Seat Switcher
+✅ Completed — 2026-11-16 (verified headless; not yet checked in a browser)
+
+Files:
+- `src/devtools/SeatSwitcher.tsx` (new)
+- `src/features/games/useLocalGameClient.ts`
+- `src/pages/GamePage.jsx`
+- `scripts/verify-game-client.mjs`
+
+Notes:
+- offline only; shown on the Vite dev server or with `?devtools` in the URL
+- floating 👁 button (left edge, touch-sized) opens a seat grid; tapping a
+  seat renders the SAME match from that seat (boardgame.io Debug-panel idea)
+- one GameClient per seat, so the UI still only receives the viewed seat's
+  redacted state; the game UI remounts per seat (`key`) so selections and
+  timers never leak between seats
+- the viewed seat is played by hand, every other seat by bots (the previous
+  seat becomes bot-played after a switch); 🤖 autoplay is per seat
+- orange dot = seat has a legal move right now (god view, devtools only);
+  "คุณ" marks the real player; results still credit the real player
+- verifier switches seats mid-game in all three games (8–18 switches) with
+  per-seat privacy assertions
+
+Follow-up:
+- optional "pause bots" toggle for pure hot-seat play (every seat manual)
+- optional role peek / full-state inspector panel
+
+---
+
 # Epic 6 - Avalon MVP
 
 Goal:

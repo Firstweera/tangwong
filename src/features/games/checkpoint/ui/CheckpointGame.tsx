@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Avatar, Icon } from '@/components/ui';
 import type { Player } from '@/types';
-import { useGameEngine } from '../../engine';
 import type { GameState, RoomState } from '../../engine';
 import { GameShell } from '../../ui/GameShell';
-import { nextAutoActor, nextBotAction } from '../bot.ts';
-import { checkpointConfig } from '../config.ts';
 import { CHECKPOINT_GOODS, LEGAL_GOODS } from '../goods.ts';
 import type { CheckpointGoodId, CheckpointPrivate, CheckpointPublic, LegalGoodId } from '../types.ts';
 
@@ -25,21 +22,22 @@ export interface CheckpointGameProps {
   busy?: boolean;
   error?: string | null;
   showToast?: (message: string, emoji?: string) => void;
+  /** Offline only: the local seat is bot-played. */
+  autoPlay?: boolean;
+  onToggleAutoPlay?: () => void;
 }
-
-const BOT_DELAY = 520;
 
 export function CheckpointGame({
   roomState, players, meId, onExit, onEnd, externalState = null,
   onSubmitAction, onlineMode = false, loading = false, busy = false, error, showToast,
+  autoPlay = false, onToggleAutoPlay,
 }: CheckpointGameProps) {
-  const local = useGameEngine<CheckpointPublic, CheckpointPrivate>(checkpointConfig);
-  const state = externalState ?? local.state;
-  const controlled = onlineMode || externalState !== null;
+  // State comes from the GameClient (Supabase online, LocalTransport offline);
+  // bots, setup and phase entry all run in the transport, not here.
+  const state = externalState;
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [declaredGoodId, setDeclaredGoodId] = useState<LegalGoodId>('rice');
   const [offer, setOffer] = useState(0);
-  const [autoAll, setAutoAll] = useState(false);
 
   const phase = state?.public.phase ?? 'lobby';
   const pub = state?.public.data;
@@ -48,24 +46,6 @@ export function CheckpointGame({
   const isGatekeeper = pub?.gatekeeperId === meId;
   const me = players.find(player => player.id === meId);
   const byId = (id: string) => players.find(player => player.id === id);
-
-  useEffect(() => {
-    if (!controlled) local.start(roomState);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!controlled && state?.public.phase === 'lobby') local.transitionTo('pack');
-  }, [state?.public.phase]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (onlineMode || !state || state.winner) return;
-    const actor = nextAutoActor(state, meId, autoAll);
-    if (!actor) return;
-    const action = nextBotAction(state, actor);
-    if (!action) return;
-    const timer = setTimeout(() => local.dispatch(action), BOT_DELAY);
-    return () => clearTimeout(timer);
-  }, [state, autoAll, meId, onlineMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setSelectedIndexes([]);
@@ -85,8 +65,7 @@ export function CheckpointGame({
   }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const act = (type: string, payload: unknown) => {
-    if (controlled) void onSubmitAction?.(type, payload);
-    else local.dispatch({ type, playerId: meId, payload });
+    void onSubmitAction?.(type, payload);
   };
 
   const selectedGoods = useMemo(
@@ -238,7 +217,7 @@ export function CheckpointGame({
     <GameShell
       roomId={roomState.roomId} meId={meId} players={players} hasState={Boolean(state)} winner={state?.winner}
       onlineMode={onlineMode} busy={busy} onExit={onExit} track={track} table={table} roleStrip={roleStrip} actionBar={actionBar}
-      extraChips={!onlineMode ? <button className="chip checkpoint-auto th" onClick={() => setAutoAll(value => !value)}>🤖 {autoAll ? 'หยุด' : 'ออโต้'}</button> : undefined}
+      extraChips={!onlineMode ? <button className="chip checkpoint-auto th" onClick={onToggleAutoPlay}>🤖 {autoPlay ? 'หยุด' : 'ออโต้'}</button> : undefined}
     />
   );
 }

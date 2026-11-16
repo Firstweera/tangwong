@@ -28,16 +28,20 @@ must(gameService, "from('game_private')", 'game service reads private owner stat
 must(gameService, "functions.invoke('game-start'", 'game service invokes game-start');
 must(gameService, "functions.invoke('game-action'", 'game service invokes game-action');
 
-const hook = read('src/features/games/engine/useRealtimeGame.ts');
-must(hook, 'useSupabaseTransport', 'realtime hook respects transport flag');
-must(hook, 'gameService.fetchGame', 'realtime hook fetches server state');
-must(hook, 'gameService.subscribeGame', 'realtime hook subscribes to game changes');
-must(hook, 'submitAction', 'realtime hook exposes submitAction');
-must(hook, 'start', 'realtime hook exposes start');
-must(hook, 'meId', 'realtime hook resolves effective player id');
+const transport = read('src/services/supabase/gameTransport.ts');
+must(transport, 'service.fetchGame', 'SupabaseTransport fetches server state');
+must(transport, 'service.subscribeGame', 'SupabaseTransport subscribes to game changes');
+must(transport, 'service.submitAction', 'SupabaseTransport submits actions via game-action');
+must(transport, 'service.startGame', 'SupabaseTransport starts games via game-start');
+must(transport, 'redactStateFor', 'SupabaseTransport redacts to the viewer seat');
+
+const hook = read('src/features/games/useOnlineGameClient.ts');
+must(hook, 'ensureSession', 'online client resolves the auth player id');
+must(hook, 'createSupabaseTransport', 'online client uses SupabaseTransport');
+must(hook, 'createGameClient', 'online client builds a GameClient');
 
 const engineIndex = read('src/features/games/engine/index.ts');
-must(engineIndex, 'useRealtimeGame', 'engine barrel exports useRealtimeGame');
+must(engineIndex, "./client/index.ts", 'engine barrel exports the game client');
 
 const avalon = read('src/features/games/avalon/ui/AvalonGame.tsx');
 must(avalon, 'externalState', 'AvalonGame accepts external state');
@@ -46,7 +50,7 @@ must(avalon, 'onStartGame', 'AvalonGame accepts external start dispatcher');
 must(avalon, 'onlineMode', 'AvalonGame can disable local-only automation');
 
 const gamePage = read('src/pages/GamePage.jsx');
-must(gamePage, 'useRealtimeGame', 'GamePage uses realtime game hook');
+must(gamePage, 'useOnlineGameClient', 'GamePage uses the online GameClient');
 must(gamePage, 'useSupabaseTransport', 'GamePage branches on Supabase transport');
 must(gamePage, 'externalState', 'GamePage passes server state to AvalonGame');
 must(gamePage, 'onSubmitAction', 'GamePage passes server action dispatcher');

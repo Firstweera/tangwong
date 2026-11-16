@@ -1,10 +1,14 @@
 // GamePage.jsx — routes a room to its game UI via the client game registry.
-// Builds the engine RoomState from the room roster, padding with bots so a solo
-// player can run a full match (Phase A). Adding a new game = register it in
+// Online: GameClient over SupabaseTransport. Offline: GameClient over an
+// in-memory LocalTransport, with the roster padded with bots so a solo player
+// can run a full match. Adding a new game = register it in
 // src/features/games/registry.ts; no changes here.
 import { useEffect, useMemo, useRef } from 'react';
 import { getGameEntry } from '../features/games/registry';
-import { playerToGamePlayer, gamePlayerToPlayer, useRealtimeGame } from '../features/games/engine';
+import { playerToGamePlayer, gamePlayerToPlayer } from '../features/games/engine';
+import { useOnlineGameClient } from '../features/games/useOnlineGameClient';
+import { useLocalGameClient } from '../features/games/useLocalGameClient';
+import { SeatSwitcher, isSeatSwitcherEnabled } from '../devtools/SeatSwitcher';
 import { useSupabaseTransport } from '../services/supabase';
 import { ME } from '../data';
 
@@ -45,32 +49,45 @@ function buildRoomState(room, human, minPlayers) {
 export default function GamePage({ go, showToast, currentRoom, player, leaveRoom }) {
   const human = player ?? ME;
   const onlineMode = Boolean(useSupabaseTransport && currentRoom?.code && currentRoom?.id !== 'solo');
-  const realtime = useRealtimeGame(currentRoom?.code, human.id);
-  const meId = onlineMode ? (realtime.meId ?? human.id) : human.id;
+  // Online play goes through a GameClient over SupabaseTransport (Epic 5.1).
+  // `online` is the client's snapshot: { status, match, state, busy, error }.
+  const { client, snapshot: online, meId: onlineMeId } = useOnlineGameClient(currentRoom?.code, onlineMode, human.id);
+  const meId = onlineMode ? (onlineMeId ?? human.id) : human.id;
+  const onlineLoading = onlineMode && (online.status === 'idle' || online.status === 'connecting');
   const startRequested = useRef(false);
 
   // Prefer the authoritative server room once loaded (non-host joins via code,
   // so currentRoom.gameId may be stale until the realtime room syncs).
-  const gameId = (onlineMode && realtime.room?.gameId) || currentRoom?.gameId || 'avalon';
+  const gameId = (onlineMode && online.match?.gameId) || currentRoom?.gameId || 'avalon';
   const entry = getGameEntry(gameId);
   const minPlayers = entry?.config.minPlayers ?? 5;
 
   useEffect(() => { startRequested.current = false; }, [currentRoom?.code]);
 
   useEffect(() => {
-    if (!onlineMode || startRequested.current) return;
-    if (realtime.loading || realtime.busy || realtime.state || !realtime.room || !realtime.meId) return;
-    if (realtime.room.hostId !== realtime.meId) return;
+    if (!onlineMode || !client || startRequested.current) return;
+    if (online.status !== 'ready' || online.busy || online.state || !online.match) return;
+    if (online.match.hostId !== client.playerId) return;
 
     startRequested.current = true;
-    void realtime.start();
-  }, [onlineMode, realtime.loading, realtime.busy, realtime.state, realtime.room, realtime.meId, realtime.start]);
+    void client.startGame();
+  }, [onlineMode, client, online.status, online.busy, online.state, online.match]);
 
   const roomState = useMemo(
-    () => (onlineMode && realtime.state?.room ? realtime.state.room : buildRoomState(currentRoom, human, minPlayers)),
-    [onlineMode, realtime.state?.room, currentRoom, human, minPlayers],
+    () => (onlineMode && online.state?.room ? online.state.room : buildRoomState(currentRoom, human, minPlayers)),
+    [onlineMode, online.state?.room, currentRoom, human, minPlayers],
   );
   const players = useMemo(() => roomState.players.map(gamePlayerToPlayer), [roomState]);
+
+  // Offline play runs the same GameClient API over an in-memory LocalTransport;
+  // every other seat is bot-played. Game UIs only ever see one client shape.
+  const local = useLocalGameClient(gameId, roomState, meId, !onlineMode && Boolean(entry));
+  const game = onlineMode
+    ? { client, snapshot: online, loading: onlineLoading || online.busy, timeout: async () => { await client?.timeout(); } }
+    : { client: local.client, snapshot: local.snapshot, loading: !local.snapshot.state, timeout: local.timeout };
+  // Seat the UI renders. Offline devtools can switch it; results still credit `meId`.
+  const viewId = onlineMode ? meId : local.viewSeat;
+  const showSeatSwitcher = !onlineMode && isSeatSwitcherEnabled();
 
   // TODO(A4/GameShell): move into a per-game buildResultProps on the registry entry.
   const handleEnd = (state) => {
@@ -85,7 +102,7 @@ export default function GamePage({ go, showToast, currentRoom, player, leaveRoom
 
     if (gameId === 'werewolf') {
       // Server writes reveal:{playerId:{role,team}} into public_data on game end.
-      // In online mode this covers ALL players; offline it's empty (use private instead).
+      // Covers ALL players online and offline (LocalTransport mirrors the server).
       const reveal = state.public.data.reveal ?? {};
       const winnerIds = new Set(w.winners ?? []);
       const roles = {};
@@ -123,8 +140,8 @@ export default function GamePage({ go, showToast, currentRoom, player, leaveRoom
     // Avalon result
     const reason = w.conditionId === 'assassin' ? 'assassin' : w.conditionId === 'evil-hammer' ? 'reject' : 'quests';
     // reveal is { playerId: { role, side } } from the server (all players);
-    // extract the role key for ResultPage. Offline/local play has no reveal blob,
-    // so fall back to state.private (which holds every role locally).
+    // extract the role key for ResultPage. LocalTransport publishes the same
+    // reveal offline; own private state overlays it.
     const reveal = state.public.data.reveal ?? {};
     const roles = {};
     for (const [pid, r] of Object.entries(reveal)) roles[pid] = r?.role ?? r;
@@ -142,23 +159,23 @@ export default function GamePage({ go, showToast, currentRoom, player, leaveRoom
     );
   }
 
-  if (onlineMode && !realtime.state) {
-    const isHost = realtime.room?.hostId && realtime.meId && realtime.room.hostId === realtime.meId;
+  if (onlineMode && !online.state) {
+    const isHost = Boolean(client && online.match?.hostId === client.playerId);
     return (
       <div className="screen col center" style={{ gap: 12, padding: 24, textAlign: 'center' }}>
-        <span style={{ fontSize: 42 }}>{realtime.error ? '⚠️' : '⌛'}</span>
-        <span className="th h2">{realtime.error ? 'เริ่มเกมออนไลน์ไม่สำเร็จ' : 'กำลังเตรียมเกมออนไลน์'}</span>
+        <span style={{ fontSize: 42 }}>{online.error ? '⚠️' : '⌛'}</span>
+        <span className="th h2">{online.error ? 'เริ่มเกมออนไลน์ไม่สำเร็จ' : 'กำลังเตรียมเกมออนไลน์'}</span>
         <span className="th tiny" style={{ maxWidth: 280, color: 'var(--muted)', fontWeight: 700 }}>
-          {realtime.error
-            ? realtime.error
+          {online.error
+            ? online.error
             : isHost
               ? 'กำลังเรียก game-start เพื่อสร้างสถานะเกมและบทบาทลับ'
               : 'รอหัวห้องเริ่มเกม แล้วสถานะจะซิงก์มาที่เครื่องนี้อัตโนมัติ'}
         </span>
         {isHost && (
-          <button className="btn btn-primary btn-lg" disabled={realtime.busy} onClick={() => realtime.start()}>
+          <button className="btn btn-primary btn-lg" disabled={online.busy} onClick={() => void client?.startGame()}>
             <span className="sheen" />
-            <span className="th">{realtime.busy ? 'กำลังเริ่ม...' : 'เริ่มเกมอีกครั้ง'}</span>
+            <span className="th">{online.busy ? 'กำลังเริ่ม...' : 'เริ่มเกมอีกครั้ง'}</span>
           </button>
         )}
         <button className="btn btn-glass btn-lg" onClick={() => go('lobby')}>กลับห้อง</button>
@@ -168,21 +185,30 @@ export default function GamePage({ go, showToast, currentRoom, player, leaveRoom
 
   const GameUI = entry.ui;
   return (
+    <>
     <GameUI
+      // Remount per seat so per-seat UI state (selections, timers) never leaks.
+      key={viewId}
       roomState={roomState}
       players={players}
-      meId={meId}
+      meId={viewId}
       onExit={() => leaveRoom ? leaveRoom() : go('home')}
       onEnd={handleEnd}
-      externalState={onlineMode ? realtime.state : null}
-      onSubmitAction={onlineMode ? realtime.submitAction : undefined}
-      onStartGame={onlineMode ? realtime.start : undefined}
-      onTimeout={onlineMode ? realtime.timeout : undefined}
+      externalState={game.snapshot.state}
+      onSubmitAction={game.client ? async (type, payload) => { await game.client.submit(type, payload); } : undefined}
+      onStartGame={onlineMode && client ? async () => { await client.startGame(); } : undefined}
+      onTimeout={game.client ? game.timeout : undefined}
       onlineMode={onlineMode}
-      loading={realtime.loading || realtime.busy}
-      busy={onlineMode ? realtime.busy : false}
-      error={onlineMode ? realtime.error : null}
+      loading={game.loading}
+      busy={game.snapshot.busy}
+      error={game.snapshot.error}
+      autoPlay={onlineMode ? undefined : local.autoPlay}
+      onToggleAutoPlay={onlineMode ? undefined : local.toggleAutoPlay}
       showToast={showToast}
     />
+    {showSeatSwitcher && (
+      <SeatSwitcher seats={local.seats} players={players} homeSeatId={meId} onSelect={local.setViewSeat} />
+    )}
+    </>
   );
 }
