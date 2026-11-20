@@ -30,6 +30,17 @@ pnpm-debug.log*
 # supabase CLI local state
 supabase/.temp/
 
-# claude
-.claude/
+# claude — track only the project-owned AI setup (.ai/ is tracked too).
+# Third-party skills stay per-machine; personal settings never ship.
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+!.claude/agents/
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/new-game/
+!.claude/skills/game-action/
+!.claude/skills/verify/
+!.claude/skills/ship/
+.claude/settings.local.json
 .agents/
