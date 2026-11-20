@@ -53,7 +53,8 @@ Body:
 
 ## Testing
 Automated (passing): <gate commands>
-Not yet done: <browser check / two-browser online / Edge Function redeploy>
+Not yet done: <browser check / two-browser online>
+Deploy: <"Edge Functions redeploy on merge" when engine/functions changed, else "none">
 
 ## Follow-up
 - <items also recorded in the roadmap>

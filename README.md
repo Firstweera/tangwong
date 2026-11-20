@@ -8,7 +8,7 @@ Auth + Realtime). Full MVP flow: **Home → Create/Join Room → Lobby → Avalo
 ## Run it
 
 ```bash
-npm install
+pnpm install
 npm run dev      # dev server at http://localhost:5173
 npm run build    # production build → dist/
 npm run preview  # serve the production build

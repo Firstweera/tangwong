@@ -57,6 +57,7 @@ Keep secrets out of `TPublic` and out of event payloads (game-engine §6).
 4. `src/features/games/runtime.ts`: `firstPhase`, `nextBotAction`, `revealForPublic`,
    `privateActionTypes`, `botDelayMs`
 5. `supabase/functions/_shared/games.ts`: **the same values as runtime.ts**
+   (`npm run verify:registry-parity` fails otherwise)
 6. `src/pages/GamePage.jsx` `handleEnd` (+ `ResultPage.jsx` if the result differs)
 
 ## 5. Verify
@@ -65,8 +66,9 @@ Keep secrets out of `TPublic` and out of event payloads (game-engine §6).
    bots and assert the win condition. Add `"verify:<id>"` to `package.json`.
 2. Add the game to `scripts/verify-game-client.mjs` (`playOffline`, `seatSwitch`).
 3. Run the `verify` skill.
-4. Online play needs `supabase functions deploy game-start` and `game-action`. Ask
-   first, and list it as not yet done if skipped.
+4. Online play: the Edge Functions redeploy automatically when the PR merges into `main`
+   (`.github/workflows/deploy-supabase.yml`). Before the merge, list "online play not yet
+   verified". After it, check the Actions run, then do a two-browser game.
 
 ## 6. Finish
 

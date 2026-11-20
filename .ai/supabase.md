@@ -87,8 +87,19 @@ each other. Automatic retry on 409 is an open follow-up.
 ## 6. Deploy
 
 - SQL: paste into the Supabase SQL Editor in order (no CLI migration pipeline yet).
-- Functions: `supabase functions deploy game-start` and `supabase functions deploy game-action`.
-  Redeploy **both** after changing anything under `src/features/games/` that they import.
+- Functions: **automatic.** `.github/workflows/deploy-supabase.yml` redeploys `game-start`
+  and `game-action` on every push to `main` that touches `src/features/games/**`,
+  `src/types/**` or `supabase/functions/**`, after the CI gate passes. Merging such a PR
+  is therefore a production deploy. It can also be run by hand from the Actions tab.
+- Manual fallback: `supabase functions deploy game-start` and `... game-action`
+  (both, always). If the CLI says `Access token not provided` right after
+  `supabase login`, export `SUPABASE_ACCESS_TOKEN` for the shell instead.
+- A new game must be in **both** registries; `npm run verify:registry-parity` (part of
+  the gate) fails otherwise, so a half-registered game never deploys.
+- In-progress online games keep running on the new code after a deploy. A change to
+  the state shape must tolerate the old shape (read new fields defensively).
+- Migrations are **not** applied by CI. The deploy workflow only warns when a file
+  under `supabase/migrations/` changed. Apply them by hand, before merging code that needs them.
 - Live check: [../supabase/functions/README.md](../supabase/functions/README.md) and
   `npm run verify:live-game`. These write to the real project, so run them only when asked.
 
@@ -97,3 +108,6 @@ each other. Automatic retry on 409 is an open follow-up.
 - The browser gets only the **anon** key. RLS is what protects data.
 - `SUPABASE_SERVICE_ROLE_KEY` exists only inside Edge Functions (injected by the platform).
 - `.env`, `.env.local` are git-ignored and are **not read** by Claude (settings deny).
+- GitHub Actions secrets (set by a human in repo Settings → Secrets and variables →
+  Actions): `SUPABASE_ACCESS_TOKEN` (a scoped token: TangWong project, Edge Functions
+  write) and `SUPABASE_PROJECT_REF`. Never echo them in a workflow.

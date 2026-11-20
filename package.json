@@ -18,8 +18,10 @@
     "verify:werewolf": "node scripts/verify-werewolf.mjs",
     "verify:checkpoint": "node scripts/verify-checkpoint.mjs",
     "verify:game-client": "node scripts/verify-game-client.mjs",
-    "verify:supabase-transport": "node scripts/verify-supabase-transport.mjs"
+    "verify:supabase-transport": "node scripts/verify-supabase-transport.mjs",
+    "verify:registry-parity": "node scripts/verify-registry-parity.mjs"
   },
+  "packageManager": "pnpm@10.27.0",
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
     "@vercel/analytics": "^2.0.1",

@@ -118,6 +118,15 @@ Vercel:
 - [ ] `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_USE_SUPABASE=true` set
 - [ ] first deploy succeeds; site loads
 
+Edge Functions (automatic since 2026-11-20):
+
+- [ ] GitHub repo secrets `SUPABASE_ACCESS_TOKEN` (scoped: TangWong project, Edge
+      Functions write) and `SUPABASE_PROJECT_REF` are set
+- [ ] after merging into `main`, the **Deploy Supabase functions** run in the Actions
+      tab is green (it runs only when game engine / function code changed; use
+      "Run workflow" to deploy by hand)
+- [ ] migrations are still applied by hand, before merging code that needs them
+
 Post-deploy smoke test (two devices):
 
 - [ ] both devices load the production URL and get distinct anonymous identities

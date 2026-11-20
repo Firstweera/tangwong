@@ -39,7 +39,7 @@ migrated, not rewritten — see [architecture.md §3](architecture.md).
 | Styling | prototype CSS (`src/styles/`) + Tailwind v4 utilities bridged to design tokens — [coding-standards §4](coding-standards.md) |
 | Backend | Supabase — Postgres + RLS, anonymous Auth, Realtime, Edge Functions (Deno) — [supabase.md](supabase.md) |
 | Hosting | Vercel (static SPA) — [../DEPLOYMENT.md](../DEPLOYMENT.md) |
-| Package manager | pnpm in practice (`node_modules/.pnpm`, newer `pnpm-lock.yaml`); README still says `npm install` and `package-lock.json` is also tracked. Scripts run fine via `npm run`. Ask before adding a dependency, and say which lockfile you updated |
+| Package manager | **pnpm** (`packageManager` in package.json, `pnpm-lock.yaml` only; decided 2026-11-20). Install with `pnpm install`; CI uses `pnpm install --frozen-lockfile`. Scripts also run via `npm run`. Ask before adding a dependency |
 
 There is no Node server and no Socket.io server. "Socket.io-ready" in older docs means
 the transport seam exists ([game-engine §7](game-engine.md)); Supabase is the live backend.
@@ -73,6 +73,7 @@ developer plays a full match.
 | `npm run dev` | Vite dev server |
 | `npm run build` | production build (also the only bundler-level type gate for JSX) |
 | `npx tsc --noEmit -p .` | typecheck `src/` |
+| `npm run verify:registry-parity` | runtime.ts and the Edge Function registry list the same games with the same `firstPhase` and `privateActionTypes` |
 | `npm run verify:game-client` | headless matches through GameClient: multi-seat, offline, seat switching (all games) |
 | `npm run verify:supabase-transport` | SupabaseTransport against an in-memory fake service |
 | `npm run verify:werewolf` · `verify:checkpoint` | per-game engine runs |

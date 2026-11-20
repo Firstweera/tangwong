@@ -47,6 +47,6 @@ If a phase gains or changes a time limit, update the server `PHASE_TIMEOUT_SECON
 1. Extend `scripts/verify-<id>.mjs` so a full game exercises the new action. If the
    action is private, also extend the privacy assertions in `verify-game-client.mjs`.
 2. Run the `verify` skill.
-3. Changed shared game code → Edge Functions need a redeploy. Ask first; otherwise list
-   it as not done.
+3. Changed shared game code → the Edge Functions redeploy automatically after the merge
+   into `main`. New state fields must tolerate games already running on the old shape.
 4. Update the roadmap entry and the owner `.ai/` doc if a rule changed.

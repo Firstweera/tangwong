@@ -1,0 +1,51 @@
+# Merge gate (.ai/workflow.md §4): typecheck, build and every offline verify script.
+# Never runs verify:live-game — that one writes to the production database.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  gate:
+    name: Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit -p .
+      - name: Build
+        run: pnpm run build
+      - name: Registry parity (runtime.ts ↔ Edge Functions)
+        run: pnpm run verify:registry-parity
+      - name: Game client
+        run: pnpm run verify:game-client
+      - name: Supabase transport
+        run: pnpm run verify:supabase-transport
+      - name: Werewolf
+        run: pnpm run verify:werewolf
+      - name: Checkpoint
+        run: pnpm run verify:checkpoint
+      - name: Game action contract
+        run: pnpm run verify:game-action
+      - name: Game timeout contract
+        run: pnpm run verify:game-timeout
+      - name: Realtime game contract
+        run: pnpm run verify:realtime-game
