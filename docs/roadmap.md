@@ -1793,14 +1793,39 @@ Notes:
   Rumor rewards in one authoritative action
 
 ### Scoring + Contracts
-🟡 In Progress — 2026-07-13
+🟡 In Progress — 2026-11-20 (engine + UI done locally; not yet live)
+
+Files:
+- `docs/games/checkpoint-rules.md` (v0.3: demand deck, Contract values, tie-breaks)
+- `src/features/games/checkpoint/market.ts` (new: demand cards, Contracts, scoring helpers)
+- `src/features/games/checkpoint/{types,setup,phases,actions,winConditions,bot,rules}.ts`
+- `src/features/games/checkpoint/ui/CheckpointGame.tsx`, `src/styles/components.css`
+- `src/features/games/runtime.ts`, `supabase/functions/_shared/games.ts`
+- `src/pages/GamePage.jsx`, `src/pages/ResultPage.jsx`
+- `scripts/verify-checkpoint.mjs`, `scripts/verify-game-client.mjs`
 
 Notes:
-- playable scoring is complete: remaining cash plus delivered Goods value
-- live score ranking and dedicated result page are implemented
+- new `contract` phase (firstPhase): each player keeps 1 of 2 secret Contracts via
+  `CHOOSE_CONTRACT` (private action type); public only shows who has chosen
+- Market demand: 7-card deck, one card per shift drawn at shift change (never
+  precomputed), reshuffled when empty; bonuses tracked as public `marketBonus`,
+  penalty increases on Weapons Crackdown / Counterfeit Alert, Honest Trade +1 baht from the bank
+- final score = cash + delivered value + Market bonus + completed Contract value;
+  Contracts revealed in public `contractResults` only at game end
+- ties: most delivered Legal goods → most cash → shared
+- bots choose a Contract and favour Contract/demand goods when packing
+- fix: bot offers are capped at the bot's cash (bigger penalties made a 6-player
+  stall reproducible in ~4.5% of games)
+- UI reads all new fields defensively, so it still renders against the old server
+
+Not verified:
+- browser check of the contract screen, demand strip and result page (light + dark, phone width)
+- online play: Edge Functions `game-start` and `game-action` need a redeploy;
+  until then online games keep the old rules
 
 Follow-up:
-- add Market demand bonuses and private Contracts after the first balance test
+- redeploy Edge Functions, then a two-browser online game
+- balance playtest of Contract values and demand bonuses
 
 ### Bots + Online Verification
 🟡 In Progress — 2026-07-13

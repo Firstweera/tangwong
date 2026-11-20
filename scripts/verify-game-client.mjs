@@ -27,6 +27,7 @@ writeFileSync(entry, `
   import { werewolfConfig } from '${src}/werewolf/config.ts';
   import { getGameRuntime } from '${src}/runtime.ts';
   import { nextBotAction as werewolfBot } from '${src}/werewolf/bot.ts';
+  import { CONTRACT_IDS } from '${src}/checkpoint/market.ts';
 
   const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
 
@@ -137,6 +138,12 @@ writeFileSync(entry, `
     for (let i = 0; i < 4000 && !master.getFullState().winner; i += 1) {
       const keys = Object.keys(me.getState().state.private);
       assert(keys.length === 1 && keys[0] === 'me', gameId + ' offline leaked ' + keys);
+      if (gameId === 'checkpoint') {
+        // Contracts stay secret until the game ends.
+        const pubData = me.getState().state.public.data;
+        const json = JSON.stringify(pubData);
+        assert(pubData.gameComplete || !CONTRACT_IDS.some(id => json.includes(id)), 'checkpoint contract leaked into public data');
+      }
       const full = master.getFullState();
       // Hand my seat to the bot halfway through (🤖 toggle).
       if (manual === 6 && autoFrom < 0) { master.setAutoPlay('me', true); autoFrom = master.getActionLog().length; }
@@ -159,6 +166,9 @@ writeFileSync(entry, `
     if (gameId !== 'checkpoint') {
       const reveal = end.public.data.reveal ?? {};
       assert(Object.keys(reveal).length === seatCount, gameId + ' reveal missing seats: ' + Object.keys(reveal).length);
+    } else {
+      const results = end.public.data.contractResults ?? {};
+      assert(Object.keys(results).length === seatCount, 'checkpoint contract results missing seats: ' + Object.keys(results).length);
     }
     me.stop();
     console.log(gameId + ' offline: PASS — my manual moves ' + manual + ', autoplay from action ' + autoFrom + ', total ' + master.getActionLog().length);

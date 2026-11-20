@@ -5,7 +5,11 @@ const pub = (state: { public: { data: unknown } }) => state.public.data as Check
 const merchantCount = (state: { room: { players: unknown[] } }) => state.room.players.length - 1;
 
 export const CHECKPOINT_PHASES: PhaseConfig[] = [
-  { id: 'lobby', label: 'Lobby', labelTh: 'ห้องรอ', allowedActions: [], transitions: [{ to: 'pack', when: 'manual' }] },
+  { id: 'lobby', label: 'Lobby', labelTh: 'ห้องรอ', allowedActions: [], transitions: [{ to: 'contract', when: 'manual' }] },
+  {
+    id: 'contract', label: 'Contract', labelTh: 'เลือกสัญญา', allowedActions: ['CHOOSE_CONTRACT'],
+    transitions: [{ to: 'pack', when: 'condition', condition: state => (pub(state).contractsChosen ?? []).length === state.room.players.length }],
+  },
   {
     id: 'pack', label: 'Pack', labelTh: 'จัดกระเป๋า', allowedActions: ['SUBMIT_CRATE'],
     transitions: [{ to: 'negotiate', when: 'condition', condition: state => Object.keys(pub(state).declarations).length === merchantCount(state) }],

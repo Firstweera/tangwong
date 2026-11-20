@@ -131,6 +131,8 @@ export default function GamePage({ go, showToast, currentRoom, player, leaveRoom
         scores: w.scores ?? state.public.data.wealth,
         cash: state.public.data.cash,
         delivered: state.public.data.delivered,
+        marketBonus: state.public.data.marketBonus ?? {},
+        contractResults: state.public.data.contractResults ?? {},
         reasonTh: w.reasonTh ?? w.reason,
         ...shared,
       });

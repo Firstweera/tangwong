@@ -206,11 +206,30 @@ button.werewolf-seat-button:focus-visible {
 .checkpoint-icon-action.inspect { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--accent); }
 .checkpoint-icon-action:disabled { opacity: .35; }
 .checkpoint-rumor-button { width: 30px; height: 30px; padding: 0; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-2); }
-.checkpoint-wallet { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; padding-top: 9px; padding-bottom: 5px; border-top: 1px solid var(--border); }
+.checkpoint-role { border-top: 1px solid var(--border); }
+.checkpoint-wallet { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; padding-top: 9px; padding-bottom: 5px; }
 .checkpoint-wallet > span { display: flex; flex-direction: column; align-items: center; }
 .checkpoint-wallet small { color: var(--muted); font-size: 10px; font-weight: 700; }
 .checkpoint-wallet strong { color: var(--text); font-size: 15px; }
 .checkpoint-primary { width: 100%; }
+.checkpoint-demand { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 6px; margin-top: 8px; padding: 6px 9px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border)); border-radius: 8px; background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.checkpoint-demand > span { font-size: 16px; line-height: 1; }
+.checkpoint-demand strong { font-size: 12px; white-space: nowrap; }
+.checkpoint-demand small { overflow: hidden; color: var(--muted); font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.checkpoint-contracts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.checkpoint-contract-card { display: flex; min-width: 0; min-height: 150px; padding: 12px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; transition: border-color .15s, background .15s, transform .15s; }
+.checkpoint-contract-card > span { font-size: 30px; line-height: 1; }
+.checkpoint-contract-card strong { font-size: 14px; }
+.checkpoint-contract-card small { color: var(--muted); font-size: 11px; font-weight: 700; line-height: 1.35; }
+.checkpoint-contract-card b { margin-top: 2px; color: var(--accent); font-size: 15px; }
+.checkpoint-contract-card[data-selected="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, var(--surface)); transform: translateY(-2px); }
+.checkpoint-contract-card:disabled:not([data-selected="true"]) { opacity: .45; }
+.checkpoint-note { color: var(--muted); font-size: 11px; line-height: 1.45; text-align: center; }
+.checkpoint-contract-mini { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 7px; padding-top: 8px; font-size: 11px; color: var(--muted); }
+.checkpoint-contract-mini > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.checkpoint-contract-mini strong { color: var(--text); }
+.checkpoint-contract-mini b { color: var(--text); white-space: nowrap; }
+.checkpoint-contract-mini[data-done="true"] b { color: var(--good); }
 .checkpoint-offer-bar { display: grid; grid-template-columns: 42px 1fr 42px minmax(108px, 1.2fr); gap: 6px; align-items: stretch; }
 .checkpoint-offer-bar > button:not(.btn) { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 22px; }
 .checkpoint-offer-bar > div { display: flex; min-width: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); flex-direction: column; align-items: center; justify-content: center; }

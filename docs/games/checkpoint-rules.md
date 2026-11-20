@@ -1,4 +1,4 @@
-# ผู้ตรวจการ — Game Design Draft v0.2
+# ผู้ตรวจการ — Game Design Draft v0.3
 
 > Working title for an original TangWong bluffing and negotiation game.
 > This design uses original names, theme, content, interface, and rules.
@@ -87,7 +87,8 @@ not final production numbers.
 
 1. Randomize the first Gatekeeper.
 2. Give every player 20 baht and 6 Goods cards.
-3. Deal 2 private Contracts to each player; they keep 1.
+3. Deal 2 different private Contracts to each player. Each player secretly keeps 1
+   (`contract` phase, before the first shift). Others only see *who* has chosen.
 4. Reveal the first Market demand card.
 5. Give the Gatekeeper inspection seals:
    - 3 players: 1 seal
@@ -147,7 +148,12 @@ If an inspected crate contains any other Legal good or any Illegal good:
 - cards matching the declared Legal good are delivered
 - all mismatched Legal and Illegal goods are confiscated and discarded
 - the merchant pays their printed inspection penalties to the Gatekeeper
+  (plus any Market demand penalty increase)
 - the sealed offer is cancelled
+
+Market demand bonuses are applied here, at the moment goods are delivered
+(passed crates and the matching part of an inspected crate). They are tracked
+per player as a public **Market bonus** that counts toward score.
 
 ### 5. Market Close
 
@@ -155,9 +161,8 @@ If an inspected crate contains any other Legal good or any Illegal good:
    - correct accusation against a bluffing merchant: accuser gains 2 baht
    - incorrect accusation against a truthful merchant: accuser loses 1 baht
    - uninspected or passed target: no reward or penalty
-2. Apply the current Market demand bonus to delivered goods.
-3. Merchants draw back to 6 cards.
-4. Rotate the Gatekeeper clockwise and reveal a new Market demand card.
+2. Merchants draw back to 6 cards.
+3. Rotate the Gatekeeper clockwise and reveal a new Market demand card.
 
 ## Game Length
 
@@ -170,28 +175,39 @@ alliances after seeing how the table behaved in the first rotation.
 
 One demand is active each shift and is visible before packing.
 
-Initial set:
+- The deck holds the 7 cards below. One card is drawn at random at setup and at
+  every shift change, from the cards not yet drawn. When all 7 have been drawn,
+  the deck is reshuffled. The next card is drawn only when the shift changes, so
+  nobody (not even the server state) knows it in advance.
+- Value bonuses become **Market bonus** points for the merchant who delivers.
+- Penalty increases apply per confiscated card of that type.
 
-- Rice Shortage — Rice gains +1 value this shift
-- Apple Fair — the first Apple delivered by each merchant gains +1 value
-- Silk Festival — Silk gains +2 value this shift
-- Medical Drive — Medicine gains +2 value this shift
-- Weapons Crackdown — Illegal Gun inspection penalties increase by 2 baht
-- Counterfeit Alert — Counterfeit Money inspection penalties increase by 2 baht
-- Honest Trade — truthful inspected crates gain 1 extra baht
+| card | Thai | effect |
+| ---- | ---- | ------ |
+| Rice Shortage | ข้าวขาดตลาด | each delivered Rice +1 |
+| Apple Fair | เทศกาลแอปเปิล | +1 if the merchant delivers at least one Apple this shift |
+| Silk Festival | งานผ้าไหม | each delivered Silk +2 |
+| Medical Drive | รณรงค์ยา | each delivered Medicine +2 |
+| Weapons Crackdown | กวาดล้างปืนเถื่อน | each confiscated Illegal Gun +2 baht penalty |
+| Counterfeit Alert | เตือนภัยแบงก์ปลอม | each confiscated Counterfeit Money +2 baht penalty |
+| Honest Trade | ค้าขายสุจริต | a truthful inspected merchant gains +1 baht from the bank (on top of compensation) |
 
 ## Contracts
 
-Contracts provide private end-game objectives worth 4–7 baht.
+Contracts are private end-game objectives. A completed Contract adds its value
+to the final score. Contracts stay private during play and are revealed for
+every player, completed or not, when the game ends.
 
-Initial examples:
+| contract | Thai | goal (counted over the whole game) | value |
+| -------- | ---- | ---------------------------------- | ----: |
+| Rice Merchant | พ่อค้าข้าว | deliver 4 Rice | 5 |
+| Silk Road | เส้นทางไหม | deliver 3 Silk | 5 |
+| Diverse Cargo | สินค้าหลากหลาย | deliver 4 or more different goods | 4 |
+| Arms Dealer | นายหน้าอาวุธ | deliver 2 Illegal Guns | 7 |
+| Master Forger | ช่างปลอมแปลง | deliver 2 Counterfeit Money | 7 |
+| Clean Record | ประวัติขาวสะอาด | never have an Illegal good confiscated | 4 |
 
-- Rice Merchant — deliver 4 Rice
-- Silk Road — deliver 3 Silk
-- Diverse Cargo — deliver at least one good from four different names
-- Arms Dealer — deliver 2 Illegal Guns
-- Master Forger — deliver 2 Counterfeit Money
-- Clean Record — finish with no confiscated Illegal goods
+Values are starting numbers for the balance playtest.
 
 ## Game End
 
@@ -200,13 +216,9 @@ Initial examples:
 
 Final score:
 
-Current playable vertical slice:
+`remaining baht + delivered Goods value + Market bonus + completed Contract value`
 
-`remaining baht + delivered Goods value`
-
-Target after the balance pass:
-
-`remaining baht + delivered Goods value + Market bonuses + completed Contract value`
+During play the scoreboard shows everything except Contracts (they are secret).
 
 Highest score wins. Ties break by:
 
@@ -232,14 +244,17 @@ Highest score wins. Ties break by:
 - remaining inspection seals
 - pass/inspect decisions
 - revealed inspected crates
-- delivered goods, baht, demand card, score summary
+- delivered goods, baht, demand card, cards already drawn from the demand deck, score summary
+- Market bonus per player, confiscated Illegal count per player
+- who has chosen a Contract (not which one)
+- at game end only: every player's Contract and whether it was completed
 
 ### Private Player State
 
 - hand
 - packed crate before reveal
 - sealed offer amount
-- private Contract
+- 2 Contract options and the chosen Contract
 
 ### Server-only State
 
@@ -249,6 +264,7 @@ Highest score wins. Ties break by:
 
 ## Action Model
 
+- `CHOOSE_CONTRACT` (private payload)
 - `SUBMIT_CRATE`
 - `SUBMIT_OFFER`
 - `PLACE_RUMOR`
@@ -260,6 +276,7 @@ Highest score wins. Ties break by:
 
 ```text
 setup
+  -> contract (everyone keeps 1 of 2 Contracts)
   -> pack
   -> negotiate
   -> decide
@@ -319,9 +336,14 @@ Implemented on 2026-07-13:
 - bot merchants and bot Gatekeepers
 - cash + delivered-goods scoring and result ranking
 
+Implemented on 2026-11-20 (v0.3):
+
+- `contract` phase: keep 1 of 2 private Contracts, revealed at game end
+- Market demand card per shift (7-card deck, reshuffled when empty)
+- Market bonus, penalty increases, Honest Trade bank bonus
+- final score with completed Contracts and the delivered-Legal / baht tie-breaks
+
 Deferred to the balance pass:
 
 - finite shared draw pile and discard pile
-- Market demand cards
-- private Contracts and contract score
 - phase timers and timeout defaults
