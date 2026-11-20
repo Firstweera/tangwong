@@ -185,7 +185,7 @@ Follow-up:
 ## CI/CD
 
 ### GitHub Actions gate + Edge Function auto-deploy
-🟡 In Progress — 2026-11-20 (files ready; needs repo secrets and a first green run)
+✅ Completed — 2026-11-20 (PR #4; first runs green on GitHub)
 
 Files:
 - `.github/workflows/ci.yml` (new): the merge gate on every PR and push to `main`
@@ -205,15 +205,22 @@ Notes:
   server registry on purpose)
 - Supabase CLI pinned to 2.107.0 with `--use-api` bundling, the same way the last manual
   deploy succeeded
+- repo secrets `SUPABASE_ACCESS_TOKEN` (scoped token: Edge Functions read-write, Edge
+  Function Secrets no access) and `SUPABASE_PROJECT_REF` are set
+- first GitHub run (manual "Run workflow" on `27ae447`): gate 31s ✅ → Edge Functions
+  deployed 15s ✅
+- action versions moved to Node 24 runtimes after the first run warned about Node 20:
+  `actions/checkout@v7`, `actions/setup-node@v7`, `pnpm/action-setup@v6`,
+  `supabase/setup-cli@v3` (runtimes checked in each action's `action.yml`)
 - `verify:live-game` is not run by CI (it writes to production)
 
 Not verified:
-- no workflow has run on GitHub yet (actionlint is not installed here; YAML parses)
+- the push-triggered runs from merging PR #4 were not checked (only the manual run)
+- the bumped action versions have not run on GitHub yet (they run on this PR)
 - Vercel now installs from `pnpm-lock.yaml` only; the next Vercel deploy must be checked
-- the deploy job needs `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` repo secrets
 
 Follow-up:
-- set the two secrets, merge, and check the first CI + deploy runs
+- check the CI run on the action-version PR and the next push-triggered deploy
 - optional: protect `main` so the CI gate is required before merge
 - optional: a manual-only migration workflow (`supabase db push`) if migrations become frequent
 
