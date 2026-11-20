@@ -33,9 +33,10 @@ const service = read('src/services/supabase/game.ts');
 must(service, 'timeoutGame', 'game service exposes timeoutGame');
 must(service, "type: 'TIMEOUT'", 'timeoutGame invokes game-action with TIMEOUT');
 
-const hook = read('src/features/games/engine/useRealtimeGame.ts');
-must(hook, 'timeout: () => Promise<void>', 'realtime hook exposes timeout');
-must(hook, 'gameService.timeoutGame', 'realtime hook calls timeoutGame');
+const transport = read('src/services/supabase/gameTransport.ts');
+must(transport, 'service.timeoutGame', 'SupabaseTransport calls timeoutGame');
+const clientTypes = read('src/features/games/engine/client/types.ts');
+must(clientTypes, 'timeout(): Promise<MoveResult>', 'GameClient exposes timeout');
 
 const avalon = read('src/features/games/avalon/ui/AvalonGame.tsx');
 must(avalon, 'onTimeout', 'AvalonGame accepts an online timeout callback');
@@ -44,7 +45,8 @@ must(avalon, 'isHost', 'AvalonGame only lets the host drive online timeout');
 must(avalon, 'void onTimeout?.()', 'AvalonGame calls timeout callback when the online host timer expires');
 
 const gamePage = read('src/pages/GamePage.jsx');
-must(gamePage, 'onTimeout={onlineMode ? realtime.timeout : undefined}', 'GamePage wires realtime timeout into AvalonGame');
+must(gamePage, 'await client?.timeout()', 'GamePage wires online GameClient timeout into the game UI');
+must(gamePage, 'onTimeout={game.client ? game.timeout : undefined}', 'GamePage passes the active client timeout to the game UI');
 
 const pkg = read('package.json');
 must(pkg, 'verify:game-timeout', 'package exposes verify:game-timeout');

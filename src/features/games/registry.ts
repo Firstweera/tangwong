@@ -21,6 +21,7 @@ export interface GameUIProps {
   meId: string;
   onExit: () => void;
   onEnd: (state: GameState) => void;
+  /** Redacted state for `meId` from the GameClient (online or LocalTransport). */
   externalState?: GameState | null;
   onSubmitAction?: (type: string, payload: unknown) => void | Promise<void>;
   onStartGame?: () => void | Promise<void>;
@@ -32,6 +33,10 @@ export interface GameUIProps {
   /** Latest online action/sync error surfaced to the player as a toast. */
   error?: string | null;
   showToast?: (message: string, emoji?: string) => void;
+  /** Offline only: the local seat is currently bot-played. */
+  autoPlay?: boolean;
+  /** Offline only: toggle bot-play for the local seat (🤖 chip). */
+  onToggleAutoPlay?: () => void;
 }
 
 export interface GameRegistryEntry {

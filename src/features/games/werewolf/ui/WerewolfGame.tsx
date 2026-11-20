@@ -4,19 +4,15 @@
 // action bar.  Mirrors AvalonGame's offline/online duality pattern.
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui';
-import { useGameEngine } from '../../engine';
 import type { GameState, RoomState } from '../../engine';
 import type { Player } from '@/types';
-import { werewolfConfig } from '../config';
 import type { WerewolfPublic, WerewolfPrivate } from '../types.ts';
-import { nextBotAction, nextAutoActor } from '../bot';
 import { GameShell } from '../../ui/GameShell';
 import { WerewolfTable } from './WerewolfTable';
 import { WolfRoleCard } from './WolfRoleCard';
 
 type S = GameState<WerewolfPublic, WerewolfPrivate>;
 
-const BOT_DELAY = 900;
 const DISCUSS_MS = 3 * 60 * 1000; // 3-minute dayDiscuss countdown
 
 function friendlyError(raw: string): string {
@@ -45,20 +41,22 @@ export interface WerewolfGameProps {
   busy?: boolean;
   error?: string | null;
   showToast?: (message: string, emoji?: string) => void;
+  /** Offline only: the local seat is bot-played. */
+  autoPlay?: boolean;
+  onToggleAutoPlay?: () => void;
 }
 
 export function WerewolfGame({
   roomState, players, meId, onExit, onEnd,
   externalState = null, onSubmitAction, onStartGame, onTimeout,
   onlineMode = false, loading = false, busy = false,
-  error = null, showToast,
+  error = null, showToast, autoPlay = false, onToggleAutoPlay,
 }: WerewolfGameProps) {
-  const local = useGameEngine<WerewolfPublic, WerewolfPrivate>(werewolfConfig);
-  const state = externalState ?? local.state;
-  const controlled = onlineMode || externalState !== null;
+  // State comes from the GameClient (Supabase online, LocalTransport offline);
+  // bots, setup and phase entry all run in the transport, not here.
+  const state = externalState;
 
   const [roleOpen, setRoleOpen]         = useState(false);
-  const [autoAll, setAutoAll]           = useState(false);
   const [nightTarget, setNightTarget]   = useState<string | null>(null);
   const [cupidSecond, setCupidSecond]   = useState<string | null>(null);
   const [voteTarget, setVoteTarget]     = useState<string | null>(null);
@@ -85,29 +83,6 @@ export function WerewolfGame({
   const livingWolfCount = myPriv?.role === 'werewolf' && pub
     ? [meId, ...myPriv.sees].filter(id => !pub.eliminatedPlayers.includes(id)).length
     : 0;
-
-  // ─── Start + first phase transition (offline) ────────────────────────────────
-  useEffect(() => {
-    if (controlled) return;
-    local.start(roomState);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (controlled) return;
-    if (state?.public.phase === 'lobby') local.transitionTo('roleReveal');
-  }, [state?.public.phase]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ─── Bot autoplay (offline) ──────────────────────────────────────────────────
-  useEffect(() => {
-    if (onlineMode) return;
-    if (!state || state.winner) return;
-    const actor = nextAutoActor(state, meId, autoAll);
-    if (!actor) return;
-    const action = nextBotAction(state, actor);
-    if (!action) return;
-    const t = setTimeout(() => local.dispatch(action), BOT_DELAY);
-    return () => clearTimeout(t);
-  }, [state, autoAll]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── End of game ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -164,8 +139,7 @@ export function WerewolfGame({
   }, [phase]);
 
   const act = (type: string, payload: unknown) => {
-    if (controlled) void onSubmitAction?.(type, payload);
-    else local.dispatch({ type, playerId: meId, payload });
+    void onSubmitAction?.(type, payload);
   };
 
   // ─── dayDiscuss countdown ─────────────────────────────────────────────────────
@@ -727,7 +701,7 @@ export function WerewolfGame({
   // ─── Mode chip (top bar extras) ───────────────────────────────────────────────
   const modeChip = onlineMode
     ? <span className="chip" style={{ background: 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>ออนไลน์</span>
-    : <button className="chip" onClick={() => setAutoAll(a => !a)} style={{ background: autoAll ? 'var(--grad-soft)' : 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>🤖 {autoAll ? 'ออโต้' : 'แมนนวล'}</button>;
+    : <button className="chip" onClick={onToggleAutoPlay} style={{ background: autoPlay ? 'var(--grad-soft)' : 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>🤖 {autoPlay ? 'ออโต้' : 'แมนนวล'}</button>;
 
   const loadingContent = onlineMode && onStartGame ? (
     <button className="btn btn-primary btn-lg" onClick={() => void onStartGame()}>

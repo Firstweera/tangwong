@@ -7,3 +7,5 @@ export type { ProfileRow } from './profiles';
 export * as roomService from './rooms';
 export * as chatService from './chat';
 export * as gameService from './game';
+export { createSupabaseTransport } from './gameTransport';
+export type { SupabaseTransport, SupabaseTransportOptions, GameService } from './gameTransport';

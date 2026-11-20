@@ -1,19 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui';
 import { QuestTrack } from '@/components/ui';
-import { useGameEngine } from '../../engine';
 import type { GameState, RoomState } from '../../engine';
 import type { Player } from '@/types';
-import { avalonConfig } from '../config';
 import type { AvalonPublic, AvalonPrivate, QuestOutcome } from '../types';
-import { nextBotAction, nextAutoActor } from '../bot';
 import { GameShell } from '../../ui/GameShell';
 import { AvalonTable } from './AvalonTable';
 import { RoleRevealCard } from './RoleRevealCard';
 
 type S = GameState<AvalonPublic, AvalonPrivate>;
 
-const BOT_DELAY = 900;
 const PHASE_TIMER: Record<string, number> = { teamProposal: 45, teamVote: 25, mission: 25 };
 
 /** Map a raw engine/network error to a short, friendly Thai message for players. */
@@ -46,6 +42,9 @@ export interface AvalonGameProps {
   /** Latest online action/sync error; surfaced to the player as a toast. */
   error?: string | null;
   showToast?: (message: string, emoji?: string) => void;
+  /** Offline only: the local seat is bot-played. */
+  autoPlay?: boolean;
+  onToggleAutoPlay?: () => void;
 }
 
 export function AvalonGame({
@@ -63,41 +62,20 @@ export function AvalonGame({
   busy = false,
   error = null,
   showToast,
+  autoPlay = false,
+  onToggleAutoPlay,
 }: AvalonGameProps) {
-  const local = useGameEngine<AvalonPublic, AvalonPrivate>(avalonConfig);
-  const state = externalState ?? local.state;
-  const controlled = onlineMode || externalState !== null;
+  // State comes from the GameClient (Supabase online, LocalTransport offline);
+  // bots, setup and phase entry all run in the transport, not here.
+  const state = externalState;
 
   const [roleOpen, setRoleOpen] = useState(false);
-  const [autoAll, setAutoAll] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<string[]>([]);
   const [assassinTarget, setAssassinTarget] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const timeoutSentRef = useRef<string | null>(null);
 
   const byId = (id: string) => players.find(p => p.id === id);
-
-  // ─── Start + kick off role reveal ───────────────────────────────────────────
-  useEffect(() => {
-    if (controlled) return;
-    local.start(roomState);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (controlled) return;
-    if (state?.public.phase === 'lobby') local.transitionTo('roleReveal');
-  }, [state?.public.phase]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ─── Bot autoplay ───────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (onlineMode) return;
-    if (!state || state.winner) return;
-    const actor = nextAutoActor(state, meId, autoAll);
-    if (!actor) return;
-    const action = nextBotAction(state, actor);
-    if (!action) return;
-    const t = setTimeout(() => local.dispatch(action), BOT_DELAY);
-    return () => clearTimeout(t);
-  }, [state, autoAll]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Per-phase timer (auto-acts for the human on expiry) ─────────────────────
   const phase = state?.public.phase ?? 'lobby';
@@ -119,15 +97,12 @@ export function AvalonGame({
   }, [phase, leaderIndex, currentQuest, voteCount, missionCount, teamKey]);
   useEffect(() => {
     if (timeLeft !== 0 || !PHASE_TIMER[phase] || !state) return;
-    if (onlineMode) {
-      if (isHost && timeoutSentRef.current !== timerKey) {
-        timeoutSentRef.current = timerKey;
-        void onTimeout?.();
-      }
-      return;
-    }
-    const action = nextBotAction(state, meId);
-    if (action) local.dispatch(action);
+    // Online only the host resolves the timer (server enforces it); offline
+    // the local player's default move is played.
+    if (onlineMode && !isHost) return;
+    if (timeoutSentRef.current === timerKey) return;
+    timeoutSentRef.current = timerKey;
+    void onTimeout?.();
   }, [timeLeft, onlineMode, isHost, timerKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Toast vote outcomes on phase change ────────────────────────────────────
@@ -174,11 +149,7 @@ export function AvalonGame({
   const goodWin = state?.winner?.winnerTeam === 'good';
 
   const act = (type: string, payload: unknown) => {
-    if (controlled) {
-      void onSubmitAction?.(type, payload);
-    } else {
-      local.dispatch({ type, playerId: meId, payload });
-    }
+    void onSubmitAction?.(type, payload);
   };
 
   const seatTap = (id: string) => {
@@ -302,7 +273,7 @@ export function AvalonGame({
 
   const modeChip = onlineMode
     ? <span className="chip" style={{ background: 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>ออนไลน์</span>
-    : <button className="chip" onClick={() => setAutoAll(a => !a)} style={{ background: autoAll ? 'var(--grad-soft)' : 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>🤖 {autoAll ? 'ออโต้' : 'แมนนวล'}</button>;
+    : <button className="chip" onClick={onToggleAutoPlay} style={{ background: autoPlay ? 'var(--grad-soft)' : 'var(--surface)', borderColor: 'var(--border-2)', fontWeight: 700 }}>🤖 {autoPlay ? 'ออโต้' : 'แมนนวล'}</button>;
 
   const loadingContent = onlineMode && onStartGame
     ? (

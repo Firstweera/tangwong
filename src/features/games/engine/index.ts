@@ -7,5 +7,4 @@ export { GameEngine } from './engine.ts';
 export { redactStateFor } from './view.ts';
 export { useGameEngine } from './useGameEngine.ts';
 export type { UseGameEngineReturn } from './useGameEngine.ts';
-export { useRealtimeGame } from './useRealtimeGame.ts';
-export type { UseRealtimeGameReturn } from './useRealtimeGame.ts';
+export * from './client/index.ts';
