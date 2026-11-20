@@ -214,13 +214,17 @@ Notes:
   `supabase/setup-cli@v3` (runtimes checked in each action's `action.yml`)
 - `verify:live-game` is not run by CI (it writes to production)
 
+- verified on GitHub after PR #5 (`9d33775`): the push to `main` triggered CI #4 ✅ and
+  Deploy #3 ✅ (gate 39s → Edge Functions deployed 19s) on the Node 24 action versions,
+  with no Node 20 annotations. The earlier push-triggered Deploy #1 for PR #4 failed
+  (log not reviewed; most likely the repo secrets were not set yet). Deploy #2, run by
+  hand, and Deploy #3 passed
+
 Not verified:
-- the push-triggered runs from merging PR #4 were not checked (only the manual run)
-- the bumped action versions have not run on GitHub yet (they run on this PR)
 - Vercel now installs from `pnpm-lock.yaml` only; the next Vercel deploy must be checked
 
 Follow-up:
-- check the CI run on the action-version PR and the next push-triggered deploy
+- check the next Vercel deploy (first one installing with pnpm)
 - optional: protect `main` so the CI gate is required before merge
 - optional: a manual-only migration workflow (`supabase db push`) if migrations become frequent
 
