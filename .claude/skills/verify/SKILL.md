@@ -5,7 +5,8 @@ description: Run TangWong's local merge gate (typecheck, build, all verify scrip
 
 # Verify
 
-The gate is defined in `.ai/workflow.md` §4. There is no CI, so this is the only check.
+The gate is defined in `.ai/workflow.md` §4. CI runs the same list on GitHub, but run it
+here first: CI only reports after you push.
 
 ## 1. Run
 
@@ -14,6 +15,7 @@ Run each command separately, so one failure doesn't hide the others:
 ```bash
 npx tsc --noEmit -p .
 npm run build
+npm run verify:registry-parity
 npm run verify:game-client
 npm run verify:supabase-transport
 npm run verify:werewolf
@@ -44,7 +46,7 @@ Gate:
 Not verified here:
   - browser UI (layout, touch, light + dark)        ← whenever UI changed
   - two-browser online play on deployed Supabase    ← whenever online flow changed
-  - Edge Function redeploy needed                   ← whenever src/features/games/** or supabase/functions/** changed
+  - Edge Function deploy runs after merge (CI)      ← whenever src/features/games/**, src/types/** or supabase/functions/** changed
 ```
 
 State failures as failures, with output. Don't call work done while the gate is red.

@@ -47,11 +47,14 @@ chore(ai): add .ai operating docs and project skills
 
 ## 4. Merge Gate
 
-There is no CI. **Local validation is the only gate.**
+Run the gate locally before every commit and PR. GitHub Actions
+(`.github/workflows/ci.yml`) runs **the same list** on every PR and every push to `main`;
+a red CI blocks the merge just like a red local run. Keep the two lists identical.
 
 ```bash
 npx tsc --noEmit -p .
 npm run build
+npm run verify:registry-parity
 npm run verify:game-client
 npm run verify:supabase-transport
 npm run verify:werewolf && npm run verify:checkpoint
@@ -65,7 +68,8 @@ What the gate cannot see, and which must therefore be stated in the PR:
 
 - the UI in a browser (layout, touch, both themes)
 - online play against the deployed project (two browsers)
-- Edge Functions that need a redeploy because shared game code changed
+- whether the post-merge Edge Function deploy succeeded (it runs only after the merge,
+  see [supabase.md §6](supabase.md))
 
 ## 5. Pull Requests
 

@@ -178,9 +178,44 @@ Notes:
 Follow-up:
 - make `supabase/functions/_shared/games.ts` import `src/features/games/runtime.ts`
   so the registry parity rule becomes structural
-- decide npm vs pnpm and remove the other lockfile (`.ai/project-context.md` §2)
+- ~~decide npm vs pnpm and remove the other lockfile~~ → pnpm, see CI/CD below
 - run the new `code-reviewer` / `privacy-auditor` agents on the next game change and
   tune them
+
+## CI/CD
+
+### GitHub Actions gate + Edge Function auto-deploy
+🟡 In Progress — 2026-11-20 (files ready; needs repo secrets and a first green run)
+
+Files:
+- `.github/workflows/ci.yml` (new): the merge gate on every PR and push to `main`
+- `.github/workflows/deploy-supabase.yml` (new): after the gate, deploys `game-start` and
+  `game-action` on pushes to `main` touching `src/features/games/**`, `src/types/**`,
+  `supabase/functions/**` (also manual "Run workflow")
+- `scripts/verify-registry-parity.mjs` (new) + `verify:registry-parity` in `package.json`
+- `package.json` (`packageManager: pnpm@10.27.0`), `package-lock.json` removed
+- `.ai/workflow.md` §4, `.ai/supabase.md` §6–7, `.ai/project-context.md`, `README.md`,
+  `DEPLOYMENT.md`, `.claude/settings.json`, skills `verify` / `new-game` / `game-action` / `ship`
+
+Notes:
+- decisions (2026-11-20): pnpm only; deploy is automatic once the gate passes (the
+  merge is the approval); migrations stay manual and the deploy workflow only warns
+- registry parity is now checked: a game missing from either registry, or a
+  `firstPhase` / `privateActionTypes` mismatch, fails the gate (tested by breaking the
+  server registry on purpose)
+- Supabase CLI pinned to 2.107.0 with `--use-api` bundling, the same way the last manual
+  deploy succeeded
+- `verify:live-game` is not run by CI (it writes to production)
+
+Not verified:
+- no workflow has run on GitHub yet (actionlint is not installed here; YAML parses)
+- Vercel now installs from `pnpm-lock.yaml` only; the next Vercel deploy must be checked
+- the deploy job needs `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` repo secrets
+
+Follow-up:
+- set the two secrets, merge, and check the first CI + deploy runs
+- optional: protect `main` so the CI gate is required before merge
+- optional: a manual-only migration workflow (`supabase db push`) if migrations become frequent
 
 ---
 

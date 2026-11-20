@@ -4,6 +4,7 @@
     "allow": [
       "Bash(npx tsc --noEmit -p .)",
       "Bash(npm run build)",
+      "Bash(npm run verify:registry-parity)",
       "Bash(npm run verify:game-client)",
       "Bash(npm run verify:supabase-transport)",
       "Bash(npm run verify:werewolf)",
