@@ -1,246 +1,123 @@
-# TangWong Project Instructions
+# CLAUDE.md
 
-## Project Context
+The **AI operating guide and documentation router** for TangWong (ตั้งวง), a mobile-first
+multiplayer board-game platform ("Discord for board games"). This file says what to read
+and which rules are mandatory. The rules themselves live in [.ai/](.ai/), one owner file
+each. Setup is in [README.md](README.md) and deploy in [DEPLOYMENT.md](DEPLOYMENT.md).
 
-This folder (`tang-wong`) is the **main production project**.
-
-The current codebase is a **prototype** — a visual and UX proof-of-concept built with plain JSX and a single CSS file. It demonstrates the design direction, screens, and game flow, but is not yet production-ready.
-
-All new work should migrate away from the prototype structure toward the scalable architecture described in this file.
-
----
-
-TangWong (ตั้งวง) is a mobile-first multiplayer board game platform for friends to create rooms, chat, bluff, vote, and play together online.
-
-## Product Direction
-
-Build TangWong as “Discord for board games”.
-
-The platform should support:
-
-- Avalon-inspired social deduction
-- Salem 1692-inspired accusation and hidden role gameplay
-- Sheriff-inspired bluffing and negotiation
-- Exploding Kittens-inspired card effects
-- Dixit-inspired creative party gameplay
-- Istanbul-inspired strategy / euro board game gameplay
-
-## Tech Stack
-
-Use:
-
-- React
-- TypeScript
-- Vite
-- Tailwind CSS
-- Socket.io-ready architecture
-
-### Styling: Tailwind CSS v4 + cn()
-
-Tailwind v4 is installed via the `@tailwindcss/vite` plugin (configured in
-`vite.config.js`). Setup lives in `src/styles/tailwind.css`:
-
-- **Preflight is intentionally excluded** while the prototype CSS still exists —
-  only Tailwind's `theme` + `utilities` layers are imported, so adding Tailwind
-  changes no existing pixels. Re-enable preflight once the CSS migration completes.
-- **Theme is bridged to the design tokens** via `@theme`: utilities like
-  `bg-primary` / `text-muted` resolve to the same live CSS variables as the
-  design system and stay light/dark aware. Tailwind's default colour palette is
-  cleared (`--color-*: initial`) so colours can't drift off-token.
-- Class scanning is scoped to `src/` (`source("../")`).
-
-Compose class names with **`cn()`** from `src/lib/utils.ts` (clsx +
-tailwind-merge) so conditional classes merge and later Tailwind utilities win:
-
-```tsx
-import { cn } from "@/lib/utils"; // or relative: '../lib/utils'
-<div className={cn("px-4 py-2", isActive && "bg-primary", className)} />;
-```
-
-Avoid:
-
-- Large UI libraries unless explicitly requested
-- Hardcoded duplicated screens
-- One-off components that cannot be reused
-
-## Design Direction
-
-The UI should be:
-
-- Mobile-first
-- Modern
-- Social
-- Playful
-- Premium
-- Easy to use during hangouts
-
-Visual inspiration:
-
-- Discord
-- Supercell
-- Board Game Arena
-- Modern startup apps
-
-Use dark mode as the primary experience.
-
-## UX Principles
-
-Users should be able to:
-
-- Create a room quickly
-- Join with a room code
-- Invite friends easily
-- See who is ready
-- Chat and react
-- Start a game
-- Play an entire match on mobile
-
-Prioritize:
-
-- Touch-friendly controls
-- Clear game phases
-- Clear turn indicators
-- Clear voting state
-- Hidden information privacy
-- Reconnection-friendly state
-
-## Architecture
-
-Use a feature-based structure:
-
-src/
-
-- app/
-- pages/
-- components/
-- features/
-  - lobby/
-  - room/
-  - profile/
-  - friends/
-  - games/
-    - avalon/
-    - salem/
-    - sheriff/
-    - exploding-kittens/
-    - dixit/
-    - istanbul/
-- hooks/
-- services/
-- stores/
-- types/
-- assets/
-
-## Game Engine Direction
-
-Design the game system so each game has:
-
-- game config
-- player state
-- public state
-- private player state
-- phases
-- actions
-- events
-- win condition
-- validation rules
-
-The system should support both:
-
-- Auto Game Master
-- Optional Host / Moderator tools
-
-## Development Rules
-
-Always:
-
-- Keep the current visual design unless asked to redesign
-- Use TypeScript types
-- Create reusable components
-- Separate UI from game logic
-- Prefer clean state machines for game phases
-- Keep mobile layout first
-
-Never:
-
-- Use copyrighted assets from real board games
-- Use official names, artwork, logos, or rulebook text directly
-- Build only for desktop
-- Add unnecessary backend code before the MVP needs it
-- Create duplicate components for each game when a shared component can work
-
-## First MVP Goal
-
-The first playable MVP should be:
-
-Home → Create/Join Room → Lobby → Avalon-inspired Game → Result
-
-Do not prioritize landing page, profile, friends, achievements, or monetization before the core multiplayer loop works.
-
-# Progress Tracking Rules
-
-Before starting any task:
-
-1. Read docs/roadmap.md
-
-2. Identify:
-   - current epic
-   - current feature
-   - task status
-
-3. Do not work on future epics unless explicitly instructed.
+React 18 · Vite · TypeScript · Tailwind v4 (tokens, no preflight) · Supabase (Postgres +
+RLS, anonymous Auth, Realtime, Edge Functions). One shared pure-TS game engine runs in the
+browser, the verify scripts and the Edge Functions.
 
 ---
 
-After completing a feature:
+## 1. Before Every Task
 
-Update docs/roadmap.md
+1. Read [docs/roadmap.md](docs/roadmap.md) and name the **current epic, feature and status**.
+   Do not work on a future epic unless explicitly asked ([workflow §1](.ai/workflow.md)).
+2. Read [.ai/project-context.md](.ai/project-context.md) §1–3 and
+   [.ai/architecture.md](.ai/architecture.md) §1–2. Then read only the sections §3 below
+   routes you to.
+3. Pick the matching skill (§4) if one exists.
 
-Change status:
+## 2. Mandatory Rules
 
-⚪ Not Started
-→ 🟡 In Progress
-→ ✅ Completed
+1. **New feature or new files → show the file plan first and wait for approval.** Small
+   edits to existing files don't need one.
+2. **Hidden information is the trust boundary.** A client receives only its own private
+   slice; a game UI reads only `private[meId]`; nothing secret goes in public state or the
+   action log ([game-engine §6](.ai/game-engine.md)).
+3. **Game rules exist once**, as pure TS under `src/features/games/`. No game logic, bot
+   loop or engine call in a UI; state and actions come from a `GameClient`
+   ([game-engine §7](.ai/game-engine.md)).
+4. **The server is the authority online.** Edge Functions are the only writers of game
+   tables. Never add a client write path or an RLS write policy for them ([supabase §2](.ai/supabase.md)).
+5. **Original IP only.** Never use real games' names, art, logos, role names or rule text
+   ([coding-standards §6](.ai/coding-standards.md)).
+6. **Keep the current visual design**, mobile-first, tokens + `cn()` only, no new hex
+   ([coding-standards §4–5](.ai/coding-standards.md)).
+7. **Reuse before creating.** Use shared components instead of a per-game copy. Add no new
+   UI kit, state library or dependency without approval.
+8. **Validate before saying done** ([workflow §4](.ai/workflow.md)). Report failures and
+   unverified parts as such.
+9. **Docs and roadmap move with the code**: update the owner `.ai/` file and the roadmap in
+   the same change ([workflow §1, §6](.ai/workflow.md)).
+10. **Git:** commit or push only when asked, never to `main`, never force. Keep the
+    `Co-Authored-By` trailer ([workflow §2–3](.ai/workflow.md)).
 
----
-
-When marking a feature as completed:
-
-Add:
-
-- completion date
-- implemented files
-- notes
-- follow-up tasks
-
-Example:
-
-### Guest Profile
-
-✅ Completed
-
-Files:
-
-- guest-store.ts
-- guest-types.ts
-- ProfileSheet.tsx
-
-Notes:
-
-- nickname persistence implemented
-- avatar selection implemented
-
-Follow-up:
-
-- integrate with Socket.io player identity
+When asked to explain something, answer in four parts: what it does · why this approach ·
+what breaks if it is removed · the simpler alternative, if one exists.
 
 ---
 
-At the end of every implementation:
+## 3. Documentation Map
 
-Provide:
+**Every rule has exactly one owner file.** A second statement of a rule is a pointer. If
+two places disagree, fix the duplicate.
 
-1. What was completed
-2. What roadmap items changed
-3. What remains in the current epic
-4. Suggested next task
+| file | owns |
+| ---- | ---- |
+| [.ai/project-context.md](.ai/project-context.md) | what TangWong is, stack, run modes + env, commands, shipped games, docs outside `.ai/` |
+| [.ai/architecture.md](.ai/architecture.md) | layers, folder map, prototype migration, **game registries (6 places)**, room/game data flow, import boundaries, Deno-shared code |
+| [.ai/game-engine.md](.ai/game-engine.md) | state model, game config, phases/actions/validation, win, bots, **hidden information**, GameClient + transports, timers, add-a-game checklist, verify scripts |
+| [.ai/supabase.md](.ai/supabase.md) | tables + RLS, Edge Functions + error envelope, client services, migrations, deploy, secrets |
+| [.ai/coding-standards.md](.ai/coding-standards.md) | TS, naming, imports, styling, mobile UI behaviour, original IP, copy, comments, dependencies, **review checklist** |
+| [.ai/workflow.md](.ai/workflow.md) | roadmap discipline, branches, commits, PRs, **merge gate**, doc-update rule, end-of-task report |
+| [PRODUCT.md](PRODUCT.md) · [DESIGN.md](DESIGN.md) | users, brand, design principles · visual direction (also read by the `impeccable` skill) |
+
+Read **sections, not files**: `grep -n "^## " .ai/<file>.md`, then read the range you need.
+
+| the task involves | read |
+| ----------------- | ---- |
+| any game logic, a new action or phase | game-engine §2–5 |
+| anything a player should not see | game-engine §6 (always) |
+| a game UI or `GamePage` | architecture §6 · game-engine §7 · coding-standards §4–5 |
+| a new game | architecture §4 · game-engine §9 → `new-game` skill |
+| online play, RLS, Edge Functions | supabase §1–3 · architecture §8 |
+| a migration | supabase §2, §5 |
+| rooms / chat | architecture §5 |
+| styling, a new screen | coding-standards §4–5 · DESIGN.md · `src/design-system/README.md` |
+| a timer | game-engine §8 |
+
+---
+
+## 4. Skills and Agents
+
+| name | use when |
+| ---- | -------- |
+| `new-game` | adding a game: engine files, six registries, rules doc, verify script |
+| `game-action` | adding or changing an action, phase or bot behaviour in an existing game |
+| `verify` | before reporting work as done: runs the gate and writes the report |
+| `ship` | committing, preparing and opening a PR |
+| agent `code-reviewer` | after a change: reviews the diff against `.ai/` |
+| agent `privacy-auditor` | a diff touching private state, redaction, RLS, Edge Functions, transports or auth |
+
+Design skills (`impeccable`, `frontend-design`, `web-design-guidelines`,
+`tailwind-design-system`, `shadcn`) are general tools. Where they disagree with
+`.ai/coding-standards.md` or DESIGN.md, this repo wins.
+
+Agents defer to this file and `.ai/`. Where an agent and `.ai/` disagree, `.ai/` wins.
+
+---
+
+## 5. Source of Truth
+
+1. Explicit user instruction
+2. `docs/roadmap.md` scope and the user's approved plan
+3. `.ai/` owner docs and PRODUCT.md / DESIGN.md
+4. Per-game rules in `docs/games/`
+5. Existing implementation
+6. `docs/prototype/` (visual reference only, never code)
+7. Generic framework knowledge
+
+Never choose silently between conflicting requirements. If a conflict affects game rules,
+privacy or architecture, stop and ask.
+
+## 6. When Unsure
+
+Ask instead of guessing when:
+
+- a game rule is silent on a case the engine must handle;
+- a change would put any secret where another seat could read it;
+- the task needs an Edge Function redeploy or a live Supabase write;
+- the work belongs to a future epic.

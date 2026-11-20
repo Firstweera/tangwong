@@ -143,6 +143,45 @@ Components:
 - Sheet
 - Typography
 
+## AI Tooling
+
+### AI Operating Docs
+✅ Completed — 2026-11-20
+
+Files:
+- `CLAUDE.md` (rewritten as a router), `AGENTS.md` (pointer only)
+- `.ai/project-context.md`, `.ai/architecture.md`, `.ai/game-engine.md`,
+  `.ai/supabase.md`, `.ai/coding-standards.md`, `.ai/workflow.md`
+- `.claude/settings.json`, `.claude/hooks/push-guard.mjs`
+- `.claude/agents/code-reviewer.md`, `.claude/agents/privacy-auditor.md`
+- `.claude/skills/{new-game,game-action,verify,ship}/SKILL.md`
+- `.gitignore`
+
+Notes:
+- structure adapted from two local reference repos (plugme-fnm, raot-marketplace):
+  CLAUDE.md routes, `.ai/` owns each rule once with numbered sections, skills hold
+  procedures, agents review against `.ai/`
+- every rule from the old CLAUDE.md was moved to an owner file; `AGENTS.md` no longer
+  duplicates CLAUDE.md
+- new owner docs for previously undocumented core: game engine, hidden-information
+  rules, GameClient/transports, the six game registries, Deno-shared code, Supabase
+  authority and error envelope
+- settings: allow the gate commands, ask before `git push` / live Supabase / function
+  deploy, deny pushing to `main` and reading `.env` files; `push-guard` hook also
+  blocks force pushes (tested against 12 command shapes)
+- removed unrelated skills (`next-best-practices`, `next-upgrade`, `turborepo`,
+  `remotion-best-practices`) and the generic `.claude/commands` (replaced by skills/agents)
+- `.claude/` was entirely git-ignored; now the project-owned parts are tracked and
+  third-party skills stay per-machine
+- commits keep the `Co-Authored-By` trailer (decided 2026-11-20)
+
+Follow-up:
+- make `supabase/functions/_shared/games.ts` import `src/features/games/runtime.ts`
+  so the registry parity rule becomes structural
+- decide npm vs pnpm and remove the other lockfile (`.ai/project-context.md` §2)
+- run the new `code-reviewer` / `privacy-auditor` agents on the next game change and
+  tune them
+
 ---
 
 # Epic 1 - Multiplayer Lobby MVP
