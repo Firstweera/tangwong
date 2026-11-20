@@ -1793,7 +1793,7 @@ Notes:
   Rumor rewards in one authoritative action
 
 ### Scoring + Contracts
-🟡 In Progress — 2026-11-20 (engine + UI done locally; not yet live)
+🟡 In Progress — 2026-11-20 (engine + UI done; Edge Functions redeployed and live-checked)
 
 Files:
 - `docs/games/checkpoint-rules.md` (v0.3: demand deck, Contract values, tie-breaks)
@@ -1818,13 +1818,27 @@ Notes:
   stall reproducible in ~4.5% of games)
 - UI reads all new fields defensively, so it still renders against the old server
 
+Verified live (2026-11-20, after redeploying `game-start` + `game-action`):
+- `npm run verify:live-game`: 46/46 (Avalon + Werewolf unaffected)
+- one-off Checkpoint smoke on production (3 seats, 12/12):
+  - game starts in `contract` with a demand card
+  - each seat reads only its own private row
+  - an un-dealt contract is rejected (400)
+  - public data has no contract ids while someone is still choosing
+  - the game moves to `pack` once everyone has chosen
+  - `CHOOSE_CONTRACT` payloads are logged as `{ submitted: true }`
+- the smoke covered the contract phase only; no full live Checkpoint game was
+  played to the end
+
 Not verified:
 - browser check of the contract screen, demand strip and result page (light + dark, phone width)
-- online play: Edge Functions `game-start` and `game-action` need a redeploy;
-  until then online games keep the old rules
+- two-browser online Checkpoint game played to the end (result page with contracts)
 
 Follow-up:
-- redeploy Edge Functions, then a two-browser online game
+- two-browser online Checkpoint game to the end
+- add Checkpoint to `scripts/e2e-live-game.mjs` (it covers Avalon + Werewolf only)
+- Supabase CLI 2.107.0 on macOS could not read its own Keychain login; deploy
+  worked with `SUPABASE_ACCESS_TOKEN` set for the session
 - balance playtest of Contract values and demand bonuses
 
 ### Bots + Online Verification
