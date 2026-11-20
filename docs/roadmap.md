@@ -1793,14 +1793,53 @@ Notes:
   Rumor rewards in one authoritative action
 
 ### Scoring + Contracts
-🟡 In Progress — 2026-07-13
+🟡 In Progress — 2026-11-20 (engine + UI done; Edge Functions redeployed and live-checked)
+
+Files:
+- `docs/games/checkpoint-rules.md` (v0.3: demand deck, Contract values, tie-breaks)
+- `src/features/games/checkpoint/market.ts` (new: demand cards, Contracts, scoring helpers)
+- `src/features/games/checkpoint/{types,setup,phases,actions,winConditions,bot,rules}.ts`
+- `src/features/games/checkpoint/ui/CheckpointGame.tsx`, `src/styles/components.css`
+- `src/features/games/runtime.ts`, `supabase/functions/_shared/games.ts`
+- `src/pages/GamePage.jsx`, `src/pages/ResultPage.jsx`
+- `scripts/verify-checkpoint.mjs`, `scripts/verify-game-client.mjs`
 
 Notes:
-- playable scoring is complete: remaining cash plus delivered Goods value
-- live score ranking and dedicated result page are implemented
+- new `contract` phase (firstPhase): each player keeps 1 of 2 secret Contracts via
+  `CHOOSE_CONTRACT` (private action type); public only shows who has chosen
+- Market demand: 7-card deck, one card per shift drawn at shift change (never
+  precomputed), reshuffled when empty; bonuses tracked as public `marketBonus`,
+  penalty increases on Weapons Crackdown / Counterfeit Alert, Honest Trade +1 baht from the bank
+- final score = cash + delivered value + Market bonus + completed Contract value;
+  Contracts revealed in public `contractResults` only at game end
+- ties: most delivered Legal goods → most cash → shared
+- bots choose a Contract and favour Contract/demand goods when packing
+- fix: bot offers are capped at the bot's cash (bigger penalties made a 6-player
+  stall reproducible in ~4.5% of games)
+- UI reads all new fields defensively, so it still renders against the old server
+
+Verified live (2026-11-20, after redeploying `game-start` + `game-action`):
+- `npm run verify:live-game`: 46/46 (Avalon + Werewolf unaffected)
+- one-off Checkpoint smoke on production (3 seats, 12/12):
+  - game starts in `contract` with a demand card
+  - each seat reads only its own private row
+  - an un-dealt contract is rejected (400)
+  - public data has no contract ids while someone is still choosing
+  - the game moves to `pack` once everyone has chosen
+  - `CHOOSE_CONTRACT` payloads are logged as `{ submitted: true }`
+- the smoke covered the contract phase only; no full live Checkpoint game was
+  played to the end
+
+Not verified:
+- browser check of the contract screen, demand strip and result page (light + dark, phone width)
+- two-browser online Checkpoint game played to the end (result page with contracts)
 
 Follow-up:
-- add Market demand bonuses and private Contracts after the first balance test
+- two-browser online Checkpoint game to the end
+- add Checkpoint to `scripts/e2e-live-game.mjs` (it covers Avalon + Werewolf only)
+- Supabase CLI 2.107.0 on macOS could not read its own Keychain login; deploy
+  worked with `SUPABASE_ACCESS_TOKEN` set for the session
+- balance playtest of Contract values and demand bonuses
 
 ### Bots + Online Verification
 🟡 In Progress — 2026-07-13

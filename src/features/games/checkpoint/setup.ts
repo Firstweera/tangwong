@@ -1,6 +1,7 @@
 import type { GamePlayer } from '../engine';
 import type { CheckpointPrivate, CheckpointPublic } from './types.ts';
 import { drawGoods } from './goods.ts';
+import { dealContractOptions, drawDemand } from './market.ts';
 
 export function inspectionSealsFor(playerCount: number): number {
   return playerCount <= 3 ? 1 : 2;
@@ -9,6 +10,8 @@ export function inspectionSealsFor(playerCount: number): number {
 export function buildCheckpointPublic(players: GamePlayer[]): CheckpointPublic {
   const order = players.map(player => player.id);
   const emptyInventory = Object.fromEntries(order.map(id => [id, {}]));
+  const zero = () => Object.fromEntries(order.map(id => [id, 0]));
+  const firstDemand = drawDemand([]);
   return {
     playerOrder: order,
     gatekeeperId: order[0],
@@ -25,6 +28,11 @@ export function buildCheckpointPublic(players: GamePlayer[]): CheckpointPublic {
     delivered: emptyInventory,
     wealth: Object.fromEntries(order.map(id => [id, 20])),
     gameComplete: false,
+    demand: firstDemand.demand,
+    demandDrawn: firstDemand.drawn,
+    marketBonus: zero(),
+    confiscatedIllegal: zero(),
+    contractsChosen: [],
   };
 }
 
@@ -35,6 +43,8 @@ export function buildCheckpointPrivate(players: GamePlayer[]): Record<string, Ch
     offer: null,
     receivedOffers: {},
     rumorUsed: false,
+    contractOptions: dealContractOptions(),
+    contract: null,
   }]));
 }
 

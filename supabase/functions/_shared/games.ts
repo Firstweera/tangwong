@@ -74,7 +74,7 @@ const werewolfEntry: ServerGameEntry = {
 
 const checkpointEntry: ServerGameEntry = {
   config: checkpointConfig as GameEngineConfig<unknown, unknown>,
-  firstPhase: 'pack',
+  firstPhase: 'contract',
   nextBotAction(state, playerId) {
     return checkpointNextBotAction(
       state as GameState<CheckpointPublic, CheckpointPrivate>,
@@ -84,7 +84,7 @@ const checkpointEntry: ServerGameEntry = {
   revealForPublic() {
     return {};
   },
-  privateActionTypes: ['SUBMIT_CRATE', 'SUBMIT_OFFER'],
+  privateActionTypes: ['CHOOSE_CONTRACT', 'SUBMIT_CRATE', 'SUBMIT_OFFER'],
 };
 
 export const GAME_REGISTRY: Record<string, ServerGameEntry> = {

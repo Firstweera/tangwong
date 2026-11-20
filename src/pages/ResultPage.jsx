@@ -64,6 +64,8 @@ export default function ResultPage({ go, payload, showToast, player }) {
   if (payload?.gameId === 'checkpoint') {
     const scores = payload?.scores ?? {};
     const cash = payload?.cash ?? {};
+    const marketBonus = payload?.marketBonus ?? {};
+    const contractResults = payload?.contractResults ?? {};
     const winnerIds = new Set(payload?.winners ?? []);
     const ranking = [...players].sort((a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0));
     const iWon = winnerIds.has(youId);
@@ -85,12 +87,14 @@ export default function ResultPage({ go, payload, showToast, player }) {
           <div className="pad-x" style={{ marginTop: 28 }}>
             <div className="section-head">
               <h2 className="th section-title">อันดับความมั่งคั่ง</h2>
-              <span className="section-note">เงินสด + สินค้า</span>
+              <span className="section-note">เงิน + สินค้า + โบนัส + สัญญา</span>
             </div>
             <div className="col gap8">
               {ranking.map((p, index) => {
                 const shown = index < revealAt;
-                const goodsScore = (scores[p.id] ?? 0) - (cash[p.id] ?? 0);
+                const contract = contractResults[p.id];
+                const bonus = marketBonus[p.id] ?? 0;
+                const goodsScore = (scores[p.id] ?? 0) - (cash[p.id] ?? 0) - bonus - (contract?.value ?? 0);
                 return (
                   <div key={p.id} className="status-card row between" style={{
                     opacity: shown ? 1 : 0,
@@ -105,7 +109,12 @@ export default function ResultPage({ go, payload, showToast, player }) {
                         <span className="th h3" style={{ fontSize: 14.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {p.name}{p.id === youId && <span style={{ color: 'var(--primary)', fontSize: 11 }}> · คุณ</span>}
                         </span>
-                        <span className="th tiny">เงิน {cash[p.id] ?? 0} · สินค้า {goodsScore}</span>
+                        <span className="th tiny">เงิน {cash[p.id] ?? 0} · สินค้า {goodsScore}{bonus ? ` · โบนัส ${bonus}` : ''}</span>
+                        {contract && (
+                          <span className="th tiny" style={{ color: contract.completed ? 'var(--good)' : 'var(--muted)' }}>
+                            {contract.emoji} {contract.nameTh} · {contract.completed ? `สำเร็จ +${contract.value}` : 'ไม่สำเร็จ'}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <strong style={{ color: winnerIds.has(p.id) ? 'var(--accent)' : 'var(--text)', fontSize: 18 }}>{scores[p.id] ?? 0}฿</strong>

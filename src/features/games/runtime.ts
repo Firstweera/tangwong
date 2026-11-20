@@ -57,10 +57,10 @@ const RUNTIMES: Record<string, GameRuntime> = {
   },
   checkpoint: {
     config: checkpointConfig as GameEngineConfig<unknown, unknown>,
-    firstPhase: 'pack',
+    firstPhase: 'contract',
     nextBotAction: (s, id) => checkpointBot(s as GameState<CheckpointPublic, CheckpointPrivate>, id),
     revealForPublic: () => ({}),
-    privateActionTypes: ['SUBMIT_CRATE', 'SUBMIT_OFFER'],
+    privateActionTypes: ['CHOOSE_CONTRACT', 'SUBMIT_CRATE', 'SUBMIT_OFFER'],
     botDelayMs: 520,
   },
 };

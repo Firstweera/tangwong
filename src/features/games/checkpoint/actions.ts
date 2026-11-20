@@ -1,11 +1,21 @@
 import type { ActionDef, GameState } from '../engine';
 import { CHECKPOINT_GOODS, drawGoods, goodsValue } from './goods.ts';
 import { inspectionSealsFor } from './setup.ts';
+import {
+  CHECKPOINT_CONTRACTS,
+  CHECKPOINT_DEMANDS,
+  contractProgress,
+  demandBonusFor,
+  demandPenaltyExtra,
+  drawDemand,
+} from './market.ts';
 import type {
+  CheckpointContractResult,
   CheckpointGoodId,
   CheckpointPrivate,
   CheckpointPublic,
   CheckpointResolution,
+  ChooseContractPayload,
   SubmitCratePayload,
 } from './types.ts';
 
@@ -68,6 +78,31 @@ function transferCash(cash: Record<string, number>, from: string, to: string, re
   const paid = Math.max(0, Math.min(requested, cash[from] ?? 0));
   return { cash: { ...cash, [from]: (cash[from] ?? 0) - paid, [to]: (cash[to] ?? 0) + paid }, paid };
 }
+
+/** Running score: cash + delivered value + Market bonus. Contracts are added at game end. */
+function wealthOf(pub: Pick<CheckpointPublic, 'playerOrder' | 'cash' | 'delivered' | 'marketBonus'>): Record<string, number> {
+  return Object.fromEntries(pub.playerOrder.map(id => [
+    id,
+    (pub.cash[id] ?? 0) + goodsValue(pub.delivered[id] ?? {}) + (pub.marketBonus?.[id] ?? 0),
+  ]));
+}
+
+const chooseContract: ActionDef<CheckpointPublic, CheckpointPrivate> = {
+  validate(state, action) {
+    if (!isPlayer(state, action.playerId)) return { valid: false, error: 'Not a player' };
+    if ((P(state).contractsChosen ?? []).includes(action.playerId)) return { valid: false, error: 'Contract already chosen' };
+    const contractId = (action.payload as Partial<ChooseContractPayload> | null)?.contractId;
+    if (!contractId || !(priv(state, action.playerId)?.contractOptions ?? []).includes(contractId)) {
+      return { valid: false, error: 'Contract is not one of your options' };
+    }
+    return { valid: true };
+  },
+  handle(state, action) {
+    const { contractId } = action.payload as ChooseContractPayload;
+    const next = patchPrivate(state, action.playerId, { contract: contractId });
+    return patchPublic(next, { contractsChosen: [...(P(next).contractsChosen ?? []), action.playerId] });
+  },
+};
 
 const submitCrate: ActionDef<CheckpointPublic, CheckpointPrivate> = {
   validate(state, action) {
@@ -146,6 +181,7 @@ function resolveMerchant(state: State, merchantId: string, decision: 'pass' | 'i
   let offerPaid = 0;
   let penaltyPaid = 0;
   let compensationPaid = 0;
+  let bankBonus = 0;
 
   if (decision === 'pass') {
     const transfer = transferCash(cash, merchantId, gatekeeperId, offer);
@@ -155,10 +191,12 @@ function resolveMerchant(state: State, merchantId: string, decision: 'pass' | 'i
     const transfer = transferCash(cash, gatekeeperId, merchantId, crate.length);
     cash = transfer.cash;
     compensationPaid = transfer.paid;
+    bankBonus = CHECKPOINT_DEMANDS[pub.demand]?.honestBonus ?? 0;
+    cash[merchantId] = (cash[merchantId] ?? 0) + bankBonus;
   } else {
     delivered = crate.filter(id => id === declaration.goodId);
     confiscated = crate.filter(id => id !== declaration.goodId);
-    const penalty = confiscated.reduce((sum, id) => sum + CHECKPOINT_GOODS[id].penalty, 0);
+    const penalty = confiscated.reduce((sum, id) => sum + CHECKPOINT_GOODS[id].penalty + demandPenaltyExtra(pub.demand, id), 0);
     const transfer = transferCash(cash, merchantId, gatekeeperId, penalty);
     cash = transfer.cash;
     penaltyPaid = transfer.paid;
@@ -174,19 +212,24 @@ function resolveMerchant(state: State, merchantId: string, decision: 'pass' | 'i
 
   const ids = pub.playerOrder;
   const cashDelta = Object.fromEntries(ids.map(id => [id, (cash[id] ?? 0) - (pub.cash[id] ?? 0)]));
+  const marketBonusEarned = demandBonusFor(pub.demand, delivered);
   const resolution: CheckpointResolution = {
     merchantId, decision, truthful, goods: crate, delivered, confiscated, cashDelta,
-    offerPaid, penaltyPaid, compensationPaid,
+    offerPaid, penaltyPaid, compensationPaid, marketBonus: marketBonusEarned, bankBonus,
   };
   const nextDelivered = addInventory(pub.delivered, merchantId, delivered);
-  const wealth = Object.fromEntries(ids.map(id => [id, cash[id] + goodsValue(nextDelivered[id] ?? {})]));
+  const marketBonus = { ...(pub.marketBonus ?? {}), [merchantId]: (pub.marketBonus?.[merchantId] ?? 0) + marketBonusEarned };
+  const illegalLost = confiscated.filter(id => !CHECKPOINT_GOODS[id].legal).length;
+  const confiscatedIllegal = { ...(pub.confiscatedIllegal ?? {}), [merchantId]: (pub.confiscatedIllegal?.[merchantId] ?? 0) + illegalLost };
   return patchPublic(state, {
     inspectionSeals: decision === 'inspect' ? pub.inspectionSeals - 1 : pub.inspectionSeals,
     resolvedMerchants: [...pub.resolvedMerchants, merchantId],
     resolutions: [...pub.resolutions, resolution],
     cash,
     delivered: nextDelivered,
-    wealth,
+    marketBonus,
+    confiscatedIllegal,
+    wealth: wealthOf({ playerOrder: ids, cash, delivered: nextDelivered, marketBonus }),
   });
 }
 
@@ -215,11 +258,22 @@ const continueShift: ActionDef<CheckpointPublic, CheckpointPrivate> = {
   handle(state) {
     const pub = P(state);
     if (pub.shift >= pub.totalShifts) {
-      const wealth = Object.fromEntries(pub.playerOrder.map(id => [id, pub.cash[id] + goodsValue(pub.delivered[id] ?? {})]));
-      return patchPublic(state, { gameComplete: true, wealth });
+      // Game end: reveal every Contract and add completed ones to the score.
+      const base = wealthOf(pub);
+      const contractResults: Record<string, CheckpointContractResult> = {};
+      for (const id of pub.playerOrder) {
+        const contractId = priv(state, id)?.contract;
+        if (!contractId || !CHECKPOINT_CONTRACTS[contractId]) continue;
+        const completed = contractProgress(pub, id, contractId).done;
+        const def = CHECKPOINT_CONTRACTS[contractId];
+        contractResults[id] = { contractId, nameTh: def.nameTh, emoji: def.emoji, completed, value: completed ? def.value : 0 };
+      }
+      const wealth = Object.fromEntries(pub.playerOrder.map(id => [id, base[id] + (contractResults[id]?.value ?? 0)]));
+      return patchPublic(state, { gameComplete: true, wealth, contractResults });
     }
 
     const nextShift = pub.shift + 1;
+    const nextDemand = drawDemand(pub.demandDrawn ?? []);
     const nextGatekeeperId = pub.playerOrder[(nextShift - 1) % pub.playerOrder.length];
     let next = state;
     for (const id of pub.playerOrder) {
@@ -238,6 +292,8 @@ const continueShift: ActionDef<CheckpointPublic, CheckpointPrivate> = {
       cycle: Math.floor((nextShift - 1) / pub.playerOrder.length) + 1,
       inspectionSeals: inspectionSealsFor(pub.playerOrder.length),
       declarations: {}, offersSubmitted: [], rumors: {}, resolvedMerchants: [], resolutions: [],
+      demand: nextDemand.demand,
+      demandDrawn: nextDemand.drawn,
     });
     return {
       ...next,
@@ -247,6 +303,7 @@ const continueShift: ActionDef<CheckpointPublic, CheckpointPrivate> = {
 };
 
 export const CHECKPOINT_ACTIONS: Record<string, ActionDef<CheckpointPublic, CheckpointPrivate>> = {
+  CHOOSE_CONTRACT: chooseContract,
   SUBMIT_CRATE: submitCrate,
   PLACE_RUMOR: placeRumor,
   SUBMIT_OFFER: submitOffer,

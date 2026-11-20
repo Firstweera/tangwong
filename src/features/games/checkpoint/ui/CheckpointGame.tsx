@@ -4,7 +4,8 @@ import type { Player } from '@/types';
 import type { GameState, RoomState } from '../../engine';
 import { GameShell } from '../../ui/GameShell';
 import { CHECKPOINT_GOODS, LEGAL_GOODS } from '../goods.ts';
-import type { CheckpointGoodId, CheckpointPrivate, CheckpointPublic, LegalGoodId } from '../types.ts';
+import { CHECKPOINT_CONTRACTS, CHECKPOINT_DEMANDS, contractProgress, demandBonusFor } from '../market.ts';
+import type { CheckpointGoodId, CheckpointPrivate, CheckpointPublic, ContractId, LegalGoodId } from '../types.ts';
 
 type S = GameState<CheckpointPublic, CheckpointPrivate>;
 
@@ -38,6 +39,7 @@ export function CheckpointGame({
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [declaredGoodId, setDeclaredGoodId] = useState<LegalGoodId>('rice');
   const [offer, setOffer] = useState(0);
+  const [contractPick, setContractPick] = useState<ContractId | null>(null);
 
   const phase = state?.public.phase ?? 'lobby';
   const pub = state?.public.data;
@@ -80,6 +82,7 @@ export function CheckpointGame({
   const gatekeeper = byId(pub.gatekeeperId);
   const merchantIds = pub.playerOrder.filter(id => id !== pub.gatekeeperId);
   const phaseInfo: Record<string, { em: string; th: string }> = {
+    contract: { em: '📜', th: 'เลือกสัญญา' },
     pack: { em: '🧳', th: 'จัดกระเป๋า' },
     negotiate: { em: '🤝', th: 'เจรจา' },
     decide: { em: '🛂', th: 'ตัดสิน' },
@@ -87,6 +90,12 @@ export function CheckpointGame({
     end: { em: '🏆', th: 'จบเกม' },
   };
   const currentPhase = phaseInfo[phase] ?? phaseInfo.pack;
+  // Fields below are optional so a server that predates Contracts still renders.
+  const demand = pub.demand ? CHECKPOINT_DEMANDS[pub.demand] : undefined;
+  const myContract = mine?.contract ? CHECKPOINT_CONTRACTS[mine.contract] : undefined;
+  const contractsChosen = pub.contractsChosen ?? [];
+  const iChoseContract = contractsChosen.includes(meId);
+  const myBonus = pub.marketBonus?.[meId] ?? 0;
 
   const track = (
     <div className="checkpoint-track pad-x">
@@ -96,6 +105,13 @@ export function CheckpointGame({
         <span className="th checkpoint-kicker">กะ {pub.shift}/{pub.totalShifts}</span>
       </div>
       <div className="checkpoint-progress"><span style={{ width: `${(pub.shift / pub.totalShifts) * 100}%` }} /></div>
+      {demand && (
+        <div className="checkpoint-demand" title="ความต้องการของตลาดกะนี้">
+          <span aria-hidden>{demand.emoji}</span>
+          <strong className="th">{demand.nameTh}</strong>
+          <small className="th">{demand.descTh}</small>
+        </div>
+      )}
     </div>
   );
 
@@ -115,7 +131,8 @@ export function CheckpointGame({
           </span>
           {resolution && (
             <span className={resolution.truthful === false ? 'checkpoint-bad' : 'checkpoint-good'}>
-              {resolution.decision === 'pass' ? `ผ่าน · จ่าย ${resolution.offerPaid} บาท` : resolution.truthful ? 'ตรวจแล้วซื่อสัตย์' : `จับโกหก · ปรับ ${resolution.penaltyPaid} บาท`}
+              {resolution.decision === 'pass' ? `ผ่าน · จ่าย ${resolution.offerPaid} บาท` : resolution.truthful ? `ตรวจแล้วซื่อสัตย์${resolution.bankBonus ? ` · +${resolution.bankBonus} บาท` : ''}` : `จับโกหก · ปรับ ${resolution.penaltyPaid} บาท`}
+              {resolution.marketBonus ? ` · โบนัสตลาด +${resolution.marketBonus}` : ''}
             </span>
           )}
         </div>
@@ -148,16 +165,39 @@ export function CheckpointGame({
         <div className="checkpoint-seals" title="ตราตรวจค้นที่เหลือ">🔎 {pub.inspectionSeals}</div>
       </div>
 
-      {phase === 'pack' && !isGatekeeper && !pub.declarations[meId] ? (
+      {phase === 'contract' ? (
+        <div className="checkpoint-hand-section">
+          <div className="checkpoint-section-title">
+            <strong className="th">{iChoseContract ? 'เลือกสัญญาแล้ว' : 'เลือกสัญญาลับ 1 ใบ'}</strong>
+            <span className="th">เลือกแล้ว {contractsChosen.length}/{pub.playerOrder.length}</span>
+          </div>
+          <div className="checkpoint-contracts">
+            {(mine?.contractOptions ?? []).map(id => {
+              const contract = CHECKPOINT_CONTRACTS[id];
+              const kept = iChoseContract ? mine?.contract === id : contractPick === id;
+              return (
+                <button key={id} className="checkpoint-contract-card" data-selected={kept} disabled={iChoseContract} onClick={() => setContractPick(id)}>
+                  <span aria-hidden>{contract.emoji}</span>
+                  <strong className="th">{contract.nameTh}</strong>
+                  <small className="th">{contract.descTh}</small>
+                  <b>+{contract.value}฿</b>
+                </button>
+              );
+            })}
+          </div>
+          <p className="th checkpoint-note">คนอื่นจะไม่รู้ว่าคุณเลือกใบไหนจนจบเกม ทำสำเร็จได้คะแนนเพิ่มตามมูลค่าสัญญา</p>
+        </div>
+      ) : phase === 'pack' && !isGatekeeper && !pub.declarations[meId] ? (
         <div className="checkpoint-hand-section">
           <div className="checkpoint-section-title"><strong className="th">เลือกสินค้า 1–3 ชิ้น</strong><span>{selectedGoods.length}/3</span></div>
           <div className="checkpoint-hand">
             {(mine?.hand ?? []).map((id, index) => {
               const good = CHECKPOINT_GOODS[id];
               const selected = selectedIndexes.includes(index);
+              const bonus = demandBonusFor(pub.demand, [id]);
               return (
                 <button key={`${id}-${index}`} className="checkpoint-good-card" data-selected={selected} data-illegal={!good.legal} onClick={() => setSelectedIndexes(current => selected ? current.filter(i => i !== index) : current.length < 3 ? [...current, index] : current)}>
-                  <span>{good.emoji}</span><strong className="th">{good.nameTh}</strong><small className="th">{good.legal ? 'ถูกกฎหมาย' : 'ผิดกฎหมาย'} · {good.value}฿</small>
+                  <span>{good.emoji}</span><strong className="th">{good.nameTh}</strong><small className="th">{good.legal ? 'ถูกกฎหมาย' : 'ผิดกฎหมาย'} · {good.value}฿{bonus > 0 && <em className="checkpoint-good"> +{bonus}</em>}</small>
                 </button>
               );
             })}
@@ -173,7 +213,7 @@ export function CheckpointGame({
 
       {phase === 'shiftResult' && (
         <div className="checkpoint-scoreboard">
-          {[...pub.playerOrder].sort((a, b) => pub.wealth[b] - pub.wealth[a]).map((id, index) => (
+          {[...pub.playerOrder].sort((a, b) => (pub.wealth[b] ?? 0) - (pub.wealth[a] ?? 0)).map((id, index) => (
             <div key={id}><span>{index + 1}</span><Avatar who={byId(id)} size={32} /><strong className="th">{byId(id)?.name}{id === meId ? ' · คุณ' : ''}</strong><b>{pub.wealth[id]}฿</b></div>
           ))}
         </div>
@@ -181,16 +221,31 @@ export function CheckpointGame({
     </div>
   );
 
+  const progress = myContract && mine?.contract ? contractProgress(pub, meId, mine.contract) : null;
   const roleStrip = (
-    <div className="checkpoint-wallet pad-x">
-      <span><small className="th">เงินสด</small><strong>{pub.cash[meId]}฿</strong></span>
-      <span><small className="th">มูลค่าสินค้า</small><strong>{pub.wealth[meId] - pub.cash[meId]}฿</strong></span>
-      <span><small className="th">รวม</small><strong>{pub.wealth[meId]}฿</strong></span>
+    <div className="checkpoint-role pad-x">
+      {myContract && progress && (
+        <div className="checkpoint-contract-mini" data-done={progress.done}>
+          <span aria-hidden>{myContract.emoji}</span>
+          <span className="th"><strong>{myContract.nameTh}</strong> · {myContract.descTh}</span>
+          <b>{progress.done ? '✓' : `${progress.current}/${progress.target}`} · +{myContract.value}฿</b>
+        </div>
+      )}
+      <div className="checkpoint-wallet">
+        <span><small className="th">เงินสด</small><strong>{pub.cash[meId] ?? 0}฿</strong></span>
+        <span><small className="th">สินค้า</small><strong>{(pub.wealth[meId] ?? 0) - (pub.cash[meId] ?? 0) - myBonus}฿</strong></span>
+        <span><small className="th">โบนัสตลาด</small><strong>{myBonus}฿</strong></span>
+        <span><small className="th">รวม</small><strong>{pub.wealth[meId] ?? 0}฿</strong></span>
+      </div>
     </div>
   );
 
   let actionBar = <span className="game-action-hint th">รอผู้เล่นคนอื่น...</span>;
-  if (phase === 'pack' && !isGatekeeper && !pub.declarations[meId]) {
+  if (phase === 'contract' && !iChoseContract) {
+    actionBar = <button className="btn btn-primary btn-lg checkpoint-primary" disabled={busy || !contractPick} onClick={() => act('CHOOSE_CONTRACT', { contractId: contractPick })}><span className="th">📜 {contractPick ? `เก็บสัญญา ${CHECKPOINT_CONTRACTS[contractPick].nameTh}` : 'แตะสัญญาที่ต้องการ'}</span></button>;
+  } else if (phase === 'contract') {
+    actionBar = <span className="game-action-hint th">รอคนอื่นเลือกสัญญา...</span>;
+  } else if (phase === 'pack' && !isGatekeeper && !pub.declarations[meId]) {
     actionBar = <button className="btn btn-primary btn-lg checkpoint-primary" disabled={busy || selectedGoods.length < 1} onClick={() => act('SUBMIT_CRATE', { goods: selectedGoods, declaredGoodId })}><span className="th">🧳 ปิดผนึกกระเป๋า · {selectedGoods.length} ชิ้น</span></button>;
   } else if (phase === 'pack') {
     actionBar = <span className="game-action-hint th">{isGatekeeper ? 'รอพ่อค้าจัดกระเป๋าให้ครบ' : 'ปิดผนึกแล้ว รอคนอื่น...'}</span>;
