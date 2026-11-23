@@ -1873,16 +1873,17 @@ Verified live (2026-11-20, after redeploying `game-start` + `game-action`):
   - public data has no contract ids while someone is still choosing
   - the game moves to `pack` once everyone has chosen
   - `CHOOSE_CONTRACT` payloads are logged as `{ submitted: true }`
-- the smoke covered the contract phase only; no full live Checkpoint game was
-  played to the end
+- the smoke covered the contract phase only. A full live match is now covered by
+  `verify:live-game` (see Bots + Online Verification below)
 
 Not verified:
 - browser check of the contract screen, demand strip and result page (light + dark, phone width)
-- two-browser online Checkpoint game played to the end (result page with contracts)
+- two-browser online Checkpoint game in real browsers (result page with contracts);
+  the engine side of a full online match is verified by `verify:live-game`
 
 Follow-up:
-- two-browser online Checkpoint game to the end
-- add Checkpoint to `scripts/e2e-live-game.mjs` (it covers Avalon + Werewolf only)
+- two-browser online Checkpoint game in real browsers
+- ~~add Checkpoint to `scripts/e2e-live-game.mjs`~~ done 2026-11-20
 - Supabase CLI 2.107.0 on macOS could not read its own Keychain login; deploy
   worked with `SUPABASE_ACCESS_TOKEN` set for the session
 - balance playtest of Contract values and demand bonuses
@@ -1902,10 +1903,23 @@ Notes:
 - game-start resolves opening bot actions before persistence so a human
   Gatekeeper cannot deadlock while waiting for bot merchants
 - runtime verifier completed a three-player game in 54 actions across 6 shifts
+- 2026-11-20: `scripts/e2e-live-game.mjs` now plays a full 3-player Checkpoint match
+  (2 humans + 1 bot) against the deployed Edge Functions. It checks:
+  - the game starts in `contract` with a demand card
+  - RLS limits each player to their own private row
+  - an un-dealt contract is rejected
+  - no contract id appears in public data before the end
+  - exactly 6 shifts, and the `checkpoint-wealth` win condition
+  - every player's contract is revealed at the end and the guest can read them
+  - the final score recomputed from public data matches the server
+  - `CHOOSE_CONTRACT` / `SUBMIT_CRATE` / `SUBMIT_OFFER` are redacted in `game_actions`
+  First run: 61/61 (15 new Checkpoint checks)
+- the harness mirrors goods values and contract ids from `goods.ts` / `market.ts`; a
+  change there must be copied (the final-score check fails loudly otherwise)
 
 Follow-up:
-- deploy updated `game-start` and `game-action`, then complete multi-device
-  private-state and reconnection verification
+- complete multi-device private-state and reconnection verification in real browsers
+  (Edge Functions are deployed automatically since CI/CD)
 
 ---
 

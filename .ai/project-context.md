@@ -78,7 +78,7 @@ developer plays a full match.
 | `npm run verify:supabase-transport` | SupabaseTransport against an in-memory fake service |
 | `npm run verify:werewolf` · `verify:checkpoint` | per-game engine runs |
 | `npm run verify:game-action` · `verify:game-timeout` · `verify:realtime-game` | static contract checks over Edge Function + client wiring |
-| `npm run verify:live-game` | ⚠ drives the **deployed** Supabase backend — creates real rows; run only when asked |
+| `npm run verify:live-game` | ⚠ drives the **deployed** Supabase backend (full Avalon, Werewolf and Checkpoint matches) — creates real rows; run only when asked |
 
 There is no unit-test runner and no linter configured. The verify scripts are the test
 suite. The merge gate is [workflow.md §4](workflow.md).
