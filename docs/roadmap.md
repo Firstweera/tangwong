@@ -1938,13 +1938,28 @@ Verified live (2026-11-20, after redeploying `game-start` + `game-action`):
 - the smoke covered the contract phase only. A full live match is now covered by
   `verify:live-game` (see Bots + Online Verification below)
 
+- browser check (2026-11-23, offline vs bots, headless Chromium at 390×844, light + dark,
+  no console errors across 7 runs): contract picker (2 cards, selection, "เลือกแล้ว n/N"),
+  demand strip changing per shift, hand bonus badge ("แอปเปิล 2฿ +1" under Apple Fair),
+  contract progress + 4-column wallet, pass/inspect results and market-close scoreboard,
+  result page with every contract and completion; three result rows hand-checked
+  (cash + goods + bonus + contract = total)
+
 Not verified:
-- browser check of the contract screen, demand strip and result page (light + dark, phone width)
+- real phone (only headless Chromium); whether the last scoreboard row scrolls clear of
+  the bottom bar
 - two-browser online Checkpoint game in real browsers (result page with contracts);
   the engine side of a full online match is verified by `verify:live-game`
 
 Follow-up:
 - two-browser online Checkpoint game in real browsers
+- offline game ignores the lobby roster: `GamePage` builds players from `currentRoom`,
+  which is created before lobby bots are added, so it pads with fallback bots (seen: a
+  4-seat room played as 5). Not Checkpoint-specific; dates from `57f8f75`
+- 🤖 autoplay stalls at every market close: host-only `CONTINUE_SHIFT` has no bot policy
+- the declaration select defaults to rice even when the hand has none
+- create-room sheet lists real game names ("Coup", "Dixit", and "Avalon"), against
+  AGENTS.md §2.5; needs replacement names from the user
 - ~~add Checkpoint to `scripts/e2e-live-game.mjs`~~ done 2026-11-20
 - Supabase CLI 2.107.0 on macOS could not read its own Keychain login; deploy
   worked with `SUPABASE_ACCESS_TOKEN` set for the session
