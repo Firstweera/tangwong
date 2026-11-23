@@ -223,21 +223,26 @@ Notes:
   `command not found` (zsh does not word-split). The skill now ships a zsh-safe `eval`
   loop
 - the user's "Save context" section in CLAUDE.md is kept as is
-
-Not verified:
-- `allowed-tools` pre-approval in `verify`: the fresh-session test ran the gate as one
-  zsh loop, which the per-command entries can't match, so it neither proves nor
-  disproves the YAML list syntax
-
 - `/doctor prompt-audit` (2026-11-23, target Opus 5.5): project-owned files clean of
   dated patterns; applied: ui rule tap-target wording matched to coding-standards §5,
   incident-specific "limits like cash" dropped from the engine rule, and the local
   `frontend-design` (contradicted AGENTS.md §2.6) and duplicate `skill-creator` skills
-  removed from `.claude/skills/` (untracked, per machine). Flagged only: the
-  Next.js-oriented `vercel-react-best-practices` skill, `tailwind-design-system` length
+  removed from `.claude/skills/` and `.agents/skills/` (untracked, per machine)
+- `verify` `allowed-tools`: closed as not needed. The ten gate commands are already in
+  `permissions.allow` in `.claude/settings.json`, so a session never prompts for them
+  either way; a test cannot tell the two sources apart. Gate run command by command in a
+  fresh session (2026-11-23): 10/10 green
+- `vercel-react-best-practices` (per machine, untracked): kept but made manual-only
+  (`disable-model-invocation: true`), since its `server-*` rules and Next.js / React 19
+  examples don't fit a Vite SPA on React 18. Invoke `/vercel-react-best-practices` for
+  performance work; re-add the line if the skill is reinstalled
+
+Not verified: none.
 
 Follow-up:
-- decide whether to keep `vercel-react-best-practices` (Next.js/RSC rules don't fit a Vite SPA)
+- `npm run build` warns about a 646 kB JS chunk (Vite limit 500 kB): a code-splitting
+  task (`React.lazy` / dynamic import per game) where the manual vercel skill fits
+- `tailwind-design-system` skill is 565 lines (guidance: under 500); vendor file, left as is
 
 ## CI/CD
 
