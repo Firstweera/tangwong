@@ -113,6 +113,7 @@ game UI one shape of props, whichever transport is behind it:
 | transport | `SupabaseTransport` | `LocalTransport` (`hostOnly: false`, paced bots) |
 | start | host auto-starts via `game-start` | starts on mount |
 | other seats | real players (+ server bots `bot_*`) | bot-played; devtools SeatSwitcher can view any seat |
+| roster | the server's room (`online.state.room`) | `currentRoom.players`, synced from the lobby on Start (`syncRoom`); padded with fallback bots only below `minPlayers` (e.g. opening the game without a lobby) |
 
 Game UIs never call services, never run the engine and never run bots. They render
 `externalState` and call `onSubmitAction` / `onTimeout`. Detail: [game-engine §7](game-engine.md).

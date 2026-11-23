@@ -30,7 +30,7 @@ const DEMO_ROOM = {
   createdAt: 0,
 };
 
-export default function LobbyPage({ go, layout, showToast, room, player, onLeave, onUpdateSettings }) {
+export default function LobbyPage({ go, layout, showToast, room, player, onLeave, onUpdateSettings, onSyncRoom }) {
   const seedRoom = room ?? DEMO_ROOM;
 
   // ─── Realtime room (Epic 4) — live players, ready, settings across tabs ─────
@@ -77,6 +77,12 @@ export default function LobbyPage({ go, layout, showToast, room, player, onLeave
     : undefined;
   const handleStart = () => {
     if (!canStart) return;
+    // Hand the live roster (bots included) to App before leaving the lobby.
+    // Offline, GamePage builds the match from currentRoom; online it reads the
+    // server's room instead, so this is harmless there.
+    onSyncRoom?.({
+      players, hostId: liveRoom.hostId, maxPlayers: liveRoom.maxPlayers, gameId: liveRoom.gameId,
+    });
     go('game');
   };
 
