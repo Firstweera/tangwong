@@ -96,9 +96,30 @@ When a change alters behaviour, architecture or a contract, update the owner doc
 | commands, env, run modes, shipped games | `.ai/project-context.md` |
 | a game's rules | `docs/games/<id>-rules.md` |
 | progress | `docs/roadmap.md` (+ `docs/changelog.md` for shipped changes) |
+| a mandatory rule, the doc map, source of truth | `AGENTS.md` (shared by every agent) |
+| something only Claude Code uses (skills, agents, hooks, permissions) | `CLAUDE.md` + `.claude/` |
 
 **One owner per rule.** Elsewhere, point to it; don't copy it. Write down the reason,
 not only the rule.
+
+### AI setup layers
+
+| layer | holds | loaded |
+| ----- | ----- | ------ |
+| `AGENTS.md` | entry point for every agent: tasks steps, mandatory rules, doc map | every session (Claude via `@AGENTS.md` in `CLAUDE.md`) |
+| `CLAUDE.md` | Claude Code specifics only | every session |
+| `.claude/rules/*.md` | short "must never slip" lists per area + pointers to `.ai/` | when a matching file is read or edited (`paths:` frontmatter) |
+| `.ai/*.md` | the rules themselves (owners) | on demand, by section |
+| `.claude/skills/*/SKILL.md` | procedures (`new-game`, `game-action`, `verify`, `ship`) | on demand; `ship` only via `/ship` |
+| `.claude/agents/*.md` | read-only reviewers | when delegated |
+| `.claude/settings.json` + `.claude/hooks/` | hard stops (push, migrations, `.env`) | always enforced |
+
+- A `.claude/rules/` file is a summary of its owner sections. When an owner rule changes,
+  update the matching rule file in the same change, or the two drift.
+- Keep `AGENTS.md` and `CLAUDE.md` short: facts needed every session, nothing derivable
+  from the code. Maintainer notes go in HTML comments (Claude Code strips them).
+- When instructions start to feel stale or contradictory, run `/doctor prompt-audit` in
+  Claude Code and fix what it reports in the owner file.
 
 ## 7. End-of-Task Report
 

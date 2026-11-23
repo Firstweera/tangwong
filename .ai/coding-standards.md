@@ -61,7 +61,7 @@ behaviour, copy, IP rules, comments, dependencies, and the review checklist.
 - Map raw engine and network errors to short Thai toasts (`friendlyGameError` pattern).
   Never show raw error strings to players.
 - Reuse shared components (`GameShell`, `components/ui`, design-system parts) before
-  writing a per-game copy (CLAUDE.md: no duplicate components per game).
+  writing a per-game copy (AGENTS.md §2.7: no duplicate components per game).
 
 ## 6. ⚠ Original IP Only
 

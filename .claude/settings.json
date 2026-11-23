@@ -12,6 +12,16 @@
       "Bash(npm run verify:game-action)",
       "Bash(npm run verify:game-timeout)",
       "Bash(npm run verify:realtime-game)",
+      "Bash(pnpm exec tsc --noEmit -p .)",
+      "Bash(pnpm run build)",
+      "Bash(pnpm run verify:registry-parity)",
+      "Bash(pnpm run verify:game-client)",
+      "Bash(pnpm run verify:supabase-transport)",
+      "Bash(pnpm run verify:werewolf)",
+      "Bash(pnpm run verify:checkpoint)",
+      "Bash(pnpm run verify:game-action)",
+      "Bash(pnpm run verify:game-timeout)",
+      "Bash(pnpm run verify:realtime-game)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -20,6 +30,7 @@
     "ask": [
       "Bash(git push:*)",
       "Bash(npm run verify:live-game)",
+      "Bash(pnpm run verify:live-game)",
       "Bash(supabase functions deploy:*)"
     ],
     "deny": [
@@ -39,6 +50,16 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/push-guard.mjs",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/migration-guard.mjs",
             "timeout": 10
           }
         ]

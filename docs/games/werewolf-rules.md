@@ -4,7 +4,7 @@ Canonical mechanics for our Werewolf-inspired social-deduction game, written as
 an **engine spec** so the implementation (Epic 6.5 Phase B) stays accurate and
 testable. These are the public-domain "Werewolf / Mafia" folk-game mechanics,
 **adapted** to TangWong's generic game engine. We do **not** copy any commercial
-product's proprietary role names, artwork, or rulebook text (per CLAUDE.md); use
+product's proprietary role names, artwork, or rulebook text (per AGENTS.md §2.5); use
 our own Thai/English names and descriptions.
 
 Status: reference for B1 (engine) / B3 (UI). Update this doc first if a rule

@@ -1,6 +1,8 @@
 ---
 name: ship
 description: Commit TangWong work and open a pull request the project's way: branch off main, conventional commit with scope and Co-Authored-By trailer, gate first, PR body with behaviour changes and unverified items. Use when the user asks to commit, open a PR, or ship.
+argument-hint: "[extra instruction, e.g. 'and redeploy']"
+disable-model-invocation: true
 ---
 
 # Ship

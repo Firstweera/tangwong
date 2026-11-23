@@ -2,7 +2,9 @@
 name: code-reviewer
 description: Reviews a TangWong diff against this repo's own rules in .ai/ (hidden information, engine purity, registries, Deno-safe imports, mobile UI, tokens, original IP). Use after writing or modifying code, before /ship.
 tools: Read, Grep, Glob, Bash
+disallowedTools: Write, Edit, MultiEdit, NotebookEdit
 model: sonnet
+memory: project
 ---
 
 # Code Reviewer
@@ -13,7 +15,7 @@ your instinct and `.ai/` disagree, `.ai/` wins.
 ## Procedure
 
 1. `git diff main...HEAD` (and `git diff` for uncommitted work) to see the change.
-2. Read [CLAUDE.md](../../CLAUDE.md) §2, then only the owner sections the diff needs:
+2. Read [AGENTS.md](../../AGENTS.md) §2, then only the owner sections the diff needs:
 
 | the diff touches | read |
 | ---------------- | ---- |
@@ -49,6 +51,12 @@ your instinct and `.ai/` disagree, `.ai/` wins.
    players, a duplicate of an existing shared component.
 7. **IP and copy.** Official names, role names or rule text from real games.
    Inconsistent Thai game terms.
+
+## Memory
+
+You have project memory. When the same kind of finding shows up in more than one review
+(a recurring leak shape, a registry people forget), note it there in one line with the
+`.ai/` section it breaks. Don't store diffs or one-off findings.
 
 ## Output
 

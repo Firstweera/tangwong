@@ -2,6 +2,7 @@
 name: privacy-auditor
 description: Audits a TangWong diff for hidden-information leaks and authority bypasses: private game state, redaction, end-game reveal, action-log payloads, RLS policies, Edge Functions, transports, auth/session. Use whenever such code changes.
 tools: Read, Grep, Glob, Bash
+disallowedTools: Write, Edit, MultiEdit, NotebookEdit
 model: sonnet
 ---
 
