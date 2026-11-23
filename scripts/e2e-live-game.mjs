@@ -4,6 +4,8 @@
 // two real clients would, following supabase/functions/README.md verify steps:
 //
 //   B2 game-start · B3 game-action · B5 TIMEOUT · hidden-info RLS gate
+//   + full Werewolf and Checkpoint matches (Checkpoint: secret Contracts, demand,
+//     final scoring recomputed from public data)
 //
 // It uses anonymous auth (no login wall) and the public anon key from
 // .env.local — the same key the browser ships. It does NOT need the service
@@ -259,6 +261,85 @@ async function playWerewolfToEnd({ host, guest, hostId, guestId, code, roomId })
   return null;
 }
 
+// ── Checkpoint ──────────────────────────────────────────────────────────────
+// Mirrors src/features/games/checkpoint/{goods,market}.ts. If those values change,
+// update these too (the final-score check below will fail otherwise).
+const CP_GOODS = {
+  rice: { legal: true, value: 2 }, apple: { legal: true, value: 2 }, spice: { legal: true, value: 3 },
+  silk: { legal: true, value: 3 }, medicine: { legal: true, value: 4 },
+  forged_documents: { legal: false, value: 6 }, stolen_gems: { legal: false, value: 7 },
+  illegal_gun: { legal: false, value: 8 }, counterfeit_money: { legal: false, value: 9 },
+};
+const CP_CONTRACT_IDS = ['rice_merchant', 'silk_road', 'diverse_cargo', 'arms_dealer', 'master_forger', 'clean_record'];
+const CP_PRIVATE_TYPES = ['CHOOSE_CONTRACT', 'SUBMIT_CRATE', 'SUBMIT_OFFER'];
+
+// Drive the two humans through a full Checkpoint match with simple legal moves
+// (keep the first Contract, pack one card and declare it truthfully when legal,
+// offer 0, pass every merchant, host continues each shift). Bots are resolved by
+// the server. Also records whether any Contract id ever appeared in public data
+// before the game was complete.
+async function playCheckpointToEnd({ host, guest, hostId, guestId, code, roomId }) {
+  const humans = new Map([[hostId, host], [guestId, guest]]);
+  const result = { final: null, contractLeak: null, shiftsSeen: new Set() };
+  let lastVersion = -1;
+  let stuck = 0;
+
+  for (let i = 0; i < 300; i++) {
+    const { data: gs } = await host
+      .from('game_states')
+      .select('phase,status,version,public_data,winner')
+      .eq('room_id', roomId)
+      .single();
+    if (!gs) return result;
+    const P = gs.public_data || {};
+    if (!P.gameComplete) {
+      const json = JSON.stringify(P);
+      const leaked = CP_CONTRACT_IDS.find(id => json.includes(id));
+      if (leaked && !result.contractLeak) result.contractLeak = `${leaked} in phase ${gs.phase}`;
+    }
+    if (gs.status === 'ended' || gs.phase === 'end' || gs.winner) { result.final = gs; return result; }
+    if (P.shift) result.shiftsSeen.add(P.shift);
+
+    let acted = false;
+    const merchants = (P.playerOrder || []).filter(id => id !== P.gatekeeperId);
+
+    if (gs.phase === 'shiftResult') {
+      acted = (await invoke(host, 'game-action', { code, type: 'CONTINUE_SHIFT', payload: null })).ok;
+    } else {
+      for (const [id, client] of humans) {
+        const isGatekeeper = id === P.gatekeeperId;
+        let move = null;
+        if (gs.phase === 'contract' && !(P.contractsChosen || []).includes(id)) {
+          const { data: mine } = await client.from('game_private').select('private_data')
+            .eq('room_id', roomId).eq('player_id', id).maybeSingle();
+          const opts = mine?.private_data?.contractOptions || [];
+          if (opts[0]) move = { type: 'CHOOSE_CONTRACT', payload: { contractId: opts[0] } };
+        } else if (gs.phase === 'pack' && !isGatekeeper && !(P.declarations || {})[id]) {
+          const { data: mine } = await client.from('game_private').select('private_data')
+            .eq('room_id', roomId).eq('player_id', id).maybeSingle();
+          const card = mine?.private_data?.hand?.[0];
+          if (card) move = { type: 'SUBMIT_CRATE', payload: { goods: [card], declaredGoodId: CP_GOODS[card].legal ? card : 'rice' } };
+        } else if (gs.phase === 'negotiate' && !isGatekeeper && !(P.offersSubmitted || []).includes(id)) {
+          move = { type: 'SUBMIT_OFFER', payload: { amount: 0 } };
+        } else if (gs.phase === 'decide' && isGatekeeper) {
+          const next = merchants.find(m => !(P.resolvedMerchants || []).includes(m));
+          if (next) move = { type: 'PASS_MERCHANT', payload: { merchantId: next } };
+        }
+        if (move) acted = (await invoke(client, 'game-action', { code, ...move })).ok || acted;
+      }
+    }
+
+    if (!acted && gs.version === lastVersion) {
+      if (++stuck >= 8) { result.final = gs; return result; }
+      await sleep(400);
+    } else {
+      stuck = 0;
+    }
+    lastVersion = gs.version;
+  }
+  return result;
+}
+
 async function main() {
   console.log(`\n\x1b[1mTangWong live game harness\x1b[0m → ${URL}`);
   console.log(`mode: ${SLOW ? 'slow (waits out a real phase timer)' : 'fast (core checks)'}`);
@@ -269,6 +350,8 @@ async function main() {
   let cleanup = async () => {};
   let wCode = '';
   let wCleanup = async () => {};
+  let cCode = '';
+  let cCleanup = async () => {};
 
   try {
     // ── auth ────────────────────────────────────────────────────────────
@@ -549,6 +632,77 @@ async function main() {
        !wAudit || wAudit.length === 0 || allRedacted,
        `${(wAudit ?? []).length} private actions checked`);
 
+    // ── Checkpoint: game-start + full match ─────────────────────────────────
+    step('Checkpoint — create room (3p), start game, play to completion');
+    cCode = randomCode();
+    const cSeed = {
+      name: '[e2e] checkpoint room',
+      gameId: 'checkpoint',
+      maxPlayers: 6,
+      isPublic: false,
+      inviteLink: `https://tangwong.app/join/${cCode}`,
+    };
+    await host.rpc('join_room', { p_code: cCode, p_seed: { ...cSeed, nickname: 'CHost', mascot: 'fox' } });
+    await guest.rpc('join_room', { p_code: cCode, p_seed: { ...cSeed, nickname: 'CGuest', mascot: 'owl' } });
+    await host.rpc('add_bot', { p_code: cCode, p_bot: { id: botId(), name: 'CBot 1', mascot: 'cat' } });
+    cCleanup = async () => {
+      try { await guest.rpc('leave_room', { p_code: cCode }); } catch {}
+      try { await host.rpc('leave_room', { p_code: cCode }); } catch {}
+    };
+
+    const { data: cr } = await host.from('rooms').select('id,status').eq('code', cCode).single();
+    ok('checkpoint room created', !!cr?.id, cr?.id);
+
+    const cStart = await invoke(host, 'game-start', { code: cCode });
+    ok('checkpoint game-start ok', cStart.ok, JSON.stringify(cStart.body));
+
+    const { data: cgs0 } = await host.from('game_states').select('phase,status,public_data').eq('room_id', cr.id).single();
+    ok('checkpoint starts at contract', cgs0?.phase === 'contract', `phase=${cgs0?.phase}`);
+    ok('checkpoint demand card dealt', !!cgs0?.public_data?.demand, cgs0?.public_data?.demand);
+
+    const { data: cHostPriv } = await host.from('game_private').select('player_id,private_data').eq('room_id', cr.id);
+    ok('checkpoint RLS: host reads only its own private row',
+       (cHostPriv ?? []).length === 1 && cHostPriv[0].player_id === hostId, `rows=${(cHostPriv ?? []).length}`);
+    const hostOpts = cHostPriv?.[0]?.private_data?.contractOptions ?? [];
+    ok('checkpoint: 2 different contract options dealt', hostOpts.length === 2 && hostOpts[0] !== hostOpts[1], JSON.stringify(hostOpts));
+
+    const undealt = CP_CONTRACT_IDS.find(id => !hostOpts.includes(id));
+    const badPick = await invoke(host, 'game-action', { code: cCode, type: 'CHOOSE_CONTRACT', payload: { contractId: undealt } });
+    ok('checkpoint: un-dealt contract rejected', !badPick.ok, `status=${badPick.status}`);
+
+    const cRun = await playCheckpointToEnd({ host, guest, hostId, guestId, code: cCode, roomId: cr.id });
+    const cFinal = cRun.final;
+    const CP = cFinal?.public_data ?? {};
+    ok('checkpoint reached end state', !!cFinal && (cFinal.status === 'ended' || !!cFinal.winner),
+       cFinal ? `phase=${cFinal.phase} status=${cFinal.status} winners=${JSON.stringify(cFinal.winner?.winners)}` : 'stuck/budget');
+    ok('checkpoint: no contract id in public data before game end', !cRun.contractLeak, cRun.contractLeak ?? 'clean');
+    ok('checkpoint: played players × 2 shifts', CP.shift === 6 && CP.totalShifts === 6, `shift=${CP.shift}/${CP.totalShifts}`);
+    ok('checkpoint: win condition = checkpoint-wealth', cFinal?.winner?.conditionId === 'checkpoint-wealth', cFinal?.winner?.conditionId);
+
+    const order = CP.playerOrder ?? [];
+    const results = CP.contractResults ?? {};
+    ok('checkpoint: contracts revealed for all 3 players', order.length === 3 && order.every(id => results[id]?.contractId),
+       `results=${Object.keys(results).length}`);
+    const mismatches = order.filter(id => {
+      const goods = Object.entries(CP.delivered?.[id] ?? {}).reduce((sum, [g, n]) => sum + CP_GOODS[g].value * n, 0);
+      const expected = (CP.cash?.[id] ?? 0) + goods + (CP.marketBonus?.[id] ?? 0) + (results[id]?.value ?? 0);
+      return CP.wealth?.[id] !== expected;
+    });
+    ok('checkpoint: final score = cash + goods + market bonus + contract', order.length > 0 && mismatches.length === 0,
+       mismatches.length ? `mismatch for ${mismatches.join(',')}` : JSON.stringify(CP.wealth));
+
+    const { data: cGuestView } = await guest.from('game_states').select('public_data').eq('room_id', cr.id).single();
+    ok('checkpoint: guest can read the revealed contracts',
+       Object.keys(cGuestView?.public_data?.contractResults ?? {}).length === 3);
+
+    const { data: cAudit } = await host
+      .from('game_actions').select('type,payload').eq('room_id', cr.id)
+      .in('type', CP_PRIVATE_TYPES);
+    const cTypes = new Set((cAudit ?? []).map(r => r.type));
+    ok('checkpoint: private payloads redacted in audit log',
+       CP_PRIVATE_TYPES.every(t => cTypes.has(t)) && (cAudit ?? []).every(r => r.payload?.submitted === true && Object.keys(r.payload).length === 1),
+       `${(cAudit ?? []).length} private actions checked (${[...cTypes].join(', ')})`);
+
   } catch (err) {
     fail++;
     console.log(`\n\x1b[31mFATAL: ${err.message}\x1b[0m`);
@@ -557,6 +711,7 @@ async function main() {
     await cleanup();
     console.log(`  room ${code} — both humans left`);
     await wCleanup();
+    await cCleanup();
   }
 
   console.log(`\n\x1b[1mResult:\x1b[0m ${pass} passed, ${fail} failed`);
