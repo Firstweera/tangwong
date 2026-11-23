@@ -36,6 +36,7 @@ supabase/.temp/
 !.claude/settings.json
 !.claude/hooks/
 !.claude/agents/
+!.claude/rules/
 !.claude/skills/
 .claude/skills/*
 !.claude/skills/new-game/

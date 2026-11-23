@@ -1,6 +1,7 @@
 ---
 name: game-action
 description: Add or change an action, phase, win condition, timer or bot behaviour in an existing TangWong game, keeping engine, bot, UI, registries, server parity and verify scripts in step. Use for any game-rule change.
+argument-hint: "<game id> <action or rule to change>"
 ---
 
 # Game Action

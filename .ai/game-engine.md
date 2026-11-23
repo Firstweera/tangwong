@@ -45,9 +45,14 @@ Types for public/private data and payloads live in `<game>/types.ts`.
 - `validate(state, action)` → `{ valid, error? }`. Compose with `engine/validation.ts`
   helpers. **Validate everything the server must trust**: actor, phase, target legality,
   turn order, one-action-per-phase.
-- `handle(state, action, emit)` is **pure**: no randomness except in `setup.ts`, no
-  clock, no I/O. It returns the next state, and the phase transition is part of that
-  returned state.
+- `handle(state, action, emit)` is **pure**: no clock, no I/O, no mutation. It returns the
+  next state, and the phase transition is part of that returned state.
+- **Randomness** happens in `setup.ts`, or in an explicit draw step inside `handle` that
+  the rules doc names (e.g. Checkpoint `CONTINUE_SHIFT` refills hands with `drawGoods` and
+  reveals the next demand with `drawDemand`). Keep draw helpers in the game's data module,
+  never call `Math.random` ad hoc elsewhere. Never precompute future draws into state: it
+  would leak them. This is safe because exactly one authority runs `handle` per match
+  (the Edge Function online, LocalTransport offline); clients never replay actions.
 - `createInitialState` starts in `'lobby'`. The authority then moves to the game's
   `firstPhase` (runtime registry).
 - Prefer an explicit state machine. Each phase names the actions that leave it.

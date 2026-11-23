@@ -1,6 +1,7 @@
 ---
 name: new-game
 description: Add a new game to TangWong end to end — rules doc, pure-TS engine files, bot, UI, all six registries, verify script. Use when the user asks to add, scaffold or start building a new game.
+argument-hint: "<game id or working title>"
 ---
 
 # New Game
@@ -11,7 +12,7 @@ Rules this skill relies on (read them; this skill doesn't restate them):
 ## 0. Gate
 
 - Is the game in the current epic of `docs/roadmap.md`? If not, stop and ask.
-- **Show the file plan and wait for approval** (CLAUDE.md §2.1).
+- **Show the file plan and wait for approval** (AGENTS.md §2.1).
 
 ## 1. Design first
 
@@ -29,7 +30,7 @@ Write in this order. Each file uses relative imports **with `.ts`**, and no `@/`
 | file | contents |
 | ---- | -------- |
 | `types.ts` | `<Id>Public`, `<Id>Private`, payload types, phase id union |
-| `setup.ts` | `createInitialPublicState`, `createInitialPrivateState`. The only place randomness is allowed |
+| `setup.ts` | `createInitialPublicState`, `createInitialPrivateState`. Randomness lives here, or in a draw step the rules doc names (game-engine §3) |
 | `phases.ts` | `PhaseConfig[]` with `allowedActions` |
 | `actions.ts` | `{ validate, handle }` per action. Validate actor, phase, legality, once-per-phase |
 | `winConditions.ts` | `WinCondition[]` with `reason` + `reasonTh` |

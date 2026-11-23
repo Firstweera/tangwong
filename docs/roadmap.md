@@ -182,6 +182,63 @@ Follow-up:
 - run the new `code-reviewer` / `privacy-auditor` agents on the next game change and
   tune them
 
+### AI Setup Refresh (Claude Code late-2026 features)
+✅ Completed — 2026-11-23 (verified in a fresh session)
+
+Files:
+- `AGENTS.md` (now the shared entry point), `CLAUDE.md` (`@AGENTS.md` + Claude specifics)
+- `.claude/rules/{game-engine,supabase,ui}.md` (new, path-scoped)
+- `.claude/hooks/migration-guard.mjs` (new), `.claude/settings.json`, `.gitignore`
+- `.claude/skills/{ship,verify,new-game,game-action}/SKILL.md`,
+  `.claude/agents/{code-reviewer,privacy-auditor}.md`
+- `.ai/workflow.md` §6 (AI setup layers), pointer fixes in `.ai/coding-standards.md`,
+  `.ai/supabase.md`, `docs/games/werewolf-rules.md`
+
+Notes:
+- based on the current Claude Code docs (memory, skills, subagents, hooks, settings) and
+  the cross-tool AGENTS.md convention
+- direction reversed: AGENTS.md holds the shared rules so Codex/Cursor get them too;
+  Claude reads them through `@AGENTS.md` (Claude Code only reads AGENTS.md natively when
+  no CLAUDE.md exists)
+- the "task → read" routing is now also automatic: path-scoped rules load when a matching
+  file is touched and point to the owner `.ai/` sections
+- `ship` is user-invoked only (`disable-model-invocation`); `verify` pre-approves the gate
+  commands by name (no wildcard, so `verify:live-game` still asks)
+- reviewers are explicitly read-only (`disallowedTools`); `code-reviewer` keeps project
+  memory for recurring findings
+- `migration-guard` blocks Edit/Write on committed migrations (tested: 7 cases incl. path
+  traversal, new migration allowed); allow rules mirrored for `pnpm`
+- `migration-guard` also confirmed live: a Write to `0003_room_exists.sql` from this
+  session was blocked by the hook
+- `/context all` in a fresh session (2026-11-23): CLAUDE.md 1.1k + AGENTS.md 2.3k tokens
+  loaded via `@AGENTS.md`; `ship` hidden from the skill list as intended; both agents
+  listed
+- path-scoped rule confirmed in a fresh session: after reading `checkpoint/goods.ts`, the
+  answer quoted wording that exists only in `.claude/rules/game-engine.md`. The rule
+  does not show under "Memory files" in `/context all` (only launch-time files do)
+- that test exposed drift: `.ai/game-engine.md` §3 said randomness only in `setup.ts`,
+  while Checkpoint draws in `CONTINUE_SHIFT`. The owner doc, the rule and the `new-game`
+  skill now all allow a named draw step and explain why it is safe
+- `verify` in a fresh session: gate 10/10 green, but its first loop failed with
+  `command not found` (zsh does not word-split). The skill now ships a zsh-safe `eval`
+  loop
+- the user's "Save context" section in CLAUDE.md is kept as is
+
+Not verified:
+- `allowed-tools` pre-approval in `verify`: the fresh-session test ran the gate as one
+  zsh loop, which the per-command entries can't match, so it neither proves nor
+  disproves the YAML list syntax
+
+- `/doctor prompt-audit` (2026-11-23, target Opus 5.5): project-owned files clean of
+  dated patterns; applied: ui rule tap-target wording matched to coding-standards §5,
+  incident-specific "limits like cash" dropped from the engine rule, and the local
+  `frontend-design` (contradicted AGENTS.md §2.6) and duplicate `skill-creator` skills
+  removed from `.claude/skills/` (untracked, per machine). Flagged only: the
+  Next.js-oriented `vercel-react-best-practices` skill, `tailwind-design-system` length
+
+Follow-up:
+- decide whether to keep `vercel-react-best-practices` (Next.js/RSC rules don't fit a Vite SPA)
+
 ## CI/CD
 
 ### GitHub Actions gate + Edge Function auto-deploy

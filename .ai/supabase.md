@@ -12,7 +12,7 @@ Design reasons live in [../docs/supabase-plan.md](../docs/supabase-plan.md) and
 
 Supabase is the whole backend: Postgres + RLS, **anonymous Auth** (every player gets an
 `auth.uid()` with no login), Realtime, and two Deno Edge Functions. Nothing else runs
-server-side. Do not add backend code the MVP does not need (CLAUDE.md).
+server-side. Do not add backend code the MVP does not need (AGENTS.md).
 
 Authority:
 

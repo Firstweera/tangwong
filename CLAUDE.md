@@ -1,123 +1,62 @@
 # CLAUDE.md
 
-The **AI operating guide and documentation router** for TangWong (ตั้งวง), a mobile-first
-multiplayer board-game platform ("Discord for board games"). This file says what to read
-and which rules are mandatory. The rules themselves live in [.ai/](.ai/), one owner file
-each. Setup is in [README.md](README.md) and deploy in [DEPLOYMENT.md](DEPLOYMENT.md).
+<!--
+Maintainer note (stripped from Claude's context): shared rules for every agent are in
+AGENTS.md, imported below. This file adds only Claude Code specifics. Keep it short;
+anything every agent needs goes in AGENTS.md, anything path-specific goes in
+.claude/rules/, anything procedural goes in a skill.
+-->
 
-React 18 · Vite · TypeScript · Tailwind v4 (tokens, no preflight) · Supabase (Postgres +
-RLS, anonymous Auth, Realtime, Edge Functions). One shared pure-TS game engine runs in the
-browser, the verify scripts and the Edge Functions.
-
----
-
-## 1. Before Every Task
-
-1. Read [docs/roadmap.md](docs/roadmap.md) and name the **current epic, feature and status**.
-   Do not work on a future epic unless explicitly asked ([workflow §1](.ai/workflow.md)).
-2. Read [.ai/project-context.md](.ai/project-context.md) §1–3 and
-   [.ai/architecture.md](.ai/architecture.md) §1–2. Then read only the sections §3 below
-   routes you to.
-3. Pick the matching skill (§4) if one exists.
-
-## 2. Mandatory Rules
-
-1. **New feature or new files → show the file plan first and wait for approval.** Small
-   edits to existing files don't need one.
-2. **Hidden information is the trust boundary.** A client receives only its own private
-   slice; a game UI reads only `private[meId]`; nothing secret goes in public state or the
-   action log ([game-engine §6](.ai/game-engine.md)).
-3. **Game rules exist once**, as pure TS under `src/features/games/`. No game logic, bot
-   loop or engine call in a UI; state and actions come from a `GameClient`
-   ([game-engine §7](.ai/game-engine.md)).
-4. **The server is the authority online.** Edge Functions are the only writers of game
-   tables. Never add a client write path or an RLS write policy for them ([supabase §2](.ai/supabase.md)).
-5. **Original IP only.** Never use real games' names, art, logos, role names or rule text
-   ([coding-standards §6](.ai/coding-standards.md)).
-6. **Keep the current visual design**, mobile-first, tokens + `cn()` only, no new hex
-   ([coding-standards §4–5](.ai/coding-standards.md)).
-7. **Reuse before creating.** Use shared components instead of a per-game copy. Add no new
-   UI kit, state library or dependency without approval.
-8. **Validate before saying done** ([workflow §4](.ai/workflow.md)). Report failures and
-   unverified parts as such.
-9. **Docs and roadmap move with the code**: update the owner `.ai/` file and the roadmap in
-   the same change ([workflow §1, §6](.ai/workflow.md)).
-10. **Git:** commit or push only when asked, never to `main`, never force. Keep the
-    `Co-Authored-By` trailer ([workflow §2–3](.ai/workflow.md)).
-
-When asked to explain something, answer in four parts: what it does · why this approach ·
-what breaks if it is removed · the simpler alternative, if one exists.
+@AGENTS.md
 
 ---
 
-## 3. Documentation Map
+# Claude Code Specifics
 
-**Every rule has exactly one owner file.** A second statement of a rule is a pointer. If
-two places disagree, fix the duplicate.
+## Path-Scoped Rules
 
-| file | owns |
-| ---- | ---- |
-| [.ai/project-context.md](.ai/project-context.md) | what TangWong is, stack, run modes + env, commands, shipped games, docs outside `.ai/` |
-| [.ai/architecture.md](.ai/architecture.md) | layers, folder map, prototype migration, **game registries (6 places)**, room/game data flow, import boundaries, Deno-shared code |
-| [.ai/game-engine.md](.ai/game-engine.md) | state model, game config, phases/actions/validation, win, bots, **hidden information**, GameClient + transports, timers, add-a-game checklist, verify scripts |
-| [.ai/supabase.md](.ai/supabase.md) | tables + RLS, Edge Functions + error envelope, client services, migrations, deploy, secrets |
-| [.ai/coding-standards.md](.ai/coding-standards.md) | TS, naming, imports, styling, mobile UI behaviour, original IP, copy, comments, dependencies, **review checklist** |
-| [.ai/workflow.md](.ai/workflow.md) | roadmap discipline, branches, commits, PRs, **merge gate**, doc-update rule, end-of-task report |
-| [PRODUCT.md](PRODUCT.md) · [DESIGN.md](DESIGN.md) | users, brand, design principles · visual direction (also read by the `impeccable` skill) |
+`.claude/rules/*.md` load automatically the first time you read or edit a matching file.
+They hold the short invariants for that area and point to the owner `.ai/` sections; they
+do not replace reading those sections.
 
-Read **sections, not files**: `grep -n "^## " .ai/<file>.md`, then read the range you need.
+| rule file                       | loads for                                                                               |
+| ------------------------------- | --------------------------------------------------------------------------------------- |
+| `.claude/rules/game-engine.md`  | `src/features/games/**`, `src/types/**`, `scripts/verify-*.mjs`, `scripts/e2e-*.mjs`    |
+| `.claude/rules/supabase.md`     | `supabase/**`, `src/services/supabase/**`, `.github/workflows/**`                       |
+| `.claude/rules/ui.md`           | game UIs, `src/pages/**`, `src/components/**`, `src/styles/**`, `src/design-system/**`  |
 
-| the task involves | read |
-| ----------------- | ---- |
-| any game logic, a new action or phase | game-engine §2–5 |
-| anything a player should not see | game-engine §6 (always) |
-| a game UI or `GamePage` | architecture §6 · game-engine §7 · coding-standards §4–5 |
-| a new game | architecture §4 · game-engine §9 → `new-game` skill |
-| online play, RLS, Edge Functions | supabase §1–3 · architecture §8 |
-| a migration | supabase §2, §5 |
-| rooms / chat | architecture §5 |
-| styling, a new screen | coding-standards §4–5 · DESIGN.md · `src/design-system/README.md` |
-| a timer | game-engine §8 |
+## Skills and Agents
 
----
+| name                    | use when                                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| `new-game`              | adding a game: engine files, six registries, rules doc, verify script                         |
+| `game-action`           | adding or changing an action, phase or bot behaviour in an existing game                      |
+| `verify`                | before reporting work as done: runs the gate and writes the report                            |
+| `ship`                  | user-invoked only (`/ship`): commit, push, prepare the PR                                     |
+| agent `code-reviewer`   | after a change: reviews the diff against `.ai/` (read-only)                                   |
+| agent `privacy-auditor` | a diff touching private state, redaction, RLS, Edge Functions, transports or auth (read-only) |
 
-## 4. Skills and Agents
+Design skills (`impeccable`, `web-design-guidelines`, `tailwind-design-system`, `shadcn`)
+are general tools, installed per machine. Where they
+disagree with `.ai/coding-standards.md` or DESIGN.md, this repo wins. Agents and skills
+defer to AGENTS.md and `.ai/`.
 
-| name | use when |
-| ---- | -------- |
-| `new-game` | adding a game: engine files, six registries, rules doc, verify script |
-| `game-action` | adding or changing an action, phase or bot behaviour in an existing game |
-| `verify` | before reporting work as done: runs the gate and writes the report |
-| `ship` | committing, preparing and opening a PR |
-| agent `code-reviewer` | after a change: reviews the diff against `.ai/` |
-| agent `privacy-auditor` | a diff touching private state, redaction, RLS, Edge Functions, transports or auth |
+## Enforced, Not Just Asked
 
-Design skills (`impeccable`, `frontend-design`, `web-design-guidelines`,
-`tailwind-design-system`, `shadcn`) are general tools. Where they disagree with
-`.ai/coding-standards.md` or DESIGN.md, this repo wins.
+`.claude/settings.json` turns some rules into hard stops. Don't route around them; if one
+blocks something you believe is needed, stop and ask.
 
-Agents defer to this file and `.ai/`. Where an agent and `.ai/` disagree, `.ai/` wins.
+- `push-guard` hook + deny rules: no push to `main`, no force push.
+- `migration-guard` hook: committed files in `supabase/migrations/` are never edited; add
+  a new numbered migration instead ([supabase §5](.ai/supabase.md)).
+- `ask`: `git push`, `verify:live-game` (writes production), `supabase functions deploy`.
+- `deny`: reading `.env`, `.env.local`, `.env.*.local`.
 
----
+## Save context
 
-## 5. Source of Truth
-
-1. Explicit user instruction
-2. `docs/roadmap.md` scope and the user's approved plan
-3. `.ai/` owner docs and PRODUCT.md / DESIGN.md
-4. Per-game rules in `docs/games/`
-5. Existing implementation
-6. `docs/prototype/` (visual reference only, never code)
-7. Generic framework knowledge
-
-Never choose silently between conflicting requirements. If a conflict affects game rules,
-privacy or architecture, stop and ask.
-
-## 6. When Unsure
-
-Ask instead of guessing when:
-
-- a game rule is silent on a case the engine must handle;
-- a change would put any secret where another seat could read it;
-- the task needs an Edge Function redeploy or a live Supabase write;
-- the work belongs to a future epic.
+- Before reading a whole file, grep first and only read the parts you need.
+- To understand the whole project, send a subagent to look and bring back only the summary.
+- Show me the diff, not the whole file.
+- Don't restate anything we've already decided in this session.
+- When we switch tasks, suggest /compact or a new session.
+- Keep answers short by default.
