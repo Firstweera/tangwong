@@ -74,8 +74,10 @@ Checked after every accepted action. The first non-null `WinResult` ends the gam
 - One function serves three jobs: server bots (`bot_*` seats), the **timeout default
   move** for a stalled human, and offline autoplay (🤖). It must always return a
   **legal** action, or the game stalls.
-- A seat with no bot policy for a phase (e.g. Checkpoint's host-only `CONTINUE_SHIFT`)
-  needs a human. Say so in the game's rules doc.
+- A seat with no bot policy for a phase needs a human. Say so in the game's rules doc.
+  Host-only steps get a policy for the host seat (e.g. Checkpoint `CONTINUE_SHIFT`), so
+  offline autoplay never stalls; online the host is always human, and the server only
+  runs `bot_*` seats.
 - Verify scripts drive whole games with it. A stall shows up there as
   `Engine stalled in phase X`.
 

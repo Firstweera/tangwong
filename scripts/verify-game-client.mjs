@@ -148,8 +148,6 @@ writeFileSync(entry, `
       // Hand my seat to the bot halfway through (🤖 toggle).
       if (manual === 6 && autoFrom < 0) { master.setAutoPlay('me', true); autoFrom = master.getActionLog().length; }
       let action = autoFrom < 0 ? rt.nextBotAction(full, 'me') : null;
-      // Checkpoint: host-only CONTINUE_SHIFT has no bot policy (same as before).
-      if (!action && full.public.phase === 'shiftResult') action = { type: 'CONTINUE_SHIFT', playerId: 'host', payload: null };
       if (action && action.playerId === 'me') {
         const r = await me.moves[action.type](action.payload);
         assert(r.ok, gameId + ' offline ' + action.type + ': ' + (r.ok ? '' : r.error));
@@ -214,7 +212,6 @@ writeFileSync(entry, `
       assert(keys.length === 1 && keys[0] === view.seat, gameId + ' seat ' + view.seat + ' saw ' + keys);
       visited.add(view.seat);
       let action = rt.nextBotAction(full, view.seat);
-      if (!action && full.public.phase === 'shiftResult') action = { type: 'CONTINUE_SHIFT', playerId: 'me', payload: null };
       if (action && action.playerId === view.seat) {
         const r = await active.submit(action.type, action.payload);
         assert(r.ok, gameId + ' seat ' + view.seat + ' ' + action.type + ': ' + (r.ok ? '' : r.error));

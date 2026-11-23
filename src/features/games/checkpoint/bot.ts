@@ -78,6 +78,12 @@ export function nextBotAction(state: State, playerId: string): GameAction | null
     }
   }
 
+  // Market close: only the host may continue. A bot-played host (offline autoplay)
+  // presses it so the match keeps going; a human host still taps it themselves.
+  if (phase === 'shiftResult') {
+    return playerId === state.room.hostId ? { type: 'CONTINUE_SHIFT', playerId, payload: null } : null;
+  }
+
   if (phase === 'decide' && isGatekeeper) {
     const unresolved = merchants(state).filter(id => !data.resolvedMerchants.includes(id));
     if (unresolved.length === 0) return null;

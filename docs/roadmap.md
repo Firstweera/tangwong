@@ -1953,10 +1953,12 @@ Not verified:
 
 Follow-up:
 - two-browser online Checkpoint game in real browsers
-- offline game ignores the lobby roster: `GamePage` builds players from `currentRoom`,
-  which is created before lobby bots are added, so it pads with fallback bots (seen: a
-  4-seat room played as 5). Not Checkpoint-specific; dates from `57f8f75`
-- 🤖 autoplay stalls at every market close: host-only `CONTINUE_SHIFT` has no bot policy
+- ~~offline game ignores the lobby roster~~ fixed 2026-11-23: the lobby syncs its live
+  roster into `currentRoom` on Start (`syncRoom`); browser check: a 4-seat room plays
+  as 4 ("เลือกแล้ว 3/4", 8 shifts) with the lobby's bot names
+- ~~🤖 autoplay stalls at every market close~~ fixed 2026-11-23: the host's bot policy
+  continues the shift; `verify-checkpoint` no longer injects `CONTINUE_SHIFT`, and a
+  browser autoplay run reached the result page hands-free (~1 min)
 - the declaration select defaults to rice even when the hand has none
 - create-room sheet lists real game names ("Coup", "Dixit", and "Avalon"), against
   AGENTS.md §2.5; needs replacement names from the user
