@@ -144,8 +144,12 @@ export default function App() {
   // Drop the rejoin shortcut (e.g. once the left room has been deleted).
   const clearLastRoom = () => setLastRoom(null);
 
+  // Merge live lobby state into App's room seed without user feedback. The
+  // lobby calls it on Start so an offline match gets the real roster.
+  const syncRoom = (patch) => setCurrentRoom(r => r ? { ...r, ...patch } : r);
+
   const updateRoomSettings = (settings) => {
-    setCurrentRoom(r => r ? { ...r, ...settings } : r);
+    syncRoom(settings);
     showToast('อัปเดตห้องแล้ว', '✅');
   };
 
@@ -172,7 +176,7 @@ export default function App() {
     go, showToast, payload, lobbyLayout: t.lobbyLayout,
     guest, player,
     currentRoom, lastRoom,
-    createRoom, joinRoom, leaveRoom, rejoinRoom, clearLastRoom, updateRoomSettings,
+    createRoom, joinRoom, leaveRoom, rejoinRoom, clearLastRoom, updateRoomSettings, syncRoom,
     openCreateRoom: (gameId) => { setCreateInitialGame(gameId ?? null); setCreateOpen(true); },
     openEditProfile: () => setEditProfileOpen(true),
     completeGuestOnboarding, onOAuth,

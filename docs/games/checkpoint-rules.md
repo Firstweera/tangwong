@@ -164,6 +164,10 @@ per player as a public **Market bonus** that counts toward score.
 2. Merchants draw back to 6 cards.
 3. Rotate the Gatekeeper clockwise and reveal a new Market demand card.
 
+The table pauses on the market-close summary until the **room host** continues
+(`CONTINUE_SHIFT`). The host's bot policy continues immediately, so offline autoplay
+runs a whole match; online the host is always a person, so they tap it.
+
 ## Game Length
 
 The game always lasts exactly **two full rotations**. Every player becomes the

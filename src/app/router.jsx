@@ -15,7 +15,7 @@ export function renderScreen(screen, ctx) {
     go, showToast, payload, lobbyLayout,
     guest, player,
     currentRoom, lastRoom,
-    createRoom, joinRoom, leaveRoom, rejoinRoom, clearLastRoom, updateRoomSettings,
+    createRoom, joinRoom, leaveRoom, rejoinRoom, clearLastRoom, updateRoomSettings, syncRoom,
     openCreateRoom, openEditProfile,
     completeGuestOnboarding, onOAuth,
   } = ctx;
@@ -29,7 +29,8 @@ export function renderScreen(screen, ctx) {
     case 'profile': return <ProfilePage go={go} showToast={showToast} guest={guest} player={player}
                               openEditProfile={openEditProfile} />;
     case 'lobby':   return <LobbyPage go={go} layout={lobbyLayout} showToast={showToast}
-                              room={currentRoom} player={player} onLeave={leaveRoom} onUpdateSettings={updateRoomSettings} />;
+                              room={currentRoom} player={player} onLeave={leaveRoom} onUpdateSettings={updateRoomSettings}
+                              onSyncRoom={syncRoom} />;
     case 'game':    return <GamePage go={go} showToast={showToast} currentRoom={currentRoom} player={player} leaveRoom={leaveRoom} />;
     case 'result':  return <ResultPage go={go} payload={payload} showToast={showToast} player={player} />;
     case 'design-spec': return <DesignSpecPage go={go} />;

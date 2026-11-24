@@ -66,9 +66,7 @@ writeFileSync(entry, `
       action = nextBotAction(state, player.id);
       if (action) break;
     }
-    if (!action && state.public.phase === 'shiftResult') {
-      action = { type: 'CONTINUE_SHIFT', playerId: room.hostId, payload: null };
-    }
+    // No fallback for market close: the host's bot policy must continue the shift.
     if (!action) throw new Error('Engine stalled in phase ' + state.public.phase);
     state = dispatch(state, action);
     actions += 1;
